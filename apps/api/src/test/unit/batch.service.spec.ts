@@ -1,0 +1,161 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { BatchService } from '../../modules/batches/batch.service.js';
+import { IBatchRepository } from '../../modules/batches/batch.repository.js';
+import { IEventBus } from '../../events/event-bus.interface.js';
+import { AppError } from '../../common/middleware/error-handler.middleware.js';
+import { BATCH_EVENTS } from '../../modules/batches/batch.events.js';
+
+class InMemoryBatchRepository implements IBatchRepository {
+  public batches: Map<string, any> = new Map();
+  public enrollments: Array<{ batchId: string; studentId: string; coachingId: string; joinedAt: Date; leftAt?: Date }> = [];
+  public teacherAssignments: Array<{ batchId: string; teacherId: string; coachingId: string; isPrimary: boolean }> = [];
+
+  public async create(data: any, teacherIds?: string[]): Promise<any> {
+    const batch = {
+      id: `batch-${Date.now()}-${Math.random()}`,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      batchStudents: [],
+      teacherBatches: [],
+      ...data,
+    };
+    if (teacherIds && teacherIds.length > 0) {
+      for (const tid of teacherIds) {
+        this.teacherAssignments.push({
+          batchId: batch.id,
+          teacherId: tid,
+          coachingId: data.coachingId,
+          isPrimary: true,
+        });
+      }
+    }
+    this.batches.set(batch.id, batch);
+    return batch;
+  }
+
+  public async findById(id: string): Promise<any | null> {
+    const b = this.batches.get(id);
+    if (!b || b.deletedAt) return null;
+    return b;
+  }
+
+  public async findMany(_filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<any[]> {
+    return Array.from(this.batches.values()).filter((b) => !b.deletedAt);
+  }
+
+  public async update(id: string, data: any): Promise<any> {
+    const b = this.batches.get(id);
+    if (!b) throw new Error('Not found');
+    const updated = { ...b, ...data, updatedAt: new Date() };
+    this.batches.set(id, updated);
+    return updated;
+  }
+
+  public async enrollStudent(data: { batchId: string; studentId: string; coachingId: string }): Promise<any> {
+    const entry = {
+      batchId: data.batchId,
+      studentId: data.studentId,
+      coachingId: data.coachingId,
+      joinedAt: new Date(),
+    };
+    this.enrollments.push(entry);
+    return entry;
+  }
+
+  public async withdrawStudent(batchId: string, studentId: string): Promise<void> {
+    const entry = this.enrollments.find((e) => e.batchId === batchId && e.studentId === studentId && !e.leftAt);
+    if (entry) {
+      entry.leftAt = new Date();
+    }
+  }
+
+  public async assignTeacher(data: { batchId: string; teacherId: string; coachingId: string; isPrimary: boolean }): Promise<void> {
+    this.teacherAssignments.push(data);
+  }
+
+  public async findActiveStudents(batchId: string): Promise<any[]> {
+    return this.enrollments
+      .filter((e) => e.batchId === batchId && !e.leftAt)
+      .map((e) => ({ id: `bs-${e.studentId}`, studentId: e.studentId, joinedAt: e.joinedAt, student: { firstName: 'Test', lastName: 'Student' } }));
+  }
+}
+
+describe('BatchService (Phase 2 Domain Unit Tests)', () => {
+  let batchService: BatchService;
+  let batchRepo: InMemoryBatchRepository;
+  let mockEventBus: IEventBus;
+
+  beforeEach(() => {
+    batchRepo = new InMemoryBatchRepository();
+    mockEventBus = {
+      publish: vi.fn().mockResolvedValue(undefined),
+      publishBatch: vi.fn().mockResolvedValue(undefined),
+      subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
+    };
+    batchService = new BatchService(batchRepo, mockEventBus);
+  });
+
+  it('should successfully create a batch and emit BatchCreated event', async () => {
+    const result = await batchService.createBatch(
+      {
+        name: 'Grade 10 Science',
+        subject: 'Physics',
+        academicYear: '2026-2027',
+        daysOfWeek: ['MON', 'WED', 'FRI'],
+      },
+      'coaching-1',
+      'user-1',
+    );
+
+    expect(result).toBeDefined();
+    expect(result.name).toBe('Grade 10 Science');
+    expect(result.academicYear).toBe('2026-2027');
+
+    expect(mockEventBus.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventName: BATCH_EVENTS.BATCH_CREATED,
+        coachingId: 'coaching-1',
+        payload: expect.objectContaining({
+          batchId: result.id,
+          name: 'Grade 10 Science',
+        }),
+      }),
+    );
+  });
+
+  it('should enroll a student in a batch and emit StudentEnrolledInBatch event', async () => {
+    const batch = await batchService.createBatch(
+      {
+        name: 'Grade 11 Math',
+        academicYear: '2026-2027',
+      },
+      'coaching-1',
+    );
+
+    await batchService.enrollStudent(
+      batch.id,
+      { studentId: 'student-999' },
+      'coaching-1',
+      'user-1',
+    );
+
+    expect(mockEventBus.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventName: BATCH_EVENTS.STUDENT_ENROLLED_IN_BATCH,
+        coachingId: 'coaching-1',
+        payload: expect.objectContaining({
+          batchId: batch.id,
+          studentId: 'student-999',
+        }),
+      }),
+    );
+  });
+
+  it('should throw NOT_FOUND when enrolling student in non-existent batch', async () => {
+    await expect(
+      batchService.enrollStudent('invalid-batch-id', { studentId: 'stu-1' }, 'coaching-1'),
+    ).rejects.toThrow(AppError);
+  });
+});

@@ -1,0 +1,19 @@
+{
+  "name": "@trueco/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
+  },
+  "dependencies": {
+    "@trueco/types": "workspace:*",
+    "react": "^19.0.0",
+    "react-native": "^0.76.0"
+  },
+  "devDependencies": {
+    "@trueco/config": "workspace:*",
+    "typescript": "^5.5.4"
+  }
+}

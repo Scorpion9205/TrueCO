@@ -1,0 +1,23 @@
+{
+  "name": "trueco-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TrueCO — WhatsApp-First Coaching Management SaaS ERP",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "test:unit": "pnpm --filter @trueco/api run test:unit",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "prisma:generate": "pnpm --filter @trueco/api run prisma:generate",
+    "prisma:migrate": "pnpm --filter @trueco/api run prisma:migrate",
+    "prisma:studio": "pnpm --filter @trueco/api run prisma:studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  },
+  "packageManager": "pnpm@11.21.0"
+}

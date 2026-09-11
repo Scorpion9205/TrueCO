@@ -1,0 +1,50 @@
+{
+  "name": "@trueco/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc -b && prisma generate",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "prisma:generate": "prisma generate --schema=src/database/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=src/database/prisma/schema.prisma",
+    "prisma:db:push": "prisma db push --schema=src/database/prisma/schema.prisma",
+    "prisma:studio": "prisma studio --schema=src/database/prisma/schema.prisma",
+    "test": "vitest run",
+    "test:unit": "vitest run src/test/unit",
+    "test:integration": "vitest run src/test/integration"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "@trueco/types": "workspace:*",
+    "argon2": "^0.41.1",
+    "bullmq": "^5.14.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "helmet": "^7.1.0",
+    "http-status-codes": "^2.3.0",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.2",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@trueco/config": "workspace:*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.5.5",
+    "@types/supertest": "^6.0.2",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^5.20.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.1"
+  }
+}
