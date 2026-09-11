@@ -18,6 +18,21 @@ import { BatchModule } from './modules/batches/batch.module.js';
 import { AttendanceModule } from './modules/attendance/attendance.module.js';
 import { TestModule } from './modules/tests/test.module.js';
 import { HomeworkModule } from './modules/homework/homework.module.js';
+import { NotificationModule } from './modules/notifications/notification.module.js';
+import { TimelineModule } from './modules/timeline/timeline.module.js';
+import { AuditModule } from './modules/audit/audit.module.js';
+import { FeeModule } from './modules/fees/fee.module.js';
+import { SalaryModule } from './modules/salary/salary.module.js';
+import { ExpenseModule } from './modules/expenses/expense.module.js';
+import { BillingModule } from './modules/billing/billing.module.js';
+import { NoticeModule } from './modules/notice-board/notice.module.js';
+import { SettingsModule } from './modules/settings/settings.module.js';
+import { ReportModule } from './modules/reports/report.module.js';
+import { DashboardModule } from './modules/dashboard/dashboard.module.js';
+import { ImportModule } from './modules/import/import.module.js';
+import { WhatsAppAssistantModule } from './modules/whatsapp-assistant/whatsapp-assistant.module.js';
+import { RiskEngineModule } from './modules/risk-engine/risk-engine.module.js';
+import { workerRegistry } from './workers/worker.registry.js';
 
 export function createApp(): Express {
   const app = express();
@@ -109,6 +124,46 @@ export function createApp(): Express {
   app.use('/api/v1/tests', testModule.router);
   app.use('/api/v1/homework', homeworkModule.router);
 
+  // Domain Module Routes (Phase 3: Notifications, Timeline & Audit)
+  const notificationModule = NotificationModule.init();
+  const timelineModule = TimelineModule.init();
+  const auditModule = AuditModule.init();
+
+  app.use('/api/v1/notifications', notificationModule.router);
+  app.use('/api/v1/timeline', timelineModule.router);
+  app.use('/api/v1/audit', auditModule.router);
+
+  // Domain Module Routes (Phase 4: Fees, Salary, Expenses & Billing)
+  const feeModule = FeeModule.init();
+  const salaryModule = SalaryModule.init();
+  const expenseModule = ExpenseModule.init();
+  const billingModule = BillingModule.init();
+
+  app.use('/api/v1/fees', feeModule.router);
+  app.use('/api/v1/salary', salaryModule.router);
+  app.use('/api/v1/expenses', expenseModule.router);
+  app.use('/api/v1/billing', billingModule.router);
+
+  // Domain Module Routes (Phase 5: Reports, Notice Board, Settings & Import)
+  const noticeModule = NoticeModule.init();
+  const settingsModule = SettingsModule.init();
+  const reportModule = ReportModule.init();
+  const dashboardModule = DashboardModule.init();
+  const importModule = ImportModule.init();
+
+  app.use('/api/v1/notices', noticeModule.router);
+  app.use('/api/v1/settings', settingsModule.router);
+  app.use('/api/v1/reports', reportModule.router);
+  app.use('/api/v1/dashboard', dashboardModule.router);
+  app.use('/api/v1/import', importModule.router);
+
+  // Domain Module Routes (Phase 6: Smart WhatsApp Assistant & Student Risk Engine)
+  const whatsappAssistantModule = WhatsAppAssistantModule.init();
+  const riskEngineModule = RiskEngineModule.init();
+
+  app.use('/api/v1/whatsapp-assistant', whatsappAssistantModule.router);
+  app.use('/api/v1/risk-engine', riskEngineModule.router);
+
   // Global Error Handler (must be last)
   app.use(errorHandlerMiddleware);
 
@@ -119,6 +174,11 @@ async function startServer(): Promise<void> {
   const app = createApp();
   const port = envConfig.get('PORT');
 
+  // Start background queue workers in non-test environments
+  if (envConfig.get('NODE_ENV') !== 'test') {
+    workerRegistry.startAll();
+  }
+
   const server = app.listen(port, () => {
     logger.info(`🚀 TrueCO API server running on port ${port} [${envConfig.get('NODE_ENV')}]`);
   });
@@ -128,6 +188,7 @@ async function startServer(): Promise<void> {
     logger.info(`[Server] Received ${signal}. Starting graceful shutdown...`);
     server.close(async () => {
       try {
+        await workerRegistry.closeAll();
         await queueRegistry.closeAll();
         const prisma = getPrismaClient();
         await (prisma as any).$disconnect();

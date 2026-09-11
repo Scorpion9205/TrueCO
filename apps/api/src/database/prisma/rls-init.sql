@@ -31,7 +31,8 @@ DECLARE
     'subscriptions',
     'ai_credit_wallets',
     'settings',
-    'audit_logs'
+    'audit_logs',
+    'notices'
   ];
 BEGIN
   FOREACH tbl IN ARRAY tenant_tables

@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { SettingsController } from './settings.controller.js';
+import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
+import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
+
+export function createSettingsRoutes(controller: SettingsController): Router {
+  const router = Router();
+
+  router.use(authenticateMiddleware);
+
+  router.get('/', requirePermission('settings:read'), controller.get);
+  router.put('/', requirePermission('settings:manage'), controller.update);
+
+  return router;
+}

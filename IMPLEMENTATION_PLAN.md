@@ -91,7 +91,7 @@ flowchart TD
     P4 --> P5[Phase 5: Reports, Notice Board, Settings & Import]
     P5 --> P6[Phase 6: Smart WhatsApp Assistant & Risk Engine]
     P6 --> P7[Phase 7: AI Service Layer Premium]
-    P7 --> P8[Phase 8: Frontend Web & Mobile]
+    P7 --> P8[Phase 8: Frontend Web]
     P8 --> P9[Phase 9: Deployment & Observability]
 ```
 

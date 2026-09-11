@@ -16,6 +16,17 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // WhatsApp Cloud API
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_API_TOKEN: z.string().optional(),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().default('trueco_webhook_secret_token'),
+  WHATSAPP_API_VERSION: z.string().default('v19.0'),
+  // SMTP Email
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  EMAIL_FROM: z.string().default('TrueCO Alerts <notifications@trueco.in>'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

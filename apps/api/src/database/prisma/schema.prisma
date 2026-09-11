@@ -139,6 +139,7 @@ model Coaching {
   subscriptions   Subscription[]
   settings        Setting?
   creditWallet    AiCreditWallet?
+  notices         Notice[]
 
   @@map("coachings")
 }
@@ -395,6 +396,7 @@ model Batch {
   attendanceSessions AttendanceSession[]
   tests           Test[]
   homeworks       Homework[]
+  notices         Notice[]
 
   @@index([coachingId, isActive])
   @@map("batches")
@@ -793,3 +795,31 @@ model Setting {
 
   @@map("settings")
 }
+
+// ==========================================
+// 9. Notices & Announcements
+// ==========================================
+
+model Notice {
+  id              String           @id @default(uuid()) @db.Uuid
+  coachingId      String           @map("coaching_id") @db.Uuid
+  batchId         String?          @map("batch_id") @db.Uuid
+  title           String           @db.VarChar(255)
+  content         String           @db.Text
+  targetAudience  String           @default("ALL") @map("target_audience") @db.VarChar(50)
+  isPinned        Boolean          @default(false) @map("is_pinned")
+  expiresAt       DateTime?        @map("expires_at") @db.Timestamptz()
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz()
+  createdBy       String?          @map("created_by") @db.Uuid
+
+  coaching        Coaching         @relation(fields: [coachingId], references: [id], onDelete: Cascade)
+  batch           Batch?           @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([coachingId, createdAt])
+  @@index([coachingId, batchId])
+  @@map("notices")
+}
+
+
