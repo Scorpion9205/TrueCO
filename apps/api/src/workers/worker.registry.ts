@@ -1,16 +1,19 @@
 import { WhatsAppWorker } from './whatsapp.worker.js';
 import { EmailWorker } from './email.worker.js';
+import { AiWorker } from './ai.worker.js';
 import { logger } from '../common/logger/logger.service.js';
 
 export class WorkerRegistry {
   private static instance: WorkerRegistry;
   private readonly whatsAppWorker: WhatsAppWorker;
   private readonly emailWorker: EmailWorker;
+  private readonly aiWorker: AiWorker;
   private isRunning: boolean = false;
 
   private constructor() {
     this.whatsAppWorker = new WhatsAppWorker();
     this.emailWorker = new EmailWorker();
+    this.aiWorker = new AiWorker();
   }
 
   public static getInstance(): WorkerRegistry {
@@ -26,6 +29,7 @@ export class WorkerRegistry {
     logger.info('[WorkerRegistry] Initializing BullMQ background workers...');
     this.whatsAppWorker.start();
     this.emailWorker.start();
+    this.aiWorker.start();
     this.isRunning = true;
     logger.info('[WorkerRegistry] All background workers started successfully');
   }
@@ -37,6 +41,7 @@ export class WorkerRegistry {
     await Promise.all([
       this.whatsAppWorker.close(),
       this.emailWorker.close(),
+      this.aiWorker.close(),
     ]);
     this.isRunning = false;
     logger.info('[WorkerRegistry] All workers stopped');

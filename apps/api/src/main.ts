@@ -32,6 +32,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module.js';
 import { ImportModule } from './modules/import/import.module.js';
 import { WhatsAppAssistantModule } from './modules/whatsapp-assistant/whatsapp-assistant.module.js';
 import { RiskEngineModule } from './modules/risk-engine/risk-engine.module.js';
+import { AiModule } from './modules/ai/ai.module.js';
 import { workerRegistry } from './workers/worker.registry.js';
 
 export function createApp(): Express {
@@ -163,6 +164,10 @@ export function createApp(): Express {
 
   app.use('/api/v1/whatsapp-assistant', whatsappAssistantModule.router);
   app.use('/api/v1/risk-engine', riskEngineModule.router);
+
+  // Domain Module Routes (Phase 7: AI Service Layer - Premium)
+  const aiModule = AiModule.init();
+  app.use('/api/v1/ai', aiModule.router);
 
   // Global Error Handler (must be last)
   app.use(errorHandlerMiddleware);
