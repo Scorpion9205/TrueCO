@@ -27,7 +27,9 @@ describe('AiService (Phase 7 AI Service Layer Unit Tests)', () => {
       publish: vi.fn(async (event: any) => {
         publishedEvents.push(event);
       }),
+      publishBatch: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn(),
+      unsubscribe: vi.fn(),
     };
 
     // Use mock provider for deterministic tests

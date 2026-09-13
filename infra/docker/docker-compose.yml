@@ -1,3 +1,5 @@
+name: TrueCo
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +10,7 @@ services:
       POSTGRES_PASSWORD: trueco_password
       POSTGRES_DB: trueco_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -31,6 +33,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  bullmq:
+    image: deadly0/bull-board:latest
+    container_name: trueco-bullmq
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BULL_VERSION: BULLMQ
+      BULL_PREFIX: bull
+    ports:
+      - "3001:3000"
 
 volumes:
   postgres_data:

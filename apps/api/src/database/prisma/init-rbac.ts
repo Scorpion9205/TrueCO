@@ -1,0 +1,199 @@
+import { PrismaClient } from '@prisma/client';
+import { PlanCode, RoleType } from '@trueco/types';
+
+const prisma = new PrismaClient();
+
+const ALL_PERMISSIONS = [
+  { code: '*', module: 'system', action: 'all', description: 'Super-admin wildcard' },
+  { code: 'students:create', module: 'students', action: 'create', description: 'Enroll new student' },
+  { code: 'students:read', module: 'students', action: 'read', description: 'View student profiles' },
+  { code: 'students:update', module: 'students', action: 'update', description: 'Update student profile' },
+  { code: 'students:delete', module: 'students', action: 'delete', description: 'Deactivate/delete student' },
+  { code: 'batches:create', module: 'batches', action: 'create', description: 'Create academic batch' },
+  { code: 'batches:read', module: 'batches', action: 'read', description: 'View batches and rosters' },
+  { code: 'batches:update', module: 'batches', action: 'update', description: 'Update batch details' },
+  { code: 'batches:delete', module: 'batches', action: 'delete', description: 'Archive batch' },
+  { code: 'attendance:create', module: 'attendance', action: 'create', description: 'Mark attendance session' },
+  { code: 'attendance:read', module: 'attendance', action: 'read', description: 'View attendance history' },
+  { code: 'fees:create', module: 'fees', action: 'create', description: 'Create fee plans' },
+  { code: 'fees:read', module: 'fees', action: 'read', description: 'View fee ledgers and reports' },
+  { code: 'fees:pay', module: 'fees', action: 'pay', description: 'Record fee payment' },
+  { code: 'fees:waive', module: 'fees', action: 'waive', description: 'Waive fee installment' },
+  { code: 'tests:create', module: 'tests', action: 'create', description: 'Create test and enter marks' },
+  { code: 'tests:read', module: 'tests', action: 'read', description: 'View tests and performance' },
+  { code: 'homework:create', module: 'homework', action: 'create', description: 'Assign homework' },
+  { code: 'homework:read', module: 'homework', action: 'read', description: 'View homework submissions' },
+  { code: 'homework:update', module: 'homework', action: 'update', description: 'Update homework' },
+  { code: 'homework:delete', module: 'homework', action: 'delete', description: 'Delete homework' },
+  { code: 'teachers:create', module: 'teachers', action: 'create', description: 'Onboard teacher/faculty' },
+  { code: 'teachers:read', module: 'teachers', action: 'read', description: 'View teacher profiles' },
+  { code: 'teachers:update', module: 'teachers', action: 'update', description: 'Update teacher profile' },
+  { code: 'reports:read', module: 'reports', action: 'read', description: 'View academic and revenue reports' },
+  { code: 'ai:generate', module: 'ai', action: 'generate', description: 'Generate AI summaries and insights' },
+  { code: 'settings:read', module: 'settings', action: 'read', description: 'View institute settings' },
+  { code: 'settings:update', module: 'settings', action: 'update', description: 'Update institute settings' },
+];
+
+const TEACHER_PERMISSION_CODES = [
+  'students:read',
+  'batches:read',
+  'attendance:create',
+  'attendance:read',
+  'tests:create',
+  'tests:read',
+  'homework:create',
+  'homework:read',
+  'homework:update',
+  'homework:delete',
+  'ai:generate',
+];
+
+async function main() {
+  console.log('⚡ Initializing TrueCo System RBAC Permissions and Plans (Zero Dummy Data)...');
+
+  // 1. Seed Permissions
+  for (const perm of ALL_PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { code: perm.code },
+      update: { description: perm.description, module: perm.module, action: perm.action },
+      create: perm,
+    });
+  }
+  console.log(`✔ Synced ${ALL_PERMISSIONS.length} system permissions.`);
+
+  // 2. Ensure System Roles
+  let ownerRole = await prisma.role.findFirst({
+    where: { code: RoleType.OWNER, coachingId: null },
+  });
+  if (!ownerRole) {
+    ownerRole = await prisma.role.create({
+      data: {
+        name: 'Coaching Owner',
+        code: RoleType.OWNER,
+        description: 'Full administrative control over coaching institute',
+        isSystem: true,
+      },
+    });
+  }
+
+  let teacherRole = await prisma.role.findFirst({
+    where: { code: RoleType.TEACHER, coachingId: null },
+  });
+  if (!teacherRole) {
+    teacherRole = await prisma.role.create({
+      data: {
+        name: 'Faculty / Teacher',
+        code: RoleType.TEACHER,
+        description: 'Academic management, attendance, tests, homework and insights',
+        isSystem: true,
+      },
+    });
+  }
+
+  // 3. Map Permissions to OWNER (Wildcard & all individual permissions)
+  const dbPermissions = await prisma.permission.findMany();
+  for (const p of dbPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: ownerRole.id,
+          permissionId: p.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: ownerRole.id,
+        permissionId: p.id,
+      },
+    });
+  }
+
+  // 4. Map Permissions to TEACHER
+  const teacherPerms = dbPermissions.filter((p) => TEACHER_PERMISSION_CODES.includes(p.code));
+  for (const p of teacherPerms) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: teacherRole.id,
+          permissionId: p.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: teacherRole.id,
+        permissionId: p.id,
+      },
+    });
+  }
+  console.log('✔ Synced OWNER and TEACHER system roles & permission mappings.');
+
+  // 5. Ensure Subscription Plans exist
+  const fullFeatures = [
+    'core',
+    'attendance',
+    'fees',
+    'homework',
+    'tests',
+    'reports',
+    'salary',
+    'expenses',
+    'ai.summary',
+    'ai.parent_report',
+    'ai.insights',
+    'ai.risk_engine',
+    'whatsapp.assistant',
+  ];
+
+  await prisma.plan.upsert({
+    where: { code: PlanCode.ENTERPRISE },
+    update: {},
+    create: {
+      code: PlanCode.ENTERPRISE,
+      name: 'Enterprise Pro AI Bundle',
+      priceMonthly: 0,
+      priceYearly: 0,
+      defaultFeatures: fullFeatures,
+      defaultCredits: 1000,
+      isActive: true,
+    },
+  });
+
+  await prisma.plan.upsert({
+    where: { code: PlanCode.PRO_AI },
+    update: {},
+    create: {
+      code: PlanCode.PRO_AI,
+      name: 'Pro AI Suite',
+      priceMonthly: 1999,
+      priceYearly: 19990,
+      defaultFeatures: fullFeatures.filter((f) => f !== 'salary'),
+      defaultCredits: 500,
+      isActive: true,
+    },
+  });
+
+  await prisma.plan.upsert({
+    where: { code: PlanCode.STARTER },
+    update: {},
+    create: {
+      code: PlanCode.STARTER,
+      name: 'Starter Plan',
+      priceMonthly: 999,
+      priceYearly: 9990,
+      defaultFeatures: ['core', 'attendance', 'fees', 'reports'],
+      defaultCredits: 100,
+      isActive: true,
+    },
+  });
+  console.log('✔ Synced subscription plans.');
+  console.log('🚀 TrueCo database is primed for live user signups and logins. Zero dummy entities exist.');
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
