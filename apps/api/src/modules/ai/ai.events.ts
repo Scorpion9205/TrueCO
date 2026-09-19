@@ -5,6 +5,7 @@ export const AI_EVENTS = {
   CREDITS_ADDED: 'AiCreditsAdded',
   GENERATION_COMPLETED: 'AiGenerationCompleted',
   GENERATION_FAILED: 'AiGenerationFailed',
+  KNOWLEDGE_INGESTED: 'KnowledgeIngested',
 } as const;
 
 export interface AiCreditsDeductedPayload {
@@ -103,3 +104,27 @@ export function createAiGenerationFailedEvent(
     metadata: { correlationId, userId },
   };
 }
+
+export interface KnowledgeIngestedPayload {
+  readonly coachingId: string;
+  readonly documentId: string;
+  readonly title: string;
+  readonly type: string;
+  readonly totalChunks: number;
+}
+
+export function createKnowledgeIngestedEvent(
+  payload: KnowledgeIngestedPayload,
+  correlationId: string,
+  userId?: string,
+): DomainEvent<KnowledgeIngestedPayload> {
+  return {
+    eventId: crypto.randomUUID(),
+    eventName: AI_EVENTS.KNOWLEDGE_INGESTED,
+    coachingId: payload.coachingId,
+    occurredAt: new Date(),
+    payload,
+    metadata: { correlationId, userId },
+  };
+}
+
