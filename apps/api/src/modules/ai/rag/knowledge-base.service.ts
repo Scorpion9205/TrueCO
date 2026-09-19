@@ -106,7 +106,7 @@ export class KnowledgeBaseService {
     query: string,
     coachingId: string,
     limit: number = 4,
-    threshold: number = 0.6,
+    threshold: number = 0.3,
   ): Promise<KnowledgeChunkEntity[]> {
     if (!query || query.trim().length === 0) {
       return [];
