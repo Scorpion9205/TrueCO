@@ -130,7 +130,7 @@ async function main() {
   }
 
   // 4. Map Permissions to TEACHER
-  const teacherPerms = dbPermissions.filter((p) => TEACHER_PERMISSION_CODES.includes(p.code));
+  const teacherPerms = dbPermissions.filter((p: any) => TEACHER_PERMISSION_CODES.includes(p.code));
   for (const p of teacherPerms) {
     await prisma.rolePermission.upsert({
       where: {
