@@ -109,6 +109,16 @@ enum AiProviderType {
   @@map("ai_provider_type")
 }
 
+enum KnowledgeBaseType {
+  FAQ
+  POLICY
+  SYLLABUS
+  SCHEDULE
+  GENERAL_NOTICE
+
+  @@map("knowledge_base_type")
+}
+
 // ==========================================
 // 1. Platform / Tenant Foundation
 // ==========================================
@@ -140,6 +150,7 @@ model Coaching {
   settings        Setting?
   creditWallet    AiCreditWallet?
   notices         Notice[]
+  knowledgeBases  CoachingKnowledgeBase[]
 
   @@map("coachings")
 }
@@ -820,6 +831,51 @@ model Notice {
   @@index([coachingId, createdAt])
   @@index([coachingId, batchId])
   @@map("notices")
+}
+
+// ==========================================
+// 10. AI Knowledge Base & pgvector RAG
+// ==========================================
+
+model CoachingKnowledgeBase {
+  id             String            @id @default(uuid()) @db.Uuid
+  coachingId     String            @map("coaching_id") @db.Uuid
+  title          String            @db.VarChar(255)
+  type           KnowledgeBaseType @default(FAQ)
+  description    String?           @db.Text
+  sourceUrl      String?           @map("source_url") @db.Text
+  rawContent     String            @map("raw_content") @db.Text
+  characterCount Int               @default(0) @map("character_count")
+  isActive       Boolean           @default(true) @map("is_active")
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+  deletedAt      DateTime?         @map("deleted_at") @db.Timestamptz()
+
+  coaching       Coaching          @relation(fields: [coachingId], references: [id], onDelete: Restrict)
+  chunks         CoachingKnowledgeChunk[]
+
+  @@index([coachingId, type, isActive])
+  @@map("coaching_knowledge_bases")
+}
+
+model CoachingKnowledgeChunk {
+  id              String                @id @default(uuid()) @db.Uuid
+  coachingId      String                @map("coaching_id") @db.Uuid
+  knowledgeBaseId String                @map("knowledge_base_id") @db.Uuid
+  chunkIndex      Int                   @map("chunk_index")
+  content         String                @db.Text
+  tokenCount      Int                   @default(0) @map("token_count")
+  metadata        Json?                 @default("{}")
+  embedding       Unsupported("vector(1536)")?
+  isActive        Boolean               @default(true) @map("is_active")
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz()
+
+  knowledgeBase   CoachingKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  @@index([coachingId, isActive])
+  @@index([knowledgeBaseId, chunkIndex])
+  @@map("coaching_knowledge_chunks")
 }
 
 
