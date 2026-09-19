@@ -46,4 +46,55 @@ export class AuthController {
     await this.authService.logoutAllDevices(userId, traceId);
     res.status(StatusCodes.OK).json({ data: { message: 'All active sessions revoked successfully' } });
   };
+
+  public getMe = async (_req: Request, res: Response): Promise<void> => {
+    const userId = RequestContextService.getUserId();
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+      return;
+    }
+
+    const result = await this.authService.getMe(userId);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    const validated = (await import('./validators/auth.validator.js')).forgotPasswordSchema.parse(req.body);
+    const result = await this.authService.forgotPassword(validated.email);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public resetPassword = async (req: Request, res: Response): Promise<void> => {
+    const validated = (await import('./validators/auth.validator.js')).resetPasswordSchema.parse(req.body);
+    const result = await this.authService.resetPassword(validated.token, validated.newPassword);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public verifyEmail = async (req: Request, res: Response): Promise<void> => {
+    const validated = (await import('./validators/auth.validator.js')).verifyEmailSchema.parse(req.body);
+    const result = await this.authService.verifyEmail(validated.token);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public sendOtp = async (req: Request, res: Response): Promise<void> => {
+    const { identifier, purpose } = req.body;
+    if (!identifier) {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: { code: 'INVALID_INPUT', message: 'identifier is required' } });
+      return;
+    }
+    const result = await this.authService.sendOtp(identifier, purpose);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public verifyOtp = async (req: Request, res: Response): Promise<void> => {
+    const { identifier, code, purpose } = req.body;
+    if (!identifier || !code) {
+      res.status(StatusCodes.BAD_REQUEST).json({ error: { code: 'INVALID_INPUT', message: 'identifier and code are required' } });
+      return;
+    }
+    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip;
+    const userAgent = req.headers['user-agent'];
+    const result = await this.authService.verifyOtp(identifier, code, purpose, ipAddress, userAgent);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
 }

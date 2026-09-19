@@ -7,6 +7,7 @@ import { OpenAiAdapter } from './openai.adapter.js';
 import { ClaudeAiAdapter } from './claude.adapter.js';
 import { GeminiAiAdapter } from './gemini.adapter.js';
 import { MockAiProvider } from './mock-ai.provider.js';
+import { envConfig } from '../../../config/env.config.js';
 
 export class AiProviderFactory implements IAiProviderFactory {
   private readonly providers: Map<AiProviderType, IAiProvider> = new Map();
@@ -17,11 +18,19 @@ export class AiProviderFactory implements IAiProviderFactory {
     this.providers.set(AiProviderType.GEMINI, customProviders?.GEMINI || new GeminiAiAdapter());
   }
 
-  public getProvider(providerType: AiProviderType = AiProviderType.OPENAI): IAiProvider {
-    const provider = this.providers.get(providerType);
-    if (!provider) {
+  public getProvider(providerType?: AiProviderType): IAiProvider {
+    if (providerType && this.providers.has(providerType)) {
+      return this.providers.get(providerType)!;
+    }
+    if (envConfig.get('GEMINI_API_KEY')) {
+      return this.providers.get(AiProviderType.GEMINI) || new MockAiProvider();
+    }
+    if (envConfig.get('OPENAI_API_KEY')) {
       return this.providers.get(AiProviderType.OPENAI) || new MockAiProvider();
     }
-    return provider;
+    if (envConfig.get('ANTHROPIC_API_KEY')) {
+      return this.providers.get(AiProviderType.CLAUDE) || new MockAiProvider();
+    }
+    return this.providers.get(AiProviderType.GEMINI) || new MockAiProvider();
   }
 }

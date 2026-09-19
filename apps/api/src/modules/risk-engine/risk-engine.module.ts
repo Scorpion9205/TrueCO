@@ -16,7 +16,7 @@ export class RiskEngineModule {
     const controller = new RiskEngineController(service);
     const router = createRiskEngineRoutes(controller);
 
-    RiskEngineSubscribers.register(eventBus);
+    RiskEngineSubscribers.register(eventBus, service);
 
     return { router, service };
   }

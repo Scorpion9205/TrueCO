@@ -5,10 +5,13 @@ import { ITokenService } from '../../common/security/token.service.js';
 import { IAccountLockoutService } from '../../common/security/account-lockout.service.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
+import jwt from 'jsonwebtoken';
+import { envConfig } from '../../config/env.config.js';
 import { AuthMapper } from './auth.mapper.js';
-import { AuthResponseDto, LoginDto } from './dto/auth.dto.js';
+import { AuthResponseDto, AuthUserDto, LoginDto } from './dto/auth.dto.js';
 import { createUserLoggedInEvent, createUserLoggedOutEvent } from './auth.events.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { IOtpService, otpService as defaultOtpService } from '../../common/security/otp.service.js';
 
 export class AuthService {
   public constructor(
@@ -18,6 +21,7 @@ export class AuthService {
     private readonly tokenService: ITokenService,
     private readonly lockoutService: IAccountLockoutService,
     private readonly eventBus: IEventBus,
+    private readonly otpService: IOtpService = defaultOtpService,
   ) {}
 
   public async login(
@@ -215,5 +219,128 @@ export class AuthService {
         correlationId,
       ),
     );
+  }
+
+  public async getMe(userId: string): Promise<AuthUserDto> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('USER_NOT_FOUND', 'User profile not found', StatusCodes.NOT_FOUND);
+    }
+    return AuthMapper.toUserDto(user);
+  }
+
+  public async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      return { message: 'If an account exists with that email, a password reset link has been dispatched.' };
+    }
+
+    const resetToken = jwt.sign(
+      { sub: user.id, email: user.email, type: 'PASSWORD_RESET' },
+      envConfig.get('JWT_ACCESS_SECRET'),
+      { expiresIn: '1h' },
+    );
+
+    // Generate development terminal OTP
+    await this.otpService.generateOtp(user.email, 'PASSWORD_RESET', 600);
+
+    logger.info(`[AuthService] Password reset token generated for ${user.email}: ${resetToken}`);
+    return { message: 'If an account exists with that email, a password reset link has been dispatched.' };
+  }
+
+  public async sendOtp(
+    identifier: string,
+    purpose: 'SIGNUP' | 'LOGIN' | 'PASSWORD_RESET' | string = 'LOGIN',
+  ): Promise<{ message: string; identifier: string }> {
+    await this.otpService.generateOtp(identifier, purpose, 600);
+    return {
+      message: `OTP dispatched for ${purpose}. Check server terminal in development.`,
+      identifier,
+    };
+  }
+
+  public async verifyOtp(
+    identifier: string,
+    code: string,
+    purpose: 'SIGNUP' | 'LOGIN' | 'PASSWORD_RESET' | string = 'LOGIN',
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthResponseDto | { message: string }> {
+    const isValid = await this.otpService.verifyOtp(identifier, code, purpose);
+    if (!isValid) {
+      throw new AppError('INVALID_OR_EXPIRED_OTP', 'The entered OTP is invalid or has expired', StatusCodes.UNAUTHORIZED);
+    }
+
+    if (purpose === 'LOGIN') {
+      const user = await this.userRepository.findByEmail(identifier);
+      if (!user) {
+        throw new AppError('USER_NOT_FOUND', 'No account found associated with this email', StatusCodes.NOT_FOUND);
+      }
+
+      const userDto = AuthMapper.toUserDto(user);
+      const accessToken = this.tokenService.generateAccessToken({
+        sub: userDto.id,
+        coachingId: userDto.coachingId,
+        email: userDto.email,
+        roles: userDto.roles,
+        permissions: userDto.permissions,
+      });
+
+      const { rawToken, hashedToken, family } = this.tokenService.generateRefreshToken();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await this.refreshTokenRepository.create({
+        userId: userDto.id,
+        tokenHash: hashedToken,
+        family,
+        expiresAt,
+        userAgent,
+        ipAddress,
+      });
+
+      await this.userRepository.updateLastLogin(userDto.id);
+
+      return {
+        user: userDto,
+        tokens: {
+          accessToken,
+          refreshToken: rawToken,
+          tokenType: 'Bearer',
+          expiresIn: 15 * 60,
+        },
+      };
+    }
+
+    return { message: `OTP verified successfully for ${purpose}.` };
+  }
+
+  public async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    let payload: any;
+    try {
+      payload = jwt.verify(token, envConfig.get('JWT_ACCESS_SECRET'));
+    } catch {
+      throw new AppError('INVALID_OR_EXPIRED_TOKEN', 'Password reset token is invalid or has expired', StatusCodes.BAD_REQUEST);
+    }
+
+    if (payload.type !== 'PASSWORD_RESET' || !payload.sub) {
+      throw new AppError('INVALID_TOKEN_TYPE', 'Invalid token type', StatusCodes.BAD_REQUEST);
+    }
+
+    const newHash = await this.passwordService.hash(newPassword);
+    await this.userRepository.updatePassword(payload.sub, newHash);
+    await this.refreshTokenRepository.revokeAllForUser(payload.sub);
+
+    return { message: 'Password has been reset successfully. Please log in with your new password.' };
+  }
+
+  public async verifyEmail(token: string): Promise<{ message: string }> {
+    try {
+      jwt.verify(token, envConfig.get('JWT_ACCESS_SECRET'));
+    } catch {
+      throw new AppError('INVALID_OR_EXPIRED_TOKEN', 'Verification token is invalid or has expired', StatusCodes.BAD_REQUEST);
+    }
+
+    return { message: 'Email verified successfully.' };
   }
 }

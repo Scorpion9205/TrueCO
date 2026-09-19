@@ -19,21 +19,61 @@ export interface ITokenService {
   hashToken(token: string): string;
 }
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 export class TokenService implements ITokenService {
   private static instance: TokenService;
   private readonly privateKey: string;
   private readonly publicKey: string;
 
   private constructor() {
-    // Generate an RSA 2048-bit key pair for asymmetric RS256 token signing
+    const envPrivKey = envConfig.get('JWT_PRIVATE_KEY');
+    const envPubKey = envConfig.get('JWT_PUBLIC_KEY');
+
+    if (envPrivKey && envPubKey) {
+      this.privateKey = envPrivKey.replace(/\\n/g, '\n');
+      this.publicKey = envPubKey.replace(/\\n/g, '\n');
+      logger.info('[TokenService] Loaded RS256 asymmetric cryptographic keys from environment');
+      return;
+    }
+
+    // In local development, persist keypair to avoid invalidating sessions across restarts
+    const keysDir = path.resolve(process.cwd(), '.keys');
+    const privPath = path.join(keysDir, 'jwt_rs256.key');
+    const pubPath = path.join(keysDir, 'jwt_rs256.pub');
+
+    try {
+      if (fs.existsSync(privPath) && fs.existsSync(pubPath)) {
+        this.privateKey = fs.readFileSync(privPath, 'utf8');
+        this.publicKey = fs.readFileSync(pubPath, 'utf8');
+        logger.info('[TokenService] Loaded RS256 cryptographic keys from persistent storage');
+        return;
+      }
+    } catch {
+      // Fall through to generation
+    }
+
+    // Generate fresh RSA 2048-bit key pair
     const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
       modulusLength: 2048,
       publicKeyEncoding: { type: 'spki', format: 'pem' },
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     });
+
     this.privateKey = privateKey;
     this.publicKey = publicKey;
-    logger.info('[TokenService] Initialized RS256 asymmetric cryptographic keys');
+
+    try {
+      if (!fs.existsSync(keysDir)) {
+        fs.mkdirSync(keysDir, { recursive: true });
+      }
+      fs.writeFileSync(privPath, privateKey, { mode: 0o600 });
+      fs.writeFileSync(pubPath, publicKey, { mode: 0o644 });
+      logger.info('[TokenService] Generated and persisted new RS256 cryptographic keys to .keys/');
+    } catch {
+      logger.info('[TokenService] Generated ephemeral in-memory RS256 cryptographic keys');
+    }
   }
 
   public static getInstance(): TokenService {

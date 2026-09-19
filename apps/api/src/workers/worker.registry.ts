@@ -1,6 +1,12 @@
 import { WhatsAppWorker } from './whatsapp.worker.js';
 import { EmailWorker } from './email.worker.js';
 import { AiWorker } from './ai.worker.js';
+import { ReminderWorker } from './reminder.worker.js';
+import { PdfWorker } from './pdf.worker.js';
+import { ReportWorker } from './report.worker.js';
+import { ImportWorker } from './import.worker.js';
+import { AnalyticsWorker } from './analytics.worker.js';
+import { CleanupWorker } from './cleanup.worker.js';
 import { logger } from '../common/logger/logger.service.js';
 
 export class WorkerRegistry {
@@ -8,12 +14,24 @@ export class WorkerRegistry {
   private readonly whatsAppWorker: WhatsAppWorker;
   private readonly emailWorker: EmailWorker;
   private readonly aiWorker: AiWorker;
+  private readonly reminderWorker: ReminderWorker;
+  private readonly pdfWorker: PdfWorker;
+  private readonly reportWorker: ReportWorker;
+  private readonly importWorker: ImportWorker;
+  private readonly analyticsWorker: AnalyticsWorker;
+  private readonly cleanupWorker: CleanupWorker;
   private isRunning: boolean = false;
 
   private constructor() {
     this.whatsAppWorker = new WhatsAppWorker();
     this.emailWorker = new EmailWorker();
     this.aiWorker = new AiWorker();
+    this.reminderWorker = new ReminderWorker();
+    this.pdfWorker = new PdfWorker();
+    this.reportWorker = new ReportWorker();
+    this.importWorker = new ImportWorker();
+    this.analyticsWorker = new AnalyticsWorker();
+    this.cleanupWorker = new CleanupWorker();
   }
 
   public static getInstance(): WorkerRegistry {
@@ -23,15 +41,21 @@ export class WorkerRegistry {
     return WorkerRegistry.instance;
   }
 
-  public startAll(): void {
+  public async startAll(): Promise<void> {
     if (this.isRunning) return;
 
     logger.info('[WorkerRegistry] Initializing BullMQ background workers...');
     this.whatsAppWorker.start();
     this.emailWorker.start();
     this.aiWorker.start();
+    await this.reminderWorker.start();
+    this.pdfWorker.start();
+    this.reportWorker.start();
+    this.importWorker.start();
+    this.analyticsWorker.start();
+    await this.cleanupWorker.start();
     this.isRunning = true;
-    logger.info('[WorkerRegistry] All background workers started successfully');
+    logger.info('[WorkerRegistry] All 9 BullMQ background workers started successfully');
   }
 
   public async closeAll(): Promise<void> {
@@ -42,9 +66,15 @@ export class WorkerRegistry {
       this.whatsAppWorker.close(),
       this.emailWorker.close(),
       this.aiWorker.close(),
+      this.reminderWorker.close(),
+      this.pdfWorker.close(),
+      this.reportWorker.close(),
+      this.importWorker.close(),
+      this.analyticsWorker.close(),
+      this.cleanupWorker.close(),
     ]);
     this.isRunning = false;
-    logger.info('[WorkerRegistry] All workers stopped');
+    logger.info('[WorkerRegistry] All 9 workers stopped');
   }
 }
 

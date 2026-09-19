@@ -19,7 +19,6 @@ import {
   createAiGenerationCompletedEvent,
   createAiGenerationFailedEvent,
 } from './ai.events.js';
-import { AiProviderType } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class InsufficientAiCreditsError extends Error {
@@ -103,8 +102,8 @@ export class AiService {
     creditsCost: number = 1,
   ): Promise<AiCompletionResponseDto> {
     const feature = dto.feature || 'ai.completion';
-    const providerType = dto.provider || AiProviderType.OPENAI;
-    const provider = this.providerFactory.getProvider(providerType);
+    const provider = this.providerFactory.getProvider(dto.provider);
+    const providerType = provider.providerType;
 
     // 1. Get or create wallet & pre-check balance
     const wallet = await this.repository.createOrGetWallet(coachingId);

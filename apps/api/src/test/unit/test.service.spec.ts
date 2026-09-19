@@ -55,6 +55,18 @@ class InMemoryTestRepository implements ITestRepository {
     this.tests.set(testId, test);
     return test;
   }
+
+  public async findByStudent(studentId: string): Promise<any[]> {
+    const results: any[] = [];
+    for (const test of this.tests.values()) {
+      for (const res of test.results || []) {
+        if (res.studentId === studentId) {
+          results.push({ ...res, test });
+        }
+      }
+    }
+    return results;
+  }
 }
 
 describe('TestService (Phase 2 Domain Unit Tests)', () => {

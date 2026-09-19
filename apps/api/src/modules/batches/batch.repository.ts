@@ -8,6 +8,12 @@ export interface IBatchRepository {
   withdrawStudent(batchId: string, studentId: string): Promise<any>;
   assignTeacher(data: { batchId: string; teacherId: string; coachingId: string; isPrimary?: boolean }): Promise<any>;
   findActiveStudents(batchId: string): Promise<any[]>;
+  transferStudent(data: {
+    coachingId: string;
+    studentId: string;
+    fromBatchId: string;
+    toBatchId: string;
+  }): Promise<{ previous: any; current: any }>;
 }
 
 export class PrismaBatchRepository implements IBatchRepository {
@@ -162,5 +168,63 @@ export class PrismaBatchRepository implements IBatchRepository {
     });
 
     return records.map((r: any) => r.student);
+  }
+
+  public async transferStudent(data: {
+    coachingId: string;
+    studentId: string;
+    fromBatchId: string;
+    toBatchId: string;
+  }): Promise<{ previous: any; current: any }> {
+    const rawPrisma = this.prisma as any;
+
+    return rawPrisma.$transaction(async (tx: any) => {
+      // 1. Mark existing enrollment as left
+      const existing = await tx.batchStudent.findFirst({
+        where: {
+          batchId: data.fromBatchId,
+          studentId: data.studentId,
+          leftAt: null,
+        },
+      });
+
+      let previous = null;
+      if (existing) {
+        previous = await tx.batchStudent.update({
+          where: { id: existing.id },
+          data: { leftAt: new Date() },
+        });
+      }
+
+      // 2. Find or create enrollment in destination batch
+      const destExisting = await tx.batchStudent.findFirst({
+        where: {
+          batchId: data.toBatchId,
+          studentId: data.studentId,
+        },
+      });
+
+      let current;
+      if (destExisting) {
+        current = await tx.batchStudent.update({
+          where: { id: destExisting.id },
+          data: {
+            leftAt: null,
+            joinedAt: new Date(),
+          },
+        });
+      } else {
+        current = await tx.batchStudent.create({
+          data: {
+            batchId: data.toBatchId,
+            studentId: data.studentId,
+            coachingId: data.coachingId,
+            joinedAt: new Date(),
+          },
+        });
+      }
+
+      return { previous, current };
+    });
   }
 }

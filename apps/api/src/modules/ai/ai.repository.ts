@@ -278,7 +278,7 @@ export class PrismaAiRepository implements IAiRepository {
 
     return {
       teacherId: teacher.id,
-      teacherName: `${teacher.firstName} ${teacher.lastName}`.trim(),
+      teacherName: teacher.name.trim(),
       batches,
     };
   }

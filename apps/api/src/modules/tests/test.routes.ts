@@ -13,6 +13,7 @@ export function createTestRoutes(controller: TestController): Router {
   router.post('/:id/marks', requirePermission('tests:create'), controller.uploadMarks);
   router.get('/:id', requirePermission('tests:read'), controller.getById);
   router.get('/batch/:batchId', requirePermission('tests:read'), requireBatchAccess(), controller.getByBatch);
+  router.get('/student/:studentId', requirePermission('tests:read'), controller.getByStudent);
 
   return router;
 }

@@ -140,4 +140,8 @@ export class TestService {
     const tests = await this.testRepository.findByBatch(batchId);
     return tests.map((t) => TestMapper.toResponseDto(t));
   }
+
+  public async getResultsByStudent(studentId: string): Promise<any[]> {
+    return this.testRepository.findByStudent(studentId);
+  }
 }

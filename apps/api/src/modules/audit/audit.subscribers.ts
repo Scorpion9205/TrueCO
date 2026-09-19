@@ -193,5 +193,81 @@ export class AuditSubscribers {
         }
       },
     );
+
+    // 9. Fee Plan Created
+    eventBus.subscribe('FeePlanCreated', async (event: any) => {
+      try {
+        await auditService.recordLog(
+          {
+            userId: event.metadata?.userId,
+            action: 'FEE_PLAN_CREATED',
+            entityName: 'FeePlan',
+            entityId: event.payload.feePlanId,
+            afterState: event.payload,
+          },
+          event.payload.coachingId,
+          event.metadata?.correlationId,
+        );
+      } catch (err) {
+        logger.error('[AuditSubscribers] Error recording FEE_PLAN_CREATED audit log:', err);
+      }
+    });
+
+    // 10. Fee Paid
+    eventBus.subscribe('FeePaid', async (event: any) => {
+      try {
+        await auditService.recordLog(
+          {
+            userId: event.metadata?.userId,
+            action: 'FEE_PAID',
+            entityName: 'FeeTransaction',
+            entityId: event.payload.installmentId,
+            afterState: event.payload,
+          },
+          event.payload.coachingId,
+          event.metadata?.correlationId,
+        );
+      } catch (err) {
+        logger.error('[AuditSubscribers] Error recording FEE_PAID audit log:', err);
+      }
+    });
+
+    // 11. Salary Paid
+    eventBus.subscribe('SalaryPaid', async (event: any) => {
+      try {
+        await auditService.recordLog(
+          {
+            userId: event.metadata?.userId,
+            action: 'SALARY_PAID',
+            entityName: 'Salary',
+            entityId: event.payload.salaryId,
+            afterState: event.payload,
+          },
+          event.payload.coachingId,
+          event.metadata?.correlationId,
+        );
+      } catch (err) {
+        logger.error('[AuditSubscribers] Error recording SALARY_PAID audit log:', err);
+      }
+    });
+
+    // 12. Expense Recorded
+    eventBus.subscribe('ExpenseRecorded', async (event: any) => {
+      try {
+        await auditService.recordLog(
+          {
+            userId: event.metadata?.userId,
+            action: 'EXPENSE_RECORDED',
+            entityName: 'Expense',
+            entityId: event.payload.expenseId,
+            afterState: event.payload,
+          },
+          event.payload.coachingId,
+          event.metadata?.correlationId,
+        );
+      } catch (err) {
+        logger.error('[AuditSubscribers] Error recording EXPENSE_RECORDED audit log:', err);
+      }
+    });
   }
 }

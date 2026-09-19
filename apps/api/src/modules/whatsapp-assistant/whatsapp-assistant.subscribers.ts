@@ -7,8 +7,11 @@ import {
 import { DomainEvent } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
 
+import { NotificationService } from '../notifications/notification.service.js';
+import { NotificationChannel } from '@trueco/types';
+
 export class WhatsAppAssistantSubscribers {
-  public static register(eventBus: IEventBus): void {
+  public static register(eventBus: IEventBus, notificationService?: NotificationService): void {
     eventBus.subscribe(
       ASSISTANT_EVENTS.INBOUND_MESSAGE_RECEIVED,
       (event: DomainEvent<InboundMessageReceivedPayload>) => {
@@ -20,10 +23,29 @@ export class WhatsAppAssistantSubscribers {
 
     eventBus.subscribe(
       ASSISTANT_EVENTS.ASSISTANT_REPLIED,
-      (event: DomainEvent<AssistantRepliedPayload>) => {
+      async (event: DomainEvent<AssistantRepliedPayload>) => {
         logger.info(
-          `[AssistantSubscribers] Automated reply sent to ${event.payload.to} for intent ${event.payload.intent}`,
+          `[AssistantSubscribers] Automated reply generated for ${event.payload.to} [intent: ${event.payload.intent}]`,
         );
+
+        if (notificationService) {
+          try {
+            const idempotencyKey = `assistant.reply.${event.payload.to}.${event.metadata?.correlationId || Date.now()}`;
+            await notificationService.enqueueNotification(
+              {
+                channel: NotificationChannel.WHATSAPP,
+                recipient: event.payload.to,
+                recipientType: 'PARENT',
+                content: event.payload.replyText,
+                idempotencyKey,
+              },
+              event.coachingId || '',
+              event.metadata?.correlationId,
+            );
+          } catch (err) {
+            logger.error('[AssistantSubscribers] Failed to enqueue assistant reply to whatsapp-queue:', err);
+          }
+        }
       },
     );
   }

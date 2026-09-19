@@ -62,7 +62,7 @@ export class ReportService {
             studentId: student.id,
             studentName: `${student.firstName} ${student.lastName}`.trim(),
             studentPhone: student.phone,
-            parentName: parent ? `${parent.firstName} ${parent.lastName}`.trim() : undefined,
+            parentName: parent ? (parent.name?.trim() || [parent.firstName, parent.lastName].filter(Boolean).join(' ') || undefined) : undefined,
             parentPhone: parent?.phone,
             pendingAmount: unpaidBalance,
             overdueDays,

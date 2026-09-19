@@ -19,6 +19,8 @@ const envSchema = z.object({
   // WhatsApp Cloud API
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_API_TOKEN: z.string().optional(),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().default('trueco_webhook_secret_token'),
   WHATSAPP_API_VERSION: z.string().default('v19.0'),
   // SMTP Email
@@ -26,11 +28,28 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().optional().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  SMTP_SECURE: z.coerce.boolean().default(false),
   EMAIL_FROM: z.string().default('TrueCO Alerts <notifications@trueco.in>'),
   // AI Model Providers
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+  // Object Storage (Cloudinary / Local Mock)
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_URL: z.string().optional(),
+  // Payment Gateway (Razorpay / UPI)
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  // Cryptography & Security
+  JWT_PRIVATE_KEY: z.string().optional(),
+  JWT_PUBLIC_KEY: z.string().optional(),
+  DATABASE_ENCRYPTION_KEY: z.string().default('0123456789abcdef0123456789abcdef'),
+  // URLs
+  API_BASE_URL: z.string().default('http://localhost:4000'),
+  FRONTEND_URL: z.string().default('http://localhost:3000'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

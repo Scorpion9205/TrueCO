@@ -16,6 +16,7 @@ export interface IAuthUserRepository {
   findByEmail(email: string, coachingCode?: string): Promise<UserAggregate | null>;
   findById(id: string): Promise<UserAggregate | null>;
   updateLastLogin(userId: string): Promise<void>;
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
 }
 
 export interface IRefreshTokenRepository {
@@ -90,6 +91,13 @@ export class PrismaAuthUserRepository implements IAuthUserRepository {
     await (this.prisma as any).user.update({
       where: { id: userId },
       data: { lastLoginAt: new Date() },
+    });
+  }
+
+  public async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await (this.prisma as any).user.update({
+      where: { id: userId },
+      data: { passwordHash },
     });
   }
 }

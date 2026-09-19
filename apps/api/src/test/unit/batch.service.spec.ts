@@ -79,6 +79,26 @@ class InMemoryBatchRepository implements IBatchRepository {
       .filter((e) => e.batchId === batchId && !e.leftAt)
       .map((e) => ({ id: `bs-${e.studentId}`, studentId: e.studentId, joinedAt: e.joinedAt, student: { firstName: 'Test', lastName: 'Student' } }));
   }
+
+  public async transferStudent(data: {
+    coachingId: string;
+    studentId: string;
+    fromBatchId: string;
+    toBatchId: string;
+  }): Promise<{ previous: any; current: any }> {
+    const prev = this.enrollments.find((e) => e.batchId === data.fromBatchId && e.studentId === data.studentId && !e.leftAt);
+    if (prev) {
+      prev.leftAt = new Date();
+    }
+    const current = {
+      batchId: data.toBatchId,
+      studentId: data.studentId,
+      coachingId: data.coachingId,
+      joinedAt: new Date(),
+    };
+    this.enrollments.push(current);
+    return { previous: prev, current };
+  }
 }
 
 describe('BatchService (Phase 2 Domain Unit Tests)', () => {
@@ -156,6 +176,75 @@ describe('BatchService (Phase 2 Domain Unit Tests)', () => {
   it('should throw NOT_FOUND when enrolling student in non-existent batch', async () => {
     await expect(
       batchService.enrollStudent('invalid-batch-id', { studentId: 'stu-1' }, 'coaching-1'),
+    ).rejects.toThrow(AppError);
+  });
+
+  it('should successfully transfer a student between batches and emit StudentTransferredBatch event', async () => {
+    const batch1 = await batchService.createBatch(
+      { name: 'Batch Morning', academicYear: '2026-2027' },
+      'coaching-1',
+    );
+    const batch2 = await batchService.createBatch(
+      { name: 'Batch Evening', academicYear: '2026-2027' },
+      'coaching-1',
+    );
+
+    await batchService.enrollStudent(batch1.id, { studentId: 'student-42' }, 'coaching-1', 'user-1');
+
+    await batchService.transferStudent(
+      batch1.id,
+      { studentId: 'student-42', targetBatchId: batch2.id, reason: 'Time preference' },
+      'coaching-1',
+      'user-1',
+    );
+
+    expect(mockEventBus.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventName: BATCH_EVENTS.STUDENT_TRANSFERRED_BATCH,
+        coachingId: 'coaching-1',
+        payload: expect.objectContaining({
+          studentId: 'student-42',
+          fromBatchId: batch1.id,
+          toBatchId: batch2.id,
+          reason: 'Time preference',
+        }),
+      }),
+    );
+
+    const activeInBatch1 = await batchService.getActiveStudentsInBatch(batch1.id);
+    expect(activeInBatch1.find((s) => s.studentId === 'student-42')).toBeUndefined();
+
+    const activeInBatch2 = await batchService.getActiveStudentsInBatch(batch2.id);
+    expect(activeInBatch2.find((s) => s.studentId === 'student-42')).toBeDefined();
+  });
+
+  it('should throw BAD_REQUEST when transferring to the exact same batch', async () => {
+    const batch = await batchService.createBatch(
+      { name: 'Batch A', academicYear: '2026-2027' },
+      'coaching-1',
+    );
+
+    await expect(
+      batchService.transferStudent(
+        batch.id,
+        { studentId: 'stu-1', targetBatchId: batch.id },
+        'coaching-1',
+      ),
+    ).rejects.toThrow(AppError);
+  });
+
+  it('should throw NOT_FOUND when target batch does not exist during transfer', async () => {
+    const batch = await batchService.createBatch(
+      { name: 'Batch A', academicYear: '2026-2027' },
+      'coaching-1',
+    );
+
+    await expect(
+      batchService.transferStudent(
+        batch.id,
+        { studentId: 'stu-1', targetBatchId: 'non-existent-batch' },
+        'coaching-1',
+      ),
     ).rejects.toThrow(AppError);
   });
 });

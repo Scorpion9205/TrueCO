@@ -17,6 +17,12 @@ export interface AssignTeacherToBatchDto {
   readonly isPrimary?: boolean;
 }
 
+export interface TransferStudentBatchDto {
+  readonly studentId: string;
+  readonly targetBatchId: string;
+  readonly reason?: string;
+}
+
 export interface BatchResponseDto {
   readonly id: string;
   readonly coachingId: string;

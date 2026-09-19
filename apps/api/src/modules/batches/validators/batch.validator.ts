@@ -25,6 +25,15 @@ export const assignTeacherToBatchSchema = z
   })
   .strict();
 
+export const transferStudentBatchSchema = z
+  .object({
+    studentId: z.string().uuid(),
+    targetBatchId: z.string().uuid(),
+    reason: z.string().max(255).optional(),
+  })
+  .strict();
+
 export type CreateBatchInput = z.infer<typeof createBatchSchema>;
 export type EnrollStudentInBatchInput = z.infer<typeof enrollStudentInBatchSchema>;
 export type AssignTeacherToBatchInput = z.infer<typeof assignTeacherToBatchSchema>;
+export type TransferStudentBatchInput = z.infer<typeof transferStudentBatchSchema>;

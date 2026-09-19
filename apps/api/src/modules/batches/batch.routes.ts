@@ -14,6 +14,7 @@ export function createBatchRoutes(controller: BatchController): Router {
   router.get('/:id/students', requirePermission('batches:read'), controller.getStudents);
   router.post('/:id/students', requirePermission('batches:update'), controller.enrollStudent);
   router.delete('/:id/students/:studentId', requirePermission('batches:update'), controller.withdrawStudent);
+  router.post('/:id/transfer-student', requirePermission('batches:update'), controller.transferStudent);
   router.post('/:id/teachers', requirePermission('batches:update'), controller.assignTeacher);
 
   return router;

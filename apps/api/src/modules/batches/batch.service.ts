@@ -2,9 +2,9 @@ import { StatusCodes } from 'http-status-codes';
 import { IBatchRepository } from './batch.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { AssignTeacherToBatchDto, BatchResponseDto, CreateBatchDto, EnrollStudentInBatchDto } from './dto/batch.dto.js';
+import { AssignTeacherToBatchDto, BatchResponseDto, CreateBatchDto, EnrollStudentInBatchDto, TransferStudentBatchDto } from './dto/batch.dto.js';
 import { BatchMapper } from './batch.mapper.js';
-import { createBatchCreatedEvent, createStudentEnrolledInBatchEvent } from './batch.events.js';
+import { createBatchCreatedEvent, createStudentEnrolledInBatchEvent, createStudentTransferredBatchEvent } from './batch.events.js';
 
 export class BatchService {
   public constructor(
@@ -116,5 +116,49 @@ export class BatchService {
 
   public async getActiveStudentsInBatch(batchId: string): Promise<any[]> {
     return this.batchRepository.findActiveStudents(batchId);
+  }
+
+  public async transferStudent(
+    fromBatchId: string,
+    dto: TransferStudentBatchDto,
+    coachingId: string,
+    userId?: string,
+    correlationId: string = crypto.randomUUID(),
+  ): Promise<void> {
+    if (fromBatchId === dto.targetBatchId) {
+      throw new AppError('BAD_REQUEST', 'Source and target batches cannot be the same', StatusCodes.BAD_REQUEST);
+    }
+
+    const fromBatch = await this.batchRepository.findById(fromBatchId);
+    if (!fromBatch) {
+      throw new AppError('BATCH_NOT_FOUND', 'Source batch not found', StatusCodes.NOT_FOUND);
+    }
+
+    const toBatch = await this.batchRepository.findById(dto.targetBatchId);
+    if (!toBatch) {
+      throw new AppError('BATCH_NOT_FOUND', 'Target batch not found', StatusCodes.NOT_FOUND);
+    }
+
+    await this.batchRepository.transferStudent({
+      coachingId,
+      studentId: dto.studentId,
+      fromBatchId,
+      toBatchId: dto.targetBatchId,
+    });
+
+    await this.eventBus.publish(
+      createStudentTransferredBatchEvent(
+        {
+          coachingId,
+          studentId: dto.studentId,
+          fromBatchId,
+          toBatchId: dto.targetBatchId,
+          reason: dto.reason,
+          transferredAt: new Date(),
+        },
+        correlationId,
+        userId,
+      ),
+    );
   }
 }

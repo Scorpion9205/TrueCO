@@ -57,4 +57,23 @@ export class FeeController {
     const result = await this.feeService.getPlanById(req.params.id);
     res.status(StatusCodes.OK).json({ data: result });
   };
+
+  public getDefaulters = async (_req: Request, res: Response): Promise<void> => {
+    const coachingId = RequestContextService.getRequiredCoachingId();
+    const result = await this.feeService.getDefaulters(coachingId);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public createPaymentLink = async (req: Request, res: Response): Promise<void> => {
+    const coachingId = RequestContextService.getRequiredCoachingId();
+    const result = await this.feeService.createPaymentLink(req.params.id, coachingId);
+    res.status(StatusCodes.CREATED).json({ data: result });
+  };
+
+  public handleWebhook = async (req: Request, res: Response): Promise<void> => {
+    const signature = (req.headers['x-razorpay-signature'] as string) || '';
+    const rawBody = (req as any).rawBody;
+    const result = await this.feeService.handlePaymentWebhook(req.body, signature, rawBody);
+    res.status(StatusCodes.OK).json(result);
+  };
 }

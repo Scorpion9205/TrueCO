@@ -4,10 +4,15 @@ import { WhatsAppAssistantService } from './whatsapp-assistant.service.js';
 import { WhatsAppAssistantController } from './whatsapp-assistant.controller.js';
 import { createWhatsAppAssistantRoutes } from './whatsapp-assistant.routes.js';
 import { eventBus } from '../../events/event-bus.js';
+import { NotificationService } from '../notifications/notification.service.js';
 import { WhatsAppAssistantSubscribers } from './whatsapp-assistant.subscribers.js';
 
+export interface WhatsAppAssistantModuleOptions {
+  notificationService?: NotificationService;
+}
+
 export class WhatsAppAssistantModule {
-  public static init(): {
+  public static init(options?: WhatsAppAssistantModuleOptions): {
     router: Router;
     service: WhatsAppAssistantService;
   } {
@@ -16,7 +21,7 @@ export class WhatsAppAssistantModule {
     const controller = new WhatsAppAssistantController(service);
     const router = createWhatsAppAssistantRoutes(controller);
 
-    WhatsAppAssistantSubscribers.register(eventBus);
+    WhatsAppAssistantSubscribers.register(eventBus, options?.notificationService);
 
     return { router, service };
   }

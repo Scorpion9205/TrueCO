@@ -16,13 +16,25 @@ import {
   createFeePlanCreatedEvent,
   createFeeWaivedEvent,
 } from './fee.events.js';
-import { DiscountType, FeeInstallmentStatus } from '@trueco/types';
+import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { IPaymentGatewayAdapter, PaymentLinkResult } from '../billing/adapters/payment-gateway.interface.js';
+import { MockPaymentGatewayAdapter } from '../billing/adapters/mock-payment-gateway.adapter.js';
+import { RazorpayAdapter } from '../billing/adapters/razorpay.adapter.js';
+import { envConfig } from '../../config/env.config.js';
+import { logger } from '../../common/logger/logger.service.js';
 
 export class FeeService {
+  private readonly paymentAdapter: IPaymentGatewayAdapter;
+
   public constructor(
     private readonly feeRepository: IFeeRepository,
     private readonly eventBus: IEventBus,
-  ) {}
+    paymentAdapter?: IPaymentGatewayAdapter,
+  ) {
+    this.paymentAdapter =
+      paymentAdapter ||
+      (envConfig.get('RAZORPAY_KEY_ID') ? new RazorpayAdapter() : new MockPaymentGatewayAdapter());
+  }
 
   public async createFeePlan(
     dto: CreateFeePlanDto,
@@ -210,5 +222,114 @@ export class FeeService {
       throw new AppError('PLAN_NOT_FOUND', 'Fee plan not found', StatusCodes.NOT_FOUND);
     }
     return FeeMapper.toPlanDto(plan);
+  }
+
+  public async getDefaulters(coachingId: string): Promise<any[]> {
+    const installments = await this.feeRepository.findPendingInstallments(new Date());
+    const filtered = installments.filter((i: any) => i.coachingId === coachingId);
+    return filtered.map((inst: any) => {
+      const balance = Number(inst.amount) - Number(inst.paidAmount || 0);
+      return {
+        installmentId: inst.id,
+        installmentNo: inst.installmentNo,
+        amount: Number(inst.amount),
+        paidAmount: Number(inst.paidAmount || 0),
+        pendingAmount: balance,
+        dueDate: inst.dueDate,
+        status: inst.status,
+        student: inst.feePlan?.student
+          ? {
+              id: inst.feePlan.student.id,
+              name: `${inst.feePlan.student.firstName} ${inst.feePlan.student.lastName}`,
+              phone: inst.feePlan.student.phone,
+              email: inst.feePlan.student.email,
+            }
+          : undefined,
+      };
+    });
+  }
+
+  public async createPaymentLink(
+    installmentId: string,
+    coachingId: string,
+  ): Promise<PaymentLinkResult> {
+    const installment = await this.feeRepository.findInstallmentById(installmentId);
+    if (!installment || installment.coachingId !== coachingId) {
+      throw new AppError('INSTALLMENT_NOT_FOUND', 'Fee installment not found', StatusCodes.NOT_FOUND);
+    }
+
+    if (installment.status === FeeInstallmentStatus.PAID) {
+      throw new AppError('ALREADY_PAID', 'Installment is already paid', StatusCodes.BAD_REQUEST);
+    }
+    if (installment.status === FeeInstallmentStatus.WAIVED) {
+      throw new AppError('WAIVED', 'Installment is waived', StatusCodes.BAD_REQUEST);
+    }
+
+    const currentPaid = Number(installment.paidAmount || 0);
+    const totalAmount = Number(installment.amount);
+    const balance = totalAmount - currentPaid;
+
+    return this.paymentAdapter.createPaymentLink({
+      amount: balance,
+      currency: 'INR',
+      description: `Coaching Fee Installment #${installment.installmentNo}`,
+      customer: {
+        name: `Student Installment ${installment.installmentNo}`,
+      },
+      referenceId: installment.id,
+      notes: {
+        coachingId,
+        installmentId: installment.id,
+      },
+    });
+  }
+
+  public async handlePaymentWebhook(
+    payload: any,
+    signature: string,
+    rawBody?: Buffer | string,
+  ): Promise<{ status: string }> {
+    const isValid = this.paymentAdapter.verifyWebhookSignature(
+      rawBody || JSON.stringify(payload),
+      signature,
+    );
+
+    if (!isValid) {
+      throw new AppError(
+        'INVALID_SIGNATURE',
+        'Payment webhook signature verification failed',
+        StatusCodes.UNAUTHORIZED,
+      );
+    }
+
+    const eventName = payload.event;
+    logger.info(`[FeeService] Processing fee payment webhook event: ${eventName}`);
+
+    if (eventName === 'payment.captured' || eventName === 'payment_link.paid') {
+      const paymentEntity = payload.payload?.payment?.entity;
+      const notes = paymentEntity?.notes || payload.payload?.payment_link?.entity?.notes || {};
+      const installmentId = notes.installmentId || paymentEntity?.description?.split('#')?.[1];
+      const coachingId = notes.coachingId;
+      const amount = paymentEntity?.amount ? paymentEntity.amount / 100 : undefined;
+
+      if (installmentId && coachingId && amount) {
+        try {
+          await this.recordPayment(
+            {
+              installmentId,
+              amount,
+              paymentMethod: PaymentMethod.ONLINE,
+              transactionRef: paymentEntity.id,
+              remarks: `Online payment via Razorpay (${paymentEntity.id})`,
+            },
+            coachingId,
+          );
+        } catch (err) {
+          logger.error(`[FeeService] Error auto-recording fee payment from webhook:`, err);
+        }
+      }
+    }
+
+    return { status: 'PROCESSED' };
   }
 }

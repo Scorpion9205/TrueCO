@@ -14,6 +14,7 @@ const ALL_PERMISSIONS = [
   { code: 'batches:update', module: 'batches', action: 'update', description: 'Update batch details' },
   { code: 'batches:delete', module: 'batches', action: 'delete', description: 'Archive batch' },
   { code: 'attendance:create', module: 'attendance', action: 'create', description: 'Mark attendance session' },
+  { code: 'attendance:mark', module: 'attendance', action: 'mark', description: 'Mark daily batch attendance' },
   { code: 'attendance:read', module: 'attendance', action: 'read', description: 'View attendance history' },
   { code: 'fees:create', module: 'fees', action: 'create', description: 'Create fee plans' },
   { code: 'fees:read', module: 'fees', action: 'read', description: 'View fee ledgers and reports' },
@@ -32,12 +33,31 @@ const ALL_PERMISSIONS = [
   { code: 'ai:generate', module: 'ai', action: 'generate', description: 'Generate AI summaries and insights' },
   { code: 'settings:read', module: 'settings', action: 'read', description: 'View institute settings' },
   { code: 'settings:update', module: 'settings', action: 'update', description: 'Update institute settings' },
+  { code: 'settings:manage', module: 'settings', action: 'manage', description: 'Manage institute configurations' },
+  { code: 'salary:manage', module: 'salary', action: 'manage', description: 'Generate and manage faculty payroll' },
+  { code: 'salary:pay', module: 'salary', action: 'pay', description: 'Disburse teacher salary payments' },
+  { code: 'salary:read', module: 'salary', action: 'read', description: 'View salary slips and reports' },
+  { code: 'expenses:create', module: 'expenses', action: 'create', description: 'Record operational expense' },
+  { code: 'expenses:read', module: 'expenses', action: 'read', description: 'View institute expense reports' },
+  { code: 'expenses:update', module: 'expenses', action: 'update', description: 'Modify recorded expense' },
+  { code: 'expenses:delete', module: 'expenses', action: 'delete', description: 'Remove expense record' },
+  { code: 'risk:read', module: 'risk', action: 'read', description: 'View student risk scores and alerts' },
+  { code: 'risk:compute', module: 'risk', action: 'compute', description: 'Recompute student risk index' },
+  { code: 'rbac:manage', module: 'rbac', action: 'manage', description: 'Assign roles and permissions' },
+  { code: 'notifications:read', module: 'notifications', action: 'read', description: 'View notification delivery logs' },
+  { code: 'notifications:retry', module: 'notifications', action: 'retry', description: 'Retry failed WhatsApp/Email notifications' },
+  { code: 'notices:manage', module: 'notices', action: 'manage', description: 'Publish and edit notice board announcements' },
+  { code: 'notices:read', module: 'notices', action: 'read', description: 'Read institute notices' },
+  { code: 'data:import', module: 'import', action: 'import', description: 'Execute bulk data import' },
+  { code: 'billing:read', module: 'billing', action: 'read', description: 'View subscription and invoices' },
+  { code: 'billing:manage', module: 'billing', action: 'manage', description: 'Manage TrueCO subscription plan' },
 ];
 
 const TEACHER_PERMISSION_CODES = [
   'students:read',
   'batches:read',
   'attendance:create',
+  'attendance:mark',
   'attendance:read',
   'tests:create',
   'tests:read',
@@ -46,6 +66,7 @@ const TEACHER_PERMISSION_CODES = [
   'homework:update',
   'homework:delete',
   'ai:generate',
+  'notices:read',
 ];
 
 async function main() {

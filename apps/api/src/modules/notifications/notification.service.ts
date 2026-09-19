@@ -12,11 +12,14 @@ import { NotificationMapper } from './notification.mapper.js';
 import { NotificationChannel, NotificationStatus } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
 
+import { RecipientResolverService, recipientResolverService } from './services/recipient-resolver.service.js';
+
 export class NotificationService {
   public constructor(
     private readonly notificationRepository: INotificationRepository,
     private readonly queueRegistry: QueueRegistry,
     _eventBus?: IEventBus,
+    private readonly resolver: RecipientResolverService = recipientResolverService,
   ) {}
 
   public async enqueueNotification(
@@ -24,18 +27,25 @@ export class NotificationService {
     coachingId: string,
     correlationId: string = crypto.randomUUID(),
   ): Promise<NotificationResponseDto> {
-    // 1. Record in database with idempotencyKey
+    // 1. Resolve concrete destination contact details
+    const resolvedTargets = await this.resolver.resolveRecipients(dto.recipient, coachingId);
+    const target = resolvedTargets[0];
+    const destination = dto.channel === NotificationChannel.WHATSAPP
+      ? (target?.phone || dto.recipient)
+      : (target?.email || dto.recipient);
+
+    // 2. Record in database with idempotencyKey
     const record = await this.notificationRepository.createHistory({
       coachingId,
       channel: dto.channel,
-      recipient: dto.recipient,
-      recipientType: dto.recipientType,
+      recipient: destination,
+      recipientType: target?.recipientType || dto.recipientType,
       templateName: dto.templateName,
       content: dto.content,
       idempotencyKey: dto.idempotencyKey,
     });
 
-    // 2. Dispatch to designated BullMQ queue with deterministic jobId for idempotency
+    // 3. Dispatch to designated BullMQ queue with deterministic jobId for idempotency
     const queueName = dto.channel === NotificationChannel.WHATSAPP
       ? QUEUE_NAMES.WHATSAPP
       : QUEUE_NAMES.EMAIL;
@@ -48,8 +58,8 @@ export class NotificationService {
         notificationId: record.id,
         coachingId,
         channel: dto.channel,
-        recipient: dto.recipient,
-        recipientType: dto.recipientType,
+        recipient: destination,
+        recipientType: target?.recipientType || dto.recipientType,
         templateName: dto.templateName,
         templateLanguage: dto.templateLanguage,
         templateVariables: dto.templateVariables,
@@ -62,6 +72,53 @@ export class NotificationService {
         jobId: dto.idempotencyKey, // BullMQ deduplication: jobs with same ID won't be enqueued twice
       },
     );
+
+    // If batch/group resolution had multiple recipients, enqueue the rest
+    if (resolvedTargets.length > 1) {
+      for (let i = 1; i < resolvedTargets.length; i++) {
+        const extraTarget = resolvedTargets[i];
+        const extraDest = dto.channel === NotificationChannel.WHATSAPP
+          ? extraTarget.phone
+          : extraTarget.email;
+        if (!extraDest) continue;
+
+        const extraKey = `${dto.idempotencyKey}.${extraTarget.recipientId}`;
+        try {
+          const extraRecord = await this.notificationRepository.createHistory({
+            coachingId,
+            channel: dto.channel,
+            recipient: extraDest,
+            recipientType: extraTarget.recipientType,
+            templateName: dto.templateName,
+            content: dto.content,
+            idempotencyKey: extraKey,
+          });
+
+          await queue.add(
+            'send_notification',
+            {
+              notificationId: extraRecord.id,
+              coachingId,
+              channel: dto.channel,
+              recipient: extraDest,
+              recipientType: extraTarget.recipientType,
+              templateName: dto.templateName,
+              templateLanguage: dto.templateLanguage,
+              templateVariables: dto.templateVariables,
+              subject: dto.subject,
+              content: dto.content,
+              idempotencyKey: extraKey,
+              correlationId,
+            },
+            {
+              jobId: extraKey,
+            },
+          );
+        } catch (err) {
+          logger.error(`[NotificationService] Error fanning out to extra target ${extraDest}:`, err);
+        }
+      }
+    }
 
     logger.debug(
       `[NotificationService] Enqueued ${dto.channel} notification to ${dto.recipient} (jobId: ${dto.idempotencyKey})`,

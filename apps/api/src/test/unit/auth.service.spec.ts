@@ -26,6 +26,13 @@ class InMemoryAuthUserRepository implements IAuthUserRepository {
   }
 
   public async updateLastLogin(_userId: string): Promise<void> {}
+
+  public async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.passwordHash = passwordHash;
+    }
+  }
 }
 
 class InMemoryRefreshTokenRepository implements IRefreshTokenRepository {

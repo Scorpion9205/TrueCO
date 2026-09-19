@@ -3,6 +3,13 @@ import { NotificationService } from './notification.service.js';
 import { ATTENDANCE_EVENTS, AttendanceMarkedPayload } from '../attendance/attendance.events.js';
 import { TEST_EVENTS, TestResultReadyPayload } from '../tests/test.events.js';
 import { HOMEWORK_EVENTS, HomeworkCreatedPayload } from '../homework/homework.events.js';
+import {
+  FEE_EVENTS,
+  FeePaidPayload,
+  FeeReminderTriggeredPayload,
+} from '../fees/fee.events.js';
+import { NOTICE_EVENTS, NoticeCreatedPayload } from '../notice-board/notice.events.js';
+import { RISK_EVENTS, RiskDetectedPayload } from '../risk-engine/risk-engine.events.js';
 import { NotificationChannel, DomainEvent, AttendanceStatus } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
 
@@ -21,7 +28,7 @@ export class NotificationSubscribers {
               await notificationService.enqueueNotification(
                 {
                   channel: NotificationChannel.WHATSAPP,
-                  recipient: `student:${record.studentId}:parent`, // Worker will resolve primary parent phone
+                  recipient: `student:${record.studentId}:parent`,
                   recipientType: 'PARENT',
                   content: `Dear Parent, your child was marked ABSENT today. Please contact coaching office if this is an error.`,
                   templateName: 'student_absent_alert',
@@ -105,6 +112,124 @@ export class NotificationSubscribers {
           );
         } catch (err) {
           logger.error(`[NotificationSubscribers] Failed enqueuing homework alert:`, err);
+        }
+      },
+    );
+
+    // 4. Fee Payment Recorded -> Queue WhatsApp Payment Confirmation
+    eventBus.subscribe(
+      FEE_EVENTS.FEE_PAID,
+      async (event: DomainEvent<FeePaidPayload>) => {
+        const { coachingId, studentId, amount, receiptNumber, remainingBalance } = event.payload;
+        const idempotencyKey = `fee.paid.${receiptNumber}`;
+        const content = `Payment Received: ₹${amount} received for student receipt #${receiptNumber}. Remaining balance: ₹${remainingBalance}. Thank you!`;
+
+        try {
+          await notificationService.enqueueNotification(
+            {
+              channel: NotificationChannel.WHATSAPP,
+              recipient: `student:${studentId}:parent`,
+              recipientType: 'PARENT',
+              content,
+              templateName: 'fee_payment_confirmation',
+              templateLanguage: 'en',
+              templateVariables: {
+                amount: `₹${amount}`,
+                receipt: receiptNumber,
+                balance: `₹${remainingBalance}`,
+              },
+              idempotencyKey,
+            },
+            coachingId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error(`[NotificationSubscribers] Failed enqueuing fee payment confirmation:`, err);
+        }
+      },
+    );
+
+    // 5. Fee Reminder Triggered -> Queue Reminder Alert
+    eventBus.subscribe(
+      FEE_EVENTS.FEE_REMINDER_TRIGGERED,
+      async (event: DomainEvent<FeeReminderTriggeredPayload>) => {
+        const { coachingId, studentId, installmentId, amount, dueDate, daysUntilDue } = event.payload;
+        const idempotencyKey = `fee.reminder.${installmentId}.${new Date().toISOString().slice(0, 10)}`;
+        const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN');
+        const dueText = daysUntilDue < 0 ? `is OVERDUE by ${Math.abs(daysUntilDue)} days` : `is due on ${dueDateStr}`;
+        const content = `Fee Reminder: A payment of ₹${amount} ${dueText}. Please pay promptly.`;
+
+        try {
+          await notificationService.enqueueNotification(
+            {
+              channel: NotificationChannel.WHATSAPP,
+              recipient: `student:${studentId}:parent`,
+              recipientType: 'PARENT',
+              content,
+              templateName: 'fee_payment_reminder',
+              templateLanguage: 'en',
+              templateVariables: {
+                amount: `₹${amount}`,
+                dueDate: dueDateStr,
+              },
+              idempotencyKey,
+            },
+            coachingId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error(`[NotificationSubscribers] Failed enqueuing fee reminder:`, err);
+        }
+      },
+    );
+
+    // 6. Notice Created -> Queue Announcement Broadcast
+    eventBus.subscribe(
+      NOTICE_EVENTS.NOTICE_CREATED,
+      async (event: DomainEvent<NoticeCreatedPayload>) => {
+        const { coachingId, noticeId, title, batchId } = event.payload;
+        const idempotencyKey = `notice.created.${noticeId}`;
+        const recipient = batchId ? `batch:${batchId}:students` : `batch:all:students`;
+
+        try {
+          await notificationService.enqueueNotification(
+            {
+              channel: NotificationChannel.WHATSAPP,
+              recipient,
+              recipientType: 'STUDENT',
+              content: `📢 Announcement: *${title}*`,
+              idempotencyKey,
+            },
+            coachingId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error(`[NotificationSubscribers] Failed enqueuing notice broadcast:`, err);
+        }
+      },
+    );
+
+    // 7. Student Risk Detected -> Alert Coaching Owner
+    eventBus.subscribe(
+      RISK_EVENTS.RISK_DETECTED,
+      async (event: DomainEvent<RiskDetectedPayload>) => {
+        const { coachingId, studentId, score, level, narrative } = event.payload;
+        const idempotencyKey = `risk.alert.${studentId}.${new Date().toISOString().slice(0, 10)}`;
+
+        try {
+          await notificationService.enqueueNotification(
+            {
+              channel: NotificationChannel.WHATSAPP,
+              recipient: `coaching:${coachingId}:owner`,
+              recipientType: 'TEACHER',
+              content: `⚠️ Risk Alert: Student ${studentId} flagged at ${level} risk (score: ${score}). Narrative: ${narrative}`,
+              idempotencyKey,
+            },
+            coachingId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error(`[NotificationSubscribers] Failed enqueuing risk alert:`, err);
         }
       },
     );

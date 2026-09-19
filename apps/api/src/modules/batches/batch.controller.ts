@@ -5,8 +5,14 @@ import {
   createBatchSchema,
   enrollStudentInBatchSchema,
   assignTeacherToBatchSchema,
+  transferStudentBatchSchema,
 } from './validators/batch.validator.js';
-import { AssignTeacherToBatchDto, CreateBatchDto, EnrollStudentInBatchDto } from './dto/batch.dto.js';
+import {
+  AssignTeacherToBatchDto,
+  CreateBatchDto,
+  EnrollStudentInBatchDto,
+  TransferStudentBatchDto,
+} from './dto/batch.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 
 export class BatchController {
@@ -62,5 +68,16 @@ export class BatchController {
   public getStudents = async (req: Request, res: Response): Promise<void> => {
     const students = await this.batchService.getActiveStudentsInBatch(req.params.id);
     res.status(StatusCodes.OK).json({ data: students });
+  };
+
+  public transferStudent = async (req: Request, res: Response): Promise<void> => {
+    const fromBatchId = req.params.id;
+    const validated = transferStudentBatchSchema.parse(req.body) as TransferStudentBatchDto;
+    const coachingId = RequestContextService.getRequiredCoachingId();
+    const userId = RequestContextService.getUserId();
+    const traceId = RequestContextService.getTraceId();
+
+    await this.batchService.transferStudent(fromBatchId, validated, coachingId, userId, traceId);
+    res.status(StatusCodes.OK).json({ data: { message: 'Student transferred to target batch successfully' } });
   };
 }

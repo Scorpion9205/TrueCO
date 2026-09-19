@@ -31,5 +31,15 @@ export function createBillingRoutes(controller: BillingController): Router {
     controller.purchaseCredits,
   );
 
+  router.post(
+    '/orders',
+    authenticateMiddleware,
+    requirePermission('billing:manage'),
+    controller.createOrder,
+  );
+
+  // Razorpay webhook endpoint
+  router.post('/webhook', controller.handleWebhook);
+
   return router;
 }

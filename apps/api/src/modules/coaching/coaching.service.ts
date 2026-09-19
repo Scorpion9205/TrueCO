@@ -6,6 +6,7 @@ import { AppError } from '../../common/middleware/error-handler.middleware.js';
 import { CoachingMapper } from './coaching.mapper.js';
 import { CoachingResponseDto, RegisterCoachingDto } from './dto/coaching.dto.js';
 import { createCoachingCreatedEvent } from './coaching.events.js';
+import { otpService } from '../../common/security/otp.service.js';
 
 export class CoachingService {
   public constructor(
@@ -66,6 +67,9 @@ export class CoachingService {
         correlationId,
       ),
     );
+
+    // 5. Generate developer signup verification OTP for terminal visibility
+    await otpService.generateOtp(dto.ownerEmail, 'SIGNUP');
 
     return responseDto;
   }

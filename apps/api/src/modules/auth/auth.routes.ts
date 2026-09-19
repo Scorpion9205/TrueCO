@@ -9,6 +9,12 @@ export function createAuthRoutes(controller: AuthController): Router {
   router.post('/refresh', controller.refresh);
   router.post('/logout', controller.logout);
   router.post('/logout-all', authenticateMiddleware, controller.logoutAllDevices);
+  router.get('/me', authenticateMiddleware, controller.getMe);
+  router.post('/forgot-password', controller.forgotPassword);
+  router.post('/reset-password', controller.resetPassword);
+  router.post('/verify-email', controller.verifyEmail);
+  router.post('/send-otp', controller.sendOtp);
+  router.post('/verify-otp', controller.verifyOtp);
 
   return router;
 }

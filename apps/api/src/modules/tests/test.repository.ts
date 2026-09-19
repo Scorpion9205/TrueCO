@@ -16,6 +16,7 @@ export interface ITestRepository {
   create(input: CreateTestInput): Promise<any>;
   findById(id: string): Promise<any | null>;
   findByBatch(batchId: string): Promise<any[]>;
+  findByStudent(studentId: string): Promise<any[]>;
   upsertMarks(testId: string, coachingId: string, entries: StudentMarkEntryDto[]): Promise<any>;
 }
 
@@ -64,6 +65,17 @@ export class PrismaTestRepository implements ITestRepository {
         },
       },
       orderBy: { testDate: 'desc' },
+    });
+  }
+
+  public async findByStudent(studentId: string): Promise<any[]> {
+    const rawPrisma = this.prisma as any;
+    return rawPrisma.testResult.findMany({
+      where: { studentId, deletedAt: null },
+      include: {
+        test: true,
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

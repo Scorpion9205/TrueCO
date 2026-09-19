@@ -6,6 +6,7 @@ import { envConfig } from './config/env.config.js';
 import { logger } from './common/logger/logger.service.js';
 import { tenantContextMiddleware } from './common/middleware/tenant-context.middleware.js';
 import { errorHandlerMiddleware } from './common/middleware/error-handler.middleware.js';
+import { metricsMiddleware, getMetricsHandler } from './common/metrics/metrics.service.js';
 import { queueRegistry } from './queues/queue.registry.js';
 import { getPrismaClient } from './database/prisma/tenant-prisma.extension.js';
 import { AuthModule } from './modules/auth/auth.module.js';
@@ -33,6 +34,7 @@ import { ImportModule } from './modules/import/import.module.js';
 import { WhatsAppAssistantModule } from './modules/whatsapp-assistant/whatsapp-assistant.module.js';
 import { RiskEngineModule } from './modules/risk-engine/risk-engine.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
+import { StorageModule } from './modules/storage/storage.module.js';
 import { workerRegistry } from './workers/worker.registry.js';
 
 export function createApp(): Express {
@@ -46,11 +48,22 @@ export function createApp(): Express {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: '10mb' }));
+  app.use(
+    express.json({
+      limit: '10mb',
+      verify: (req: any, _res, buf) => {
+        req.rawBody = buf;
+      },
+    }),
+  );
   app.use(express.urlencoded({ extended: true }));
 
   // Request Context & Multi-Tenancy
   app.use(tenantContextMiddleware);
+
+  // Prometheus Metrics Collection
+  app.use(metricsMiddleware);
+  app.get('/metrics', getMetricsHandler);
 
   // Health Checks
   app.get('/health/live', (_req: Request, res: Response) => {
@@ -99,6 +112,10 @@ export function createApp(): Express {
     });
   });
 
+  // Storage Module (Attachments, uploads & receipts)
+  const storageModule = StorageModule.init();
+  app.use('/api/v1/storage', storageModule.router);
+
   // Domain Module Routes (Phase 1: Identity, Tenancy & Security)
   const authModule = AuthModule.init();
   const rbacModule = RbacModule.init();
@@ -125,14 +142,20 @@ export function createApp(): Express {
   app.use('/api/v1/tests', testModule.router);
   app.use('/api/v1/homework', homeworkModule.router);
 
+  // Domain Module Routes (Phase 6: Smart WhatsApp Assistant & Student Risk Engine)
+  const whatsappAssistantModule = WhatsAppAssistantModule.init();
+  const riskEngineModule = RiskEngineModule.init();
+
   // Domain Module Routes (Phase 3: Notifications, Timeline & Audit)
-  const notificationModule = NotificationModule.init();
+  const notificationModule = NotificationModule.init({ assistantService: whatsappAssistantModule.service });
   const timelineModule = TimelineModule.init();
   const auditModule = AuditModule.init();
 
   app.use('/api/v1/notifications', notificationModule.router);
   app.use('/api/v1/timeline', timelineModule.router);
   app.use('/api/v1/audit', auditModule.router);
+  app.use('/api/v1/whatsapp-assistant', whatsappAssistantModule.router);
+  app.use('/api/v1/risk-engine', riskEngineModule.router);
 
   // Domain Module Routes (Phase 4: Fees, Salary, Expenses & Billing)
   const feeModule = FeeModule.init();
@@ -158,13 +181,6 @@ export function createApp(): Express {
   app.use('/api/v1/dashboard', dashboardModule.router);
   app.use('/api/v1/import', importModule.router);
 
-  // Domain Module Routes (Phase 6: Smart WhatsApp Assistant & Student Risk Engine)
-  const whatsappAssistantModule = WhatsAppAssistantModule.init();
-  const riskEngineModule = RiskEngineModule.init();
-
-  app.use('/api/v1/whatsapp-assistant', whatsappAssistantModule.router);
-  app.use('/api/v1/risk-engine', riskEngineModule.router);
-
   // Domain Module Routes (Phase 7: AI Service Layer - Premium)
   const aiModule = AiModule.init();
   app.use('/api/v1/ai', aiModule.router);
@@ -181,7 +197,7 @@ async function startServer(): Promise<void> {
 
   // Start background queue workers in non-test environments
   if (envConfig.get('NODE_ENV') !== 'test') {
-    workerRegistry.startAll();
+    await workerRegistry.startAll();
   }
 
   const server = app.listen(port, () => {

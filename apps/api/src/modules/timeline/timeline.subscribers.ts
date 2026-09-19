@@ -3,7 +3,8 @@ import { TimelineService } from './timeline.service.js';
 import { STUDENT_EVENTS, StudentCreatedPayload } from '../students/student.events.js';
 import { ATTENDANCE_EVENTS, AttendanceMarkedPayload } from '../attendance/attendance.events.js';
 import { TEST_EVENTS, TestResultReadyPayload } from '../tests/test.events.js';
-import { BATCH_EVENTS, StudentEnrolledInBatchPayload } from '../batches/batch.events.js';
+import { BATCH_EVENTS, StudentEnrolledInBatchPayload, StudentTransferredBatchPayload } from '../batches/batch.events.js';
+import { FEE_EVENTS, FeePaidPayload } from '../fees/fee.events.js';
 import { DomainEvent } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
 
@@ -121,6 +122,61 @@ export class TimelineSubscribers {
           );
         } catch (err) {
           logger.error('[TimelineSubscribers] Error recording BATCH_ASSIGNED timeline entry:', err);
+        }
+      },
+    );
+
+    // 4b. Student Transferred to Another Batch
+    eventBus.subscribe(
+      BATCH_EVENTS.STUDENT_TRANSFERRED_BATCH,
+      async (event: DomainEvent<StudentTransferredBatchPayload>) => {
+        try {
+          await timelineService.recordEntry(
+            {
+              studentId: event.payload.studentId,
+              eventType: 'BATCH_TRANSFERRED',
+              summary: `Transferred from batch ${event.payload.fromBatchId} to batch ${event.payload.toBatchId}${event.payload.reason ? ` (${event.payload.reason})` : ''}`,
+              referenceId: event.payload.toBatchId,
+              metadata: {
+                fromBatchId: event.payload.fromBatchId,
+                toBatchId: event.payload.toBatchId,
+                reason: event.payload.reason,
+              },
+              occurredAt: new Date(event.payload.transferredAt),
+            },
+            event.payload.coachingId,
+            event.metadata?.userId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error('[TimelineSubscribers] Error recording BATCH_TRANSFERRED timeline entry:', err);
+        }
+      },
+    );
+
+    // 5. Fee Paid
+    eventBus.subscribe(
+      FEE_EVENTS.FEE_PAID,
+      async (event: DomainEvent<FeePaidPayload>) => {
+        try {
+          await timelineService.recordEntry(
+            {
+              studentId: event.payload.studentId,
+              eventType: 'FEE_PAID',
+              summary: `Paid ₹${event.payload.amount} (Receipt #${event.payload.receiptNumber})`,
+              referenceId: event.payload.installmentId,
+              metadata: {
+                amount: event.payload.amount,
+                receiptNumber: event.payload.receiptNumber,
+                remainingBalance: event.payload.remainingBalance,
+              },
+            },
+            event.payload.coachingId,
+            event.metadata?.userId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error('[TimelineSubscribers] Error recording FEE_PAID timeline entry:', err);
         }
       },
     );

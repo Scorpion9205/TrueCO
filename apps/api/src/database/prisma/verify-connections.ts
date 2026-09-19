@@ -14,7 +14,7 @@ async function testPrismaAndDatabase(): Promise<CheckResult> {
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: 'postgresql://trueco_user:trueco_password@localhost:5433/trueco_db?schema=public',
+        url: process.env.DATABASE_URL || 'postgresql://trueco_user:trueco_password@localhost:5432/trueco_db?schema=public',
       },
     },
   });
