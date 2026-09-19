@@ -11,12 +11,24 @@ import {
   createAssistantRepliedEvent,
   createInboundMessageReceivedEvent,
 } from './whatsapp-assistant.events.js';
+import { NlpIntentClassifier } from './nlp/nlp-intent-classifier.js';
+import { KnowledgeBaseService } from '../ai/rag/knowledge-base.service.js';
+import { AiService } from '../ai/ai.service.js';
+import { buildWhatsAppRagSystemPrompt } from './prompts/whatsapp-rag-system.prompt.js';
+import { logger } from '../../common/logger/logger.service.js';
 
 export class WhatsAppAssistantService {
+  private readonly intentClassifier: NlpIntentClassifier;
+
   public constructor(
     private readonly repository: IWhatsAppAssistantRepository,
     private readonly eventBus: IEventBus,
-  ) {}
+    private readonly knowledgeBaseService?: KnowledgeBaseService,
+    private readonly aiService?: AiService,
+    intentClassifier?: NlpIntentClassifier,
+  ) {
+    this.intentClassifier = intentClassifier || new NlpIntentClassifier();
+  }
 
   public async processInboundMessage(
     dto: InboundWhatsAppMessageDto,
@@ -190,6 +202,38 @@ export class WhatsAppAssistantService {
         break;
       }
 
+      case 'RAG_KNOWLEDGE': {
+        if (this.knowledgeBaseService) {
+          try {
+            const chunks = await this.knowledgeBaseService.searchKnowledge(dto.body, coachingId, 3, 0.18);
+            if (chunks.length > 0 && this.aiService) {
+              const contextTexts = chunks.map((c) => c.content);
+              const systemPrompt = buildWhatsAppRagSystemPrompt('TrueCO Coaching Institute', contextTexts);
+              const aiCompletion = await this.aiService.generateCompletion(
+                {
+                  prompt: dto.body,
+                  systemPrompt,
+                  maxTokens: 250,
+                  feature: 'whatsapp.rag_assistant',
+                },
+                coachingId,
+              );
+              replyText = aiCompletion.content.trim();
+            } else {
+              replyText =
+                'ℹ️ Mujhe is baare me poori jankari nahi mil pa rahi hai. Kripya hamare coaching office se sampark karein.';
+            }
+          } catch (err) {
+            logger.error('[WhatsAppAssistantService] Error in RAG processing:', err);
+            replyText =
+              'ℹ️ Hum aapka prashna samajh gaye hain, kintu abhi jankari prapt karne me asuvidha ho rahi hai. Kripya front office se sampark karein.';
+          }
+        } else {
+          replyText = 'ℹ️ Kripya hamare coaching office se sampark karein.';
+        }
+        break;
+      }
+
       case 'HELP':
       default: {
         replyText =
@@ -200,6 +244,7 @@ export class WhatsAppAssistantService {
           `• *marks* - View latest test score\n` +
           `• *homework* - See current assignments\n` +
           `• *notices* - Latest coaching notices\n` +
+          `• Or ask any questions about batch timings, syllabus, or rules!\n` +
           `• *help* - Show this menu`;
         break;
       }
@@ -229,27 +274,6 @@ export class WhatsAppAssistantService {
   }
 
   public classifyIntent(message: string): AssistantIntent {
-    const text = message.toLowerCase();
-
-    if (/\b(fee|fees|dues|balance|receipt|payment|installment)\b/.test(text)) {
-      return 'FEES';
-    }
-    if (/\b(attendance|present|absent|attendance%|classes)\b/.test(text)) {
-      return 'ATTENDANCE';
-    }
-    if (/\b(result|results|marks|score|test|exam)\b/.test(text)) {
-      return 'RESULTS';
-    }
-    if (/\b(homework|hw|assignment|assignments)\b/.test(text)) {
-      return 'HOMEWORK';
-    }
-    if (/\b(notice|notices|announcement|holiday|holidays)\b/.test(text)) {
-      return 'NOTICES';
-    }
-    if (/\b(help|menu|start|hi|hello|namaste)\b/.test(text)) {
-      return 'HELP';
-    }
-
-    return 'HELP';
+    return this.intentClassifier.classify(message);
   }
 }

@@ -4,6 +4,7 @@ export type AssistantIntent =
   | 'RESULTS'
   | 'HOMEWORK'
   | 'NOTICES'
+  | 'RAG_KNOWLEDGE'
   | 'HELP'
   | 'UNKNOWN';
 
