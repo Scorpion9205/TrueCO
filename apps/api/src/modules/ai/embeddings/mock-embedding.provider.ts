@@ -20,22 +20,27 @@ export class MockEmbeddingProvider implements IEmbeddingProvider {
   }
 
   private createDeterministicVector(text: string): number[] {
-    const vector = new Array<number>(this.dimension);
-    let hash = 0;
+    const vector = new Array<number>(this.dimension).fill(0);
+    const words = text.toLowerCase().match(/\b\w+\b/g) || [text];
 
-    for (let i = 0; i < text.length; i++) {
-      hash = (hash << 5) - hash + text.charCodeAt(i);
-      hash |= 0;
+    for (const word of words) {
+      let hash = 0;
+      for (let i = 0; i < word.length; i++) {
+        hash = (hash << 5) - hash + word.charCodeAt(i);
+        hash |= 0;
+      }
+      const seed = Math.abs(hash);
+      for (let j = 0; j < 16; j++) {
+        const idx = (seed + j * 97) % this.dimension;
+        vector[idx] += 1.0;
+      }
     }
 
     let sumSquares = 0;
     for (let i = 0; i < this.dimension; i++) {
-      const val = Math.sin((hash + 1) * (i + 1));
-      vector[i] = val;
-      sumSquares += val * val;
+      sumSquares += vector[i] * vector[i];
     }
 
-    // Normalize to unit length (Euclidean norm = 1.0) so dot product equals cosine similarity
     const norm = Math.sqrt(sumSquares) || 1.0;
     for (let i = 0; i < this.dimension; i++) {
       vector[i] = Number((vector[i] / norm).toFixed(6));
