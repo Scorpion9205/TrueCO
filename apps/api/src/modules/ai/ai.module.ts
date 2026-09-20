@@ -9,6 +9,10 @@ import { createAiRouter } from './ai.routes.js';
 import { AiSubscriber } from './ai.subscribers.js';
 import { AiJobProducer } from './ai.jobs.js';
 import { AiCron } from './ai.cron.js';
+import { PrismaKnowledgeBaseRepository } from './rag/knowledge-base.repository.js';
+import { EmbeddingProviderFactory } from './embeddings/embedding-provider.factory.js';
+import { KnowledgeBaseService } from './rag/knowledge-base.service.js';
+import { KnowledgeSyncSubscriber } from './rag/knowledge-sync.subscriber.js';
 
 export class AiModule {
   public constructor(
@@ -17,6 +21,8 @@ export class AiModule {
     public readonly subscriber: AiSubscriber,
     public readonly jobProducer: AiJobProducer,
     public readonly cron: AiCron,
+    public readonly knowledgeBaseService: KnowledgeBaseService,
+    public readonly knowledgeSyncSubscriber: KnowledgeSyncSubscriber,
   ) {}
 
   public static init(): AiModule {
@@ -30,10 +36,26 @@ export class AiModule {
     const subscriber = new AiSubscriber(eventBus, service);
     subscriber.register();
 
+    // RAG Knowledge Base & Event-Driven Auto-Sync
+    const kbRepository = new PrismaKnowledgeBaseRepository();
+    const embeddingProvider = EmbeddingProviderFactory.getInstance().getProvider();
+    const knowledgeBaseService = new KnowledgeBaseService(kbRepository, embeddingProvider, eventBus);
+
+    const knowledgeSyncSubscriber = new KnowledgeSyncSubscriber(knowledgeBaseService, eventBus);
+    knowledgeSyncSubscriber.register();
+
     const jobProducer = new AiJobProducer();
     const cron = new AiCron();
     cron.register();
 
-    return new AiModule(router, service, subscriber, jobProducer, cron);
+    return new AiModule(
+      router,
+      service,
+      subscriber,
+      jobProducer,
+      cron,
+      knowledgeBaseService,
+      knowledgeSyncSubscriber,
+    );
   }
 }

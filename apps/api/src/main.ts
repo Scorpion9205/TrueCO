@@ -142,8 +142,14 @@ export function createApp(): Express {
   app.use('/api/v1/tests', testModule.router);
   app.use('/api/v1/homework', homeworkModule.router);
 
+  // Domain Module Routes (Phase 7: AI Service Layer & pgvector RAG Knowledge Base)
+  const aiModule = AiModule.init();
+
   // Domain Module Routes (Phase 6: Smart WhatsApp Assistant & Student Risk Engine)
-  const whatsappAssistantModule = WhatsAppAssistantModule.init();
+  const whatsappAssistantModule = WhatsAppAssistantModule.init({
+    knowledgeBaseService: aiModule.knowledgeBaseService,
+    aiService: aiModule.service,
+  });
   const riskEngineModule = RiskEngineModule.init();
 
   // Domain Module Routes (Phase 3: Notifications, Timeline & Audit)
@@ -156,6 +162,7 @@ export function createApp(): Express {
   app.use('/api/v1/audit', auditModule.router);
   app.use('/api/v1/whatsapp-assistant', whatsappAssistantModule.router);
   app.use('/api/v1/risk-engine', riskEngineModule.router);
+  app.use('/api/v1/ai', aiModule.router);
 
   // Domain Module Routes (Phase 4: Fees, Salary, Expenses & Billing)
   const feeModule = FeeModule.init();
@@ -180,10 +187,6 @@ export function createApp(): Express {
   app.use('/api/v1/reports', reportModule.router);
   app.use('/api/v1/dashboard', dashboardModule.router);
   app.use('/api/v1/import', importModule.router);
-
-  // Domain Module Routes (Phase 7: AI Service Layer - Premium)
-  const aiModule = AiModule.init();
-  app.use('/api/v1/ai', aiModule.router);
 
   // Global Error Handler (must be last)
   app.use(errorHandlerMiddleware);
