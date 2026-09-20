@@ -150,6 +150,7 @@ export function createApp(): Express {
     knowledgeBaseService: aiModule.knowledgeBaseService,
     aiService: aiModule.service,
   });
+  workerRegistry.setWhatsAppAssistantService(whatsappAssistantModule.service);
   const riskEngineModule = RiskEngineModule.init();
 
   // Domain Module Routes (Phase 3: Notifications, Timeline & Audit)
