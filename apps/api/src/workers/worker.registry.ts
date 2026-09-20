@@ -1,4 +1,5 @@
 import { WhatsAppWorker } from './whatsapp.worker.js';
+import { InboundWhatsAppWorker } from './inbound-whatsapp.worker.js';
 import { EmailWorker } from './email.worker.js';
 import { AiWorker } from './ai.worker.js';
 import { ReminderWorker } from './reminder.worker.js';
@@ -8,10 +9,12 @@ import { ImportWorker } from './import.worker.js';
 import { AnalyticsWorker } from './analytics.worker.js';
 import { CleanupWorker } from './cleanup.worker.js';
 import { logger } from '../common/logger/logger.service.js';
+import { WhatsAppAssistantService } from '../modules/whatsapp-assistant/whatsapp-assistant.service.js';
 
 export class WorkerRegistry {
   private static instance: WorkerRegistry;
   private readonly whatsAppWorker: WhatsAppWorker;
+  private readonly inboundWhatsAppWorker: InboundWhatsAppWorker;
   private readonly emailWorker: EmailWorker;
   private readonly aiWorker: AiWorker;
   private readonly reminderWorker: ReminderWorker;
@@ -24,6 +27,7 @@ export class WorkerRegistry {
 
   private constructor() {
     this.whatsAppWorker = new WhatsAppWorker();
+    this.inboundWhatsAppWorker = new InboundWhatsAppWorker();
     this.emailWorker = new EmailWorker();
     this.aiWorker = new AiWorker();
     this.reminderWorker = new ReminderWorker();
@@ -41,11 +45,16 @@ export class WorkerRegistry {
     return WorkerRegistry.instance;
   }
 
+  public setWhatsAppAssistantService(service: WhatsAppAssistantService): void {
+    this.inboundWhatsAppWorker.setAssistantService(service);
+  }
+
   public async startAll(): Promise<void> {
     if (this.isRunning) return;
 
     logger.info('[WorkerRegistry] Initializing BullMQ background workers...');
     this.whatsAppWorker.start();
+    this.inboundWhatsAppWorker.start();
     this.emailWorker.start();
     this.aiWorker.start();
     await this.reminderWorker.start();
@@ -55,7 +64,7 @@ export class WorkerRegistry {
     this.analyticsWorker.start();
     await this.cleanupWorker.start();
     this.isRunning = true;
-    logger.info('[WorkerRegistry] All 9 BullMQ background workers started successfully');
+    logger.info('[WorkerRegistry] All 10 BullMQ background workers started successfully');
   }
 
   public async closeAll(): Promise<void> {
@@ -64,6 +73,7 @@ export class WorkerRegistry {
     logger.info('[WorkerRegistry] Gracefully stopping BullMQ workers...');
     await Promise.all([
       this.whatsAppWorker.close(),
+      this.inboundWhatsAppWorker.close(),
       this.emailWorker.close(),
       this.aiWorker.close(),
       this.reminderWorker.close(),
@@ -74,7 +84,7 @@ export class WorkerRegistry {
       this.cleanupWorker.close(),
     ]);
     this.isRunning = false;
-    logger.info('[WorkerRegistry] All 9 workers stopped');
+    logger.info('[WorkerRegistry] All 10 workers stopped');
   }
 }
 

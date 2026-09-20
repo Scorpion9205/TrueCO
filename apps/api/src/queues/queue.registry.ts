@@ -5,6 +5,7 @@ import { logger } from '../common/logger/logger.service.js';
 
 export const QUEUE_NAMES = {
   WHATSAPP: 'whatsapp-queue',
+  INBOUND_WHATSAPP: 'inbound-whatsapp-queue',
   EMAIL: 'email-queue',
   REMINDER: 'reminder-queue',
   REPORT: 'report-queue',

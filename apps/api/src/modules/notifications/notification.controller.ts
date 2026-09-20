@@ -6,6 +6,7 @@ import { RequestContextService } from '../../common/services/request-context.ser
 import { envConfig } from '../../config/env.config.js';
 import { NotificationStatus } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
+import { queueRegistry, QUEUE_NAMES } from '../../queues/queue.registry.js';
 
 import crypto from 'node:crypto';
 import { WhatsAppAssistantService } from '../whatsapp-assistant/whatsapp-assistant.service.js';
@@ -86,19 +87,41 @@ export class NotificationController {
               }
             }
 
-            // 2. Process Incoming Messages from Parents/Students
+            // 2. Process Incoming Messages from Parents/Students (Asynchronous Queue Ingestion)
             const messages = value?.messages || [];
             for (const msg of messages) {
-              if (msg.type === 'text' && msg.text?.body && this.assistantService) {
+              if (msg.type === 'text' && msg.text?.body) {
                 try {
-                  await this.assistantService.processInboundMessage({
-                    messageId: msg.id,
-                    from: msg.from,
-                    body: msg.text.body,
-                    timestamp: msg.timestamp ? Number(msg.timestamp) : Date.now(),
+                  const queue = queueRegistry.getQueue(QUEUE_NAMES.INBOUND_WHATSAPP);
+                  await queue.add(
+                    'process-inbound-whatsapp',
+                    {
+                      messageId: msg.id,
+                      from: msg.from,
+                      body: msg.text.body,
+                      timestamp: msg.timestamp ? Number(msg.timestamp) : Date.now(),
+                    },
+                    {
+                      jobId: `inbound.${msg.id}`, // Deduplication: exactly-once processing
+                      attempts: 3,
+                      backoff: { type: 'exponential', delay: 2000 },
+                      removeOnComplete: true,
+                    },
+                  );
+                  logger.info(`[NotificationController] Enqueued inbound WhatsApp message ${msg.id} to BullMQ`);
+                } catch (queueErr) {
+                  // Fallback: If Redis is unavailable (e.g. unit test or offline mode), process synchronously
+                  logger.warn('[NotificationController] Failed to enqueue to BullMQ, falling back to direct processing', {
+                    error: queueErr instanceof Error ? queueErr.message : String(queueErr),
                   });
-                } catch (err) {
-                  logger.error(`[NotificationController] Error processing inbound WhatsApp message ${msg.id}:`, err);
+                  if (this.assistantService) {
+                    await this.assistantService.processInboundMessage({
+                      messageId: msg.id,
+                      from: msg.from,
+                      body: msg.text.body,
+                      timestamp: msg.timestamp ? Number(msg.timestamp) : Date.now(),
+                    });
+                  }
                 }
               }
             }
