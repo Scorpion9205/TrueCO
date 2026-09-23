@@ -3,7 +3,6 @@ import {
   GenerateStudentNarrativeDto,
   GenerateParentReportCardDto,
   GenerateTeacherInsightDto,
-  AddAiCreditsDto,
   AiWalletResponseDto,
   AiUsageLogResponseDto,
   AiCompletionResponseDto,
@@ -14,7 +13,6 @@ import { IPromptCache } from './cache/redis-prompt.cache.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AiMapper } from './ai.mapper.js';
 import {
-  createAiCreditsAddedEvent,
   createAiCreditsDeductedEvent,
   createAiGenerationCompletedEvent,
   createAiGenerationFailedEvent,
@@ -50,33 +48,6 @@ export class AiService {
     return AiMapper.toWalletDto(wallet);
   }
 
-  public async addCredits(
-    coachingId: string,
-    dto: AddAiCreditsDto,
-    adminUserId?: string,
-    correlationId: string = crypto.randomUUID(),
-  ): Promise<AiWalletResponseDto> {
-    const wallet = await this.repository.createOrGetWallet(coachingId);
-    const updated = await this.repository.addCredits(wallet.id, dto.credits);
-
-    await this.eventBus.publish(
-      createAiCreditsAddedEvent(
-        {
-          coachingId,
-          walletId: wallet.id,
-          creditsAdded: dto.credits,
-          newBalance: updated.balance,
-          reason: dto.reason,
-          allocatedBy: adminUserId,
-        },
-        correlationId,
-        adminUserId,
-      ),
-    );
-
-    return AiMapper.toWalletDto(updated);
-  }
-
   public async getUsageLogs(
     coachingId: string,
     limit: number = 20,
@@ -105,13 +76,9 @@ export class AiService {
     const provider = this.providerFactory.getProvider(dto.provider);
     const providerType = provider.providerType;
 
-    // 1. Get or create wallet & pre-check balance
     const wallet = await this.repository.createOrGetWallet(coachingId);
-    if (wallet.balance < creditsCost) {
-      throw new InsufficientAiCreditsError(wallet.balance, creditsCost);
-    }
 
-    // 2. Compute prompt input hash & check cache
+    // 1. Compute prompt input hash & check cache (cache hits are free)
     const inputHash = this.cache.computeHash({
       feature,
       prompt: dto.prompt,
@@ -135,31 +102,40 @@ export class AiService {
       });
     }
 
-    // 3. Cache miss: execute model completion
-    try {
-      const completionResult = await provider.generateCompletion({
-        prompt: dto.prompt,
-        systemPrompt: dto.systemPrompt,
-        model: dto.model,
-        temperature: dto.temperature,
-        maxTokens: dto.maxTokens,
-      });
+    // 2. Reserve the credits before paying for a provider call. A check-then-deduct would let
+    //    concurrent requests all pass the check and overdraw the wallet.
+    const updatedWallet = await this.repository.reserveCredits(wallet.id, creditsCost);
+    if (!updatedWallet) {
+      throw new InsufficientAiCreditsError(wallet.balance, creditsCost);
+    }
 
-      // 4. Atomically deduct credits & log usage
-      const { wallet: updatedWallet } = await this.repository.deductCredits(
-        wallet.id,
-        creditsCost,
-        {
-          walletId: wallet.id,
-          feature,
-          provider: completionResult.provider,
-          model: completionResult.model,
-          promptTokens: completionResult.promptTokens,
-          completionTokens: completionResult.completionTokens,
-          creditsDeducted: creditsCost,
-          inputHash,
-        },
-      );
+    // 3. Execute model completion; the reservation is refunded if it fails
+    try {
+      let completionResult;
+      try {
+        completionResult = await provider.generateCompletion({
+          prompt: dto.prompt,
+          systemPrompt: dto.systemPrompt,
+          model: dto.model,
+          temperature: dto.temperature,
+          maxTokens: dto.maxTokens,
+        });
+      } catch (providerErr) {
+        await this.repository.refundCredits(wallet.id, creditsCost);
+        throw providerErr;
+      }
+
+      // 4. Record usage against the reserved credits
+      await this.repository.logUsage({
+        walletId: wallet.id,
+        feature,
+        provider: completionResult.provider,
+        model: completionResult.model,
+        promptTokens: completionResult.promptTokens,
+        completionTokens: completionResult.completionTokens,
+        creditsDeducted: creditsCost,
+        inputHash,
+      });
 
       // 5. Store in Redis prompt cache (24h TTL)
       await this.cache.set(coachingId, feature, inputHash, completionResult.content, 86400);

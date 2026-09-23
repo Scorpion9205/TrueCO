@@ -24,7 +24,8 @@ export interface ISalaryRepository {
     coachingId: string,
     filter?: { teacherId?: string; month?: number; year?: number; status?: string },
   ): Promise<any[]>;
-  recordPayment(id: string, data: RecordSalaryPaymentInput): Promise<any>;
+  /** Marks an unpaid salary paid; returns null if it was already paid (e.g. a concurrent request). */
+  recordPayment(id: string, data: RecordSalaryPaymentInput): Promise<any | null>;
   getTeacherMonthlySalary(teacherId: string): Promise<number | null>;
 }
 
@@ -79,10 +80,11 @@ export class PrismaSalaryRepository implements ISalaryRepository {
     });
   }
 
-  public async recordPayment(id: string, data: RecordSalaryPaymentInput): Promise<any> {
+  public async recordPayment(id: string, data: RecordSalaryPaymentInput): Promise<any | null> {
     const rawPrisma = this.prisma as any;
-    return rawPrisma.salary.update({
-      where: { id },
+    // Conditional update: of two concurrent "pay" requests only one flips the status
+    const { count } = await rawPrisma.salary.updateMany({
+      where: { id, status: { not: 'PAID' } },
       data: {
         status: 'PAID',
         paymentMethod: data.paymentMethod,
@@ -90,6 +92,7 @@ export class PrismaSalaryRepository implements ISalaryRepository {
         ...(data.remarks && { remarks: data.remarks }),
       },
     });
+    return count === 0 ? null : rawPrisma.salary.findUnique({ where: { id } });
   }
 
   public async getTeacherMonthlySalary(teacherId: string): Promise<number | null> {

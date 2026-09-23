@@ -48,6 +48,7 @@ export const TENANT_SCOPED_MODELS = new Set<string>([
   'Notice',
   'CoachingKnowledgeBase',
   'CoachingKnowledgeChunk',
+  'BillingPayment',
 ]);
 
 // Models that support soft deletion (have deletedAt column)

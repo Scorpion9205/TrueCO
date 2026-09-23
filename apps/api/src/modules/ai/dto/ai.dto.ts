@@ -31,11 +31,6 @@ export interface GenerateTeacherInsightDto {
   readonly provider?: AiProviderType;
 }
 
-export interface AddAiCreditsDto {
-  readonly credits: number;
-  readonly reason?: string;
-}
-
 export interface AiWalletResponseDto {
   readonly id: string;
   readonly coachingId: string;

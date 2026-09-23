@@ -151,6 +151,10 @@ model Coaching {
   creditWallet    AiCreditWallet?
   notices         Notice[]
   knowledgeBases  CoachingKnowledgeBase[]
+  feePlans        FeePlan[]
+  salaries        Salary[]
+  expenses        Expense[]
+  billingPayments BillingPayment[]
 
   @@map("coachings")
 }
@@ -404,6 +408,7 @@ model Teacher {
   teacherBatches  TeacherBatch[]
 
   @@index([coachingId, phone])
+  salaries        Salary[]
   @@map("teachers")
 }
 
@@ -591,6 +596,7 @@ model FeePlan {
   createdBy       String?          @map("created_by") @db.Uuid
   updatedBy       String?          @map("updated_by") @db.Uuid
 
+  coaching        Coaching         @relation(fields: [coachingId], references: [id], onDelete: Restrict)
   student         Student          @relation(fields: [studentId], references: [id], onDelete: Restrict)
   installments    FeeInstallment[]
 
@@ -607,6 +613,7 @@ model FeeInstallment {
   paidAmount      Decimal              @default(0) @map("paid_amount") @db.Decimal(12, 2)
   dueDate         DateTime             @map("due_date") @db.Date
   status          FeeInstallmentStatus @default(PENDING)
+  remarks         String?              @db.Text
   createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz()
   deletedAt       DateTime?            @map("deleted_at") @db.Timestamptz()
@@ -625,7 +632,7 @@ model FeeTransaction {
   amount          Decimal              @db.Decimal(12, 2)
   paymentMethod   PaymentMethod    @default(CASH) @map("payment_method")
   transactionRef  String?          @map("transaction_ref") @db.VarChar(100)
-  receiptNumber   String           @unique @map("receipt_number") @db.VarChar(100)
+  receiptNumber   String           @map("receipt_number") @db.VarChar(100)
   paidAt          DateTime         @default(now()) @map("paid_at") @db.Timestamptz()
   remarks         String?          @db.Text
   createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
@@ -636,6 +643,10 @@ model FeeTransaction {
 
   installment     FeeInstallment   @relation(fields: [installmentId], references: [id], onDelete: Restrict)
 
+  @@unique([coachingId, receiptNumber])
+  // A gateway payment id (Razorpay pay_...) can be recorded once per coaching; webhook retries
+  // and the paired payment.captured / payment_link.paid events therefore collapse to one row.
+  @@unique([coachingId, transactionRef])
   @@index([coachingId, paidAt])
   @@map("fee_transactions")
 }
@@ -655,6 +666,10 @@ model Salary {
   updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
   deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz()
 
+  coaching        Coaching         @relation(fields: [coachingId], references: [id], onDelete: Restrict)
+  teacher         Teacher          @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+
+  @@unique([teacherId, year, month])
   @@index([coachingId, teacherId, year, month])
   @@map("salaries")
 }
@@ -674,6 +689,8 @@ model Expense {
   deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz()
   createdBy       String?          @map("created_by") @db.Uuid
   updatedBy       String?          @map("updated_by") @db.Uuid
+
+  coaching        Coaching         @relation(fields: [coachingId], references: [id], onDelete: Restrict)
 
   @@index([coachingId, category, expenseDate])
   @@map("expenses")
@@ -904,4 +921,60 @@ model CoachingKnowledgeChunk {
   @@map("coaching_knowledge_chunks")
 }
 
+// ==========================================
+// 11. Money integrity: numbering and TrueCO billing
+// ==========================================
 
+// Gap-free document counters. scope is a coaching id (fee receipts) or "platform" (TrueCO
+// invoices); series is e.g. "RCT/2026-27". Incremented inside the transaction that issues the
+// document, so a rolled-back payment does not consume a number.
+model DocumentSequence {
+  scope           String           @db.VarChar(64)
+  series          String           @db.VarChar(64)
+  lastValue       Int              @default(0) @map("last_value")
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@id([scope, series])
+  @@map("document_sequences")
+}
+
+enum BillingPaymentType {
+  PLAN_UPGRADE
+  AI_CREDITS
+
+  @@map("billing_payment_type")
+}
+
+enum BillingPaymentStatus {
+  CREATED
+  PAID
+  FAILED
+
+  @@map("billing_payment_status")
+}
+
+// What a coaching bought from TrueCO. Created with the server-computed price when the order is
+// placed; the webhook settles it at most once (CREATED -> PAID) and only for the expected amount.
+model BillingPayment {
+  id               String               @id @default(uuid()) @db.Uuid
+  coachingId       String               @map("coaching_id") @db.Uuid
+  type             BillingPaymentType
+  status           BillingPaymentStatus @default(CREATED)
+  planCode         PlanCode?            @map("plan_code")
+  billingCycle     String?              @map("billing_cycle") @db.VarChar(20)
+  credits          Int?
+  amountPaise      Int                  @map("amount_paise")
+  currency         String               @default("INR") @db.VarChar(10)
+  gatewayOrderId   String               @unique @map("gateway_order_id") @db.VarChar(100)
+  gatewayPaymentId String?              @unique @map("gateway_payment_id") @db.VarChar(100)
+  invoiceNumber    String?              @unique @map("invoice_number") @db.VarChar(50)
+  paidAt           DateTime?            @map("paid_at") @db.Timestamptz()
+  createdBy        String?              @map("created_by") @db.Uuid
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz()
+
+  coaching         Coaching             @relation(fields: [coachingId], references: [id], onDelete: Restrict)
+
+  @@index([coachingId, createdAt])
+  @@map("billing_payments")
+}

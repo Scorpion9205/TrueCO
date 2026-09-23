@@ -1,20 +1,60 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { nextDocumentNumber } from '../../common/money/document-number.js';
+
+export type BillingCycle = 'MONTHLY' | 'YEARLY';
+
+export interface CreateBillingPaymentInput {
+  coachingId: string;
+  type: 'PLAN_UPGRADE' | 'AI_CREDITS';
+  planCode?: PlanCode;
+  billingCycle?: BillingCycle;
+  credits?: number;
+  amountPaise: number;
+  gatewayOrderId: string;
+  createdBy?: string;
+}
+
+export interface SettlePaymentInput {
+  gatewayOrderId: string;
+  gatewayPaymentId: string;
+  amountPaidPaise: number;
+  paidAt: Date;
+}
+
+export type SettlePaymentResult =
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'duplicate'; readonly payment: any }
+  | { readonly kind: 'amount_mismatch'; readonly payment: any }
+  | {
+      readonly kind: 'settled';
+      readonly payment: any;
+      readonly subscription?: any;
+      readonly creditsAdded: number;
+      readonly walletBalance: number;
+    };
 
 export interface IBillingRepository {
   findCurrentSubscription(coachingId: string): Promise<any | null>;
   findPlanByCode(code: PlanCode): Promise<any | null>;
   findAllActivePlans(): Promise<any[]>;
-  updateSubscriptionPlan(
-    coachingId: string,
-    planId: string,
-    status: SubscriptionStatus,
-    currentPeriodEnd: Date,
-  ): Promise<any>;
   findExpiringSubscriptions(threshold: Date): Promise<any[]>;
   updateSubscriptionStatus(id: string, status: SubscriptionStatus): Promise<any>;
   getCreditWallet(coachingId: string): Promise<any | null>;
-  addCredits(coachingId: string, credits: number): Promise<any>;
+  /** Records an order at the server-computed price, before the customer pays. */
+  createPaymentRecord(input: CreateBillingPaymentInput): Promise<any>;
+  /**
+   * Settles a paid order at most once, in one transaction: verifies the amount, marks it paid,
+   * issues the invoice number and applies the plan or credits.
+   */
+  settlePayment(input: SettlePaymentInput): Promise<SettlePaymentResult>;
+}
+
+function periodEnd(from: Date, cycle: BillingCycle): Date {
+  const end = new Date(from);
+  if (cycle === 'MONTHLY') end.setMonth(end.getMonth() + 1);
+  else end.setFullYear(end.getFullYear() + 1);
+  return end;
 }
 
 export class PrismaBillingRepository implements IBillingRepository {
@@ -44,40 +84,17 @@ export class PrismaBillingRepository implements IBillingRepository {
     });
   }
 
-  public async updateSubscriptionPlan(
-    coachingId: string,
-    planId: string,
-    status: SubscriptionStatus,
-    currentPeriodEnd: Date,
-  ): Promise<any> {
-    const rawPrisma = this.prisma as any;
-
-    const currentSub = await rawPrisma.subscription.findFirst({
-      where: { coachingId, isActive: true },
-    });
-
-    if (currentSub) {
-      return rawPrisma.subscription.update({
-        where: { id: currentSub.id },
-        data: {
-          planId,
-          status,
-          currentPeriodEnd,
-        },
-        include: { plan: true },
-      });
-    }
-
-    return null;
-  }
-
   public async findExpiringSubscriptions(threshold: Date): Promise<any[]> {
     const rawPrisma = this.prisma as any;
+    // Trials end at trialEndsAt; paid plans at currentPeriodEnd (a paid plan's trial date is
+    // already in the past, so checking it would expire paying customers).
     return rawPrisma.subscription.findMany({
       where: {
         isActive: true,
-        status: { in: [SubscriptionStatus.TRIALING, SubscriptionStatus.ACTIVE] },
-        trialEndsAt: { lte: threshold },
+        OR: [
+          { status: SubscriptionStatus.TRIALING, trialEndsAt: { lte: threshold } },
+          { status: SubscriptionStatus.ACTIVE, currentPeriodEnd: { lte: threshold } },
+        ],
       },
       include: { plan: true },
     });
@@ -99,19 +116,79 @@ export class PrismaBillingRepository implements IBillingRepository {
     });
   }
 
-  public async addCredits(coachingId: string, credits: number): Promise<any> {
+  public async createPaymentRecord(input: CreateBillingPaymentInput): Promise<any> {
     const rawPrisma = this.prisma as any;
-    return rawPrisma.aiCreditWallet.upsert({
-      where: { coachingId },
-      create: {
-        coachingId,
-        balance: credits,
-        totalAllocated: credits,
-      },
-      update: {
-        balance: { increment: credits },
-        totalAllocated: { increment: credits },
-      },
+    return rawPrisma.billingPayment.create({ data: { ...input } });
+  }
+
+  public async settlePayment(input: SettlePaymentInput): Promise<SettlePaymentResult> {
+    const rawPrisma = this.prisma as any;
+
+    return rawPrisma.$transaction(async (tx: any) => {
+      // Lock the order row so concurrent deliveries of the same webhook settle it once
+      const locked: Array<{ id: string }> = await tx.$queryRaw`
+        SELECT id FROM billing_payments WHERE gateway_order_id = ${input.gatewayOrderId} FOR UPDATE
+      `;
+      if (locked.length === 0) return { kind: 'not_found' } as const;
+
+      const payment = await tx.billingPayment.findUnique({ where: { id: locked[0].id } });
+      if (payment.status !== 'CREATED') return { kind: 'duplicate', payment } as const;
+      if (payment.amountPaise !== input.amountPaidPaise) return { kind: 'amount_mismatch', payment } as const;
+
+      const invoiceNumber = await nextDocumentNumber(tx, 'platform', 'INV', input.paidAt);
+      const settled = await tx.billingPayment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'PAID',
+          gatewayPaymentId: input.gatewayPaymentId,
+          paidAt: input.paidAt,
+          invoiceNumber,
+        },
+      });
+
+      let subscription: any;
+      let creditsAdded = 0;
+
+      if (payment.type === 'PLAN_UPGRADE') {
+        const plan = await tx.plan.findUnique({ where: { code: payment.planCode } });
+        const current = await tx.subscription.findFirst({
+          where: { coachingId: payment.coachingId, isActive: true },
+          orderBy: { createdAt: 'desc' },
+        });
+        // Renewing an active paid period extends it; otherwise the new period starts now
+        const start =
+          current?.status === SubscriptionStatus.ACTIVE && current.currentPeriodEnd > input.paidAt
+            ? current.currentPeriodEnd
+            : input.paidAt;
+        const data = {
+          planId: plan.id,
+          status: SubscriptionStatus.ACTIVE,
+          currentPeriodStart: start,
+          currentPeriodEnd: periodEnd(start, payment.billingCycle as BillingCycle),
+          gracePeriodEndsAt: null,
+        };
+        subscription = current
+          ? await tx.subscription.update({ where: { id: current.id }, data, include: { plan: true } })
+          : await tx.subscription.create({
+              data: { ...data, coachingId: payment.coachingId, trialEndsAt: input.paidAt },
+              include: { plan: true },
+            });
+        creditsAdded = plan.defaultCredits ?? 0;
+      } else {
+        creditsAdded = payment.credits ?? 0;
+      }
+
+      let walletBalance = 0;
+      if (creditsAdded > 0) {
+        const wallet = await tx.aiCreditWallet.upsert({
+          where: { coachingId: payment.coachingId },
+          create: { coachingId: payment.coachingId, balance: creditsAdded, totalAllocated: creditsAdded },
+          update: { balance: { increment: creditsAdded }, totalAllocated: { increment: creditsAdded } },
+        });
+        walletBalance = wallet.balance;
+      }
+
+      return { kind: 'settled', payment: settled, subscription, creditsAdded, walletBalance } as const;
     });
   }
 }

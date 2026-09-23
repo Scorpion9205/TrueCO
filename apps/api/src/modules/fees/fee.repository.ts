@@ -1,5 +1,9 @@
+import { StatusCodes } from 'http-status-codes';
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { AppError } from '../../common/middleware/error-handler.middleware.js';
+import { money, MoneyInput, Money } from '../../common/money/money.js';
+import { nextDocumentNumber } from '../../common/money/document-number.js';
 
 export interface CreateFeePlanInput {
   coachingId: string;
@@ -20,13 +24,23 @@ export interface CreateFeePlanInput {
 export interface RecordPaymentTxInput {
   coachingId: string;
   installmentId: string;
-  amount: number;
+  amount: MoneyInput;
   paymentMethod: PaymentMethod;
+  /** Gateway payment id for online payments; a repeat of it is reported as a duplicate. */
   transactionRef?: string;
-  receiptNumber: string;
   remarks?: string;
   createdBy?: string;
 }
+
+export type RecordPaymentResult =
+  | {
+      readonly kind: 'recorded';
+      readonly transaction: any;
+      readonly installment: any;
+      readonly plan: any;
+      readonly remainingBalance: Money;
+    }
+  | { readonly kind: 'duplicate'; readonly transaction: any };
 
 export interface IFeeRepository {
   createFeePlan(input: CreateFeePlanInput): Promise<any>;
@@ -34,11 +48,13 @@ export interface IFeeRepository {
   findPlansByStudent(studentId: string): Promise<any[]>;
   findInstallmentById(id: string): Promise<any | null>;
   findPendingInstallments(dueBeforeDate: Date): Promise<any[]>;
-  recordPaymentTransaction(
-    input: RecordPaymentTxInput,
-  ): Promise<{ transaction: any; installment: any; plan: any }>;
-  waiveInstallment(installmentId: string, remarks?: string): Promise<any>;
-  generateReceiptNumber(_coachingId: string): Promise<string>;
+  /**
+   * Records a payment atomically: serialises payments on the installment, rejects overpayment,
+   * collapses repeats of the same gateway payment, and issues the next receipt number.
+   */
+  recordPaymentTransaction(input: RecordPaymentTxInput): Promise<RecordPaymentResult>;
+  /** Waives a pending or partly paid installment; returns null if it was paid or waived meanwhile. */
+  waiveInstallment(installmentId: string, remarks?: string): Promise<any | null>;
 }
 
 export class PrismaFeeRepository implements IFeeRepository {
@@ -136,82 +152,107 @@ export class PrismaFeeRepository implements IFeeRepository {
     });
   }
 
-  public async recordPaymentTransaction(
-    input: RecordPaymentTxInput,
-  ): Promise<{ transaction: any; installment: any; plan: any }> {
+  public async recordPaymentTransaction(input: RecordPaymentTxInput): Promise<RecordPaymentResult> {
     const rawPrisma = this.prisma as any;
+    const amount = money(input.amount);
+    if (amount.lessThanOrEqualTo(0)) {
+      throw new AppError('INVALID_AMOUNT', 'Payment amount must be greater than zero', StatusCodes.BAD_REQUEST);
+    }
 
     return rawPrisma.$transaction(async (tx: any) => {
-      // 1. Fetch current installment
+      // 1. Lock the installment: concurrent payments on it now run one after another
+      const locked: Array<{ id: string }> = await tx.$queryRaw`
+        SELECT id FROM fee_installments
+        WHERE id = ${input.installmentId}::uuid AND deleted_at IS NULL
+        FOR UPDATE
+      `;
+      if (locked.length === 0) {
+        throw new AppError('INSTALLMENT_NOT_FOUND', 'Fee installment not found', StatusCodes.NOT_FOUND);
+      }
+
+      // 2. Checked after the lock, so a concurrent delivery of the same gateway payment sees
+      //    the row the first one committed
+      if (input.transactionRef) {
+        const existing = await tx.feeTransaction.findFirst({
+          where: { transactionRef: input.transactionRef },
+        });
+        if (existing) return { kind: 'duplicate', transaction: existing } as const;
+      }
+
       const installment = await tx.feeInstallment.findUnique({
         where: { id: input.installmentId },
         include: { feePlan: true },
       });
+      if (installment.status === FeeInstallmentStatus.PAID) {
+        throw new AppError('INSTALLMENT_ALREADY_PAID', 'This installment is already fully paid', StatusCodes.CONFLICT);
+      }
+      if (installment.status === FeeInstallmentStatus.WAIVED) {
+        throw new AppError('INSTALLMENT_WAIVED', 'Cannot accept payment for a waived installment', StatusCodes.CONFLICT);
+      }
 
-      if (!installment) throw new Error('Fee installment not found');
+      // 3. Exact decimal arithmetic on the locked, current balance
+      const total = money(installment.amount);
+      const alreadyPaid = money(installment.paidAmount);
+      const remaining = total.minus(alreadyPaid);
+      if (amount.greaterThan(remaining)) {
+        throw new AppError(
+          'AMOUNT_EXCEEDS_BALANCE',
+          `Payment amount (${amount.toFixed(2)}) exceeds remaining balance (${remaining.toFixed(2)})`,
+          StatusCodes.BAD_REQUEST,
+        );
+      }
 
-      // 2. Create transaction record
+      // 4. Gap-free receipt number, issued in this transaction
+      const receiptNumber = await nextDocumentNumber(tx, input.coachingId, 'RCT');
+
       const transaction = await tx.feeTransaction.create({
         data: {
           coachingId: input.coachingId,
           installmentId: input.installmentId,
-          amount: input.amount,
+          amount,
           paymentMethod: input.paymentMethod,
           transactionRef: input.transactionRef,
-          receiptNumber: input.receiptNumber,
+          receiptNumber,
           remarks: input.remarks,
           createdBy: input.createdBy,
         },
       });
 
-      // 3. Update installment paid amount and status
-      const currentPaid = Number(installment.paidAmount || 0);
-      const totalCost = Number(installment.amount);
-      const newPaid = currentPaid + input.amount;
-
-      let newStatus: FeeInstallmentStatus;
-      if (newPaid >= totalCost) {
-        newStatus = FeeInstallmentStatus.PAID;
-      } else {
-        newStatus = FeeInstallmentStatus.PARTIAL;
-      }
-
+      const newPaid = alreadyPaid.plus(amount);
       const updatedInstallment = await tx.feeInstallment.update({
         where: { id: input.installmentId },
         data: {
           paidAmount: newPaid,
-          status: newStatus,
+          status: newPaid.greaterThanOrEqualTo(total) ? FeeInstallmentStatus.PAID : FeeInstallmentStatus.PARTIAL,
         },
-        include: {
-          transactions: true,
-        },
+        include: { transactions: true },
       });
 
       return {
+        kind: 'recorded',
         transaction,
         installment: updatedInstallment,
         plan: installment.feePlan,
-      };
+        remainingBalance: total.minus(newPaid),
+      } as const;
     });
   }
 
-  public async waiveInstallment(installmentId: string, remarks?: string): Promise<any> {
+  public async waiveInstallment(installmentId: string, remarks?: string): Promise<any | null> {
     const rawPrisma = this.prisma as any;
-    return rawPrisma.feeInstallment.update({
-      where: { id: installmentId },
-      data: {
-        status: FeeInstallmentStatus.WAIVED,
-        ...(remarks && { remarks }),
+    // Conditional update: loses cleanly to a payment that completed the installment first
+    const { count } = await rawPrisma.feeInstallment.updateMany({
+      where: {
+        id: installmentId,
+        status: { in: [FeeInstallmentStatus.PENDING, FeeInstallmentStatus.PARTIAL] },
       },
-      include: {
-        feePlan: { include: { student: true } },
-      },
+      data: { status: FeeInstallmentStatus.WAIVED, ...(remarks ? { remarks } : {}) },
     });
-  }
+    if (count === 0) return null;
 
-  public async generateReceiptNumber(_coachingId: string): Promise<string> {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `RCP-${dateStr}-${rand}`;
+    return rawPrisma.feeInstallment.findUnique({
+      where: { id: installmentId },
+      include: { feePlan: { include: { student: true } } },
+    });
   }
 }
