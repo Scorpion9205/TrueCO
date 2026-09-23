@@ -28,7 +28,10 @@ export class SubscriptionExpirationScheduler {
     let processedCount = 0;
 
     for (const sub of expiringList) {
-      const trialEndsAt = new Date(sub.trialEndsAt);
+      // Trials end at trialEndsAt; paid plans at the end of the current billing period
+      const trialEndsAt = new Date(
+        sub.status === SubscriptionStatus.TRIALING ? sub.trialEndsAt : sub.currentPeriodEnd,
+      );
       const diffMs = trialEndsAt.getTime() - now.getTime();
       const daysRemaining = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 

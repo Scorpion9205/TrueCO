@@ -62,6 +62,8 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  // Price of one AI credit in paise when bought as a top-up (100 = Rs 1 per credit)
+  AI_CREDIT_PRICE_PAISE: z.coerce.number().int().positive().default(100),
   // Cryptography & Security
   JWT_PRIVATE_KEY: z.string().optional(),
   JWT_PUBLIC_KEY: z.string().optional(),

@@ -24,12 +24,3 @@ export interface SubscriptionResponseDto {
   readonly features: string[];
   readonly aiCreditBalance: number;
 }
-
-export interface UpgradePlanDto {
-  readonly planCode: PlanCode;
-  readonly billingCycle: 'MONTHLY' | 'YEARLY';
-}
-
-export interface PurchaseCreditsDto {
-  readonly credits: number;
-}

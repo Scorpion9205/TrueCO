@@ -18,20 +18,9 @@ export function createBillingRoutes(controller: BillingController): Router {
     controller.getSubscription,
   );
 
-  router.post(
-    '/upgrade',
-    authenticateMiddleware,
-    requirePermission('billing:manage'),
-    controller.upgrade,
-  );
-
-  router.post(
-    '/credits/purchase',
-    authenticateMiddleware,
-    requirePermission('billing:manage'),
-    controller.purchaseCredits,
-  );
-
+  // Plans and AI credits are bought through an order: POST /orders creates it at the server
+  // price, and the payment webhook applies it. There is deliberately no route that grants a
+  // plan or credits directly.
   router.post(
     '/orders',
     authenticateMiddleware,
