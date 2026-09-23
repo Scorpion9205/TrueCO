@@ -21,13 +21,16 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | C3 | The RS256 JWT private key is committed (`apps/api/.keys/`, first added in `95c30cd`). Anyone with repo access can forge tokens. | `apps/api/.keys/` | 0 | ✅ (history purge pending) |
 | C4 | OTP codes and password-reset tokens are logged in plaintext in every environment. Email delivery is not implemented, so logs are the only place they go. `send-otp` / `verify-otp` are public. OTPs have no attempt limit. | `otp.service.ts`, `auth.service.ts` | 0 | ✅ |
 | C5 | Tenant isolation fails open. With no `coachingId` in context (workers, cron jobs, webhooks, public routes), the Prisma extension applies no tenant filter. The RLS SQL is never applied and `withTenantRlsContext` is unused (and interpolates SQL). `findUnique` rewriting drops `select`/`include`. `aggregate`, `groupBy`, `*OrThrow` and the update branch of `upsert` are unscoped. Knowledge-base, `AiUsageLog` and `Role` models are not tenant-registered. The "cross-tenant isolation" test runs against a mocked client, not a database. | `tenant-prisma.extension.ts`, `rls-init.sql` | 1 | ✅ |
-| C6 | Webhooks: the WhatsApp HMAC check passes everything when `WHATSAPP_APP_SECRET` is unset. The Razorpay fee and billing webhooks are not idempotent, so provider retries double-record payments, upgrades and credit purchases. | `notification.controller.ts`, `fee.service.ts`, `billing.service.ts` | 0 (fail-closed) / 3 (idempotency) | 🚧 |
+| C6 | Webhooks: the WhatsApp HMAC check passes everything when `WHATSAPP_APP_SECRET` is unset. The Razorpay fee and billing webhooks are not idempotent, so provider retries double-record payments, upgrades and credit purchases. | `notification.controller.ts`, `fee.service.ts`, `billing.service.ts` | 0 (fail-closed) / 3 (idempotency) | ✅ |
+
+| C7 | Found in Phase 3: `POST /billing/upgrade`, `POST /billing/credits/purchase` and `POST /ai/wallet/add-credits` granted paid plans and AI credits with no payment, and `createOrder` took the price from the client. Any owner could self-upgrade to Enterprise and mint AI credits. | `billing.*`, `ai.*` | 3 | ✅ |
+| C8 | Found in Phase 3: fee webhook errors were swallowed and acknowledged with 200, so Razorpay never retried and the payment was lost. | `fee.service.ts` | 3 | ✅ |
 
 ### 🟠 High
 
 | ID | Finding | Phase | Status |
 |----|---------|-------|--------|
-| H1 | Fee payments: installment balance is read outside a row lock, and money is summed as JS `Number`. Receipt numbers are `date + random(4)` and globally unique, so they collide and are not sequential per coaching. | 3 | ⬜ |
+| H1 | Fee payments: installment balance is read outside a row lock, and money is summed as JS `Number`. Receipt numbers are `date + random(4)` and globally unique, so they collide and are not sequential per coaching. | 3 | ✅ |
 | H2 | The login lockout key trusts the client-supplied `X-Forwarded-For`. `trust proxy` is not set. No rate limiting exists on auth, OTP, registration or AI. | 0 | ✅ |
 | H3 | `requireBatchAccess` only checks `batchId` from params or body. `PUT /homework/:id`, `POST /tests/:id/marks`, `GET /attendance/sessions/:id` and `GET /tests/student/:id` bypass it. | 2 | ✅ |
 | H4 | Permissions are frozen in the JWT, so revocation waits for token expiry. `features` is always `[]`. `requireFeature` is only on the AI and risk-engine routes, so an expired subscription doesn't block the rest of the product. | 2 | ✅ |
@@ -42,7 +45,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | ID | Finding | Phase |
 |----|---------|-------|
 | M1 | No Prisma migrations (`db push` only). RLS, pgvector and a vector (HNSW) index are not part of deploys. | 1 ✅ |
-| M2 | Schema gaps: `Salary` has no teacher FK and no unique `(teacher, month, year)`. `FeePlan`, `Salary` and `Expense` lack a `Coaching` FK. No billing invoice/payment table. `AiUsageLog` has no `coachingId`. Nothing enforces a single active subscription. | 3 |
+| M2 | Schema gaps: `Salary` has no teacher FK and no unique `(teacher, month, year)`. `FeePlan`, `Salary` and `Expense` lack a `Coaching` FK. No billing invoice/payment table. `AiUsageLog` has no `coachingId`. Nothing enforces a single active subscription. | 3 🚧 (FKs, salary, billing tables done; usage-log coachingId and single active subscription open) |
 | M3 | Insecure defaults are accepted in production. Without `JWT_*_KEY`, each pod generates its own key, so multi-replica deploys return random 401s. | 0 |
 | M4 | Workers start inside the API process as well as in the worker container. | 4 |
 | M5 | Gemini 768-d embeddings are zero-padded to 1536. Switching provider silently corrupts retrieval. | 5 |
@@ -121,9 +124,28 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - Presigned (direct-to-Cloudinary) uploads are checked by declared type only, at the time the URL is issued
 - Knowledge-base sync calls the real Gemini API from tests when a key is present in `.env` (Phase 6: stub external providers in tests)
 
-### Phase 3: Money & data integrity
-Row locks or conditional updates on payments; `Decimal` arithmetic; per-coaching sequential receipt counters; a `payment_events` table with a unique provider event ID; unique `(coachingId, transactionRef)`; billing invoice and payment tables; salary uniqueness; missing FKs.
-**Exit:** concurrency and webhook-replay tests pass.
+### Phase 3: Money & data integrity ✅
+- [x] Fee payments lock the installment row and validate the balance inside the transaction; exact decimal arithmetic throughout (plans, discounts, payments, balances); amounts validated as whole paise
+- [x] Gap-free receipt numbers per coaching and invoice numbers for TrueCO, per Indian financial year (`RCT/2026-27/00001`, `INV/2026-27/00001`), issued inside the payment transaction (`document_sequences`)
+- [x] A gateway payment id is recorded once per coaching (unique `(coachingId, transactionRef)`): webhook retries and the paired `payment.captured` / `payment_link.paid` events collapse to one payment. Unique receipt numbers are now per coaching instead of global
+- [x] Fee webhooks: transient failures return 500 so Razorpay retries; payments that cannot be applied (e.g. installment already paid) are logged as `RECONCILE` instead of being silently dropped
+- [x] TrueCO billing reworked: the three free-grant endpoints are removed; `POST /billing/orders` prices plans and credit packs on the server and records a `billing_payments` row; the webhook settles it at most once, only for the recorded amount, and applies plan, period and credits in one transaction. ₹0 plans (the trial plan) cannot be bought. AI credit price is configurable (`AI_CREDIT_PRICE_PAISE`, default ₹1)
+- [x] AI credits are reserved atomically before a provider call and refunded if it fails; concurrent requests cannot overdraw a wallet. Removed dormant event subscribers that would have double-credited purchases
+- [x] Salaries: one per teacher per month (unique constraint, 409 on repeat); paying is a conditional update, so concurrent payments succeed once. Waivers race safely with payments
+- [x] Missing foreign keys added (`FeePlan`, `Salary`, `Expense` to `Coaching`; `Salary` to `Teacher`)
+
+**Bugs found and fixed along the way:** the expiry scheduler checked `trialEndsAt` for paid subscriptions and would have expired paying customers right after they upgraded; waiving an installment with remarks always failed (missing column); monthly and annual cycles used different names in the two billing paths, so annual orders never matched a price.
+
+**Exit:** met. Real-database tests prove: 10 concurrent payments on one installment record exactly 5 of 1,000 with an exact total; receipts are gap-free per coaching under concurrency; one gateway payment delivered 6 times is recorded once; a billing order settled by 6 concurrent webhooks grants credits once; a wrong amount grants nothing; salaries pay once; AI reservations never go negative.
+
+**Upgrading an existing database:** `pnpm prisma:migrate:deploy`. The new unique rules fail the migration if duplicates already exist (repeated receipt numbers or gateway payment ids within a coaching, or two salaries for the same teacher and month); resolve those first.
+
+**Known limitations, tracked for later phases:**
+- Fee payment links are created on TrueCO's Razorpay account; collecting fees into each coaching's own account needs Razorpay Route or per-coaching keys
+- Payments logged as `RECONCILE` (money taken but not applicable) need a review screen and refund flow; today they exist only in logs
+- Nothing enforces a single active subscription per coaching at the database level; settlement updates the current one
+- AI usage logs still carry no `coachingId` (they are reached through the wallet)
+- Paid periods use calendar months and years; proration on plan changes is not implemented
 
 ### Phase 4: Reliable async
 Transactional outbox → BullMQ; subscribers registered in the worker; separate API and worker processes; notification idempotency keys; reminder policy (once per stage, coaching's timezone, quiet hours, paged per tenant); WhatsApp state in Redis, `phone_number_id` → coaching routing, inbound message table keyed by `wamid`.
