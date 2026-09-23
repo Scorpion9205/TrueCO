@@ -27,6 +27,11 @@ class InMemoryAuthUserRepository implements IAuthUserRepository {
 
   public async updateLastLogin(_userId: string): Promise<void> {}
 
+  public async markEmailVerified(userId: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) (user as any).emailVerifiedAt = new Date();
+  }
+
   public async updatePassword(userId: string, passwordHash: string): Promise<void> {
     const user = this.users.get(userId);
     if (user) {

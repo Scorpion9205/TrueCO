@@ -51,15 +51,20 @@ export function createApp(): Express {
       credentials: true,
     }),
   );
-  app.use(
+  // Keep the raw body for webhook HMAC verification
+  const jsonParser = (limit: string) =>
     express.json({
-      limit: '10mb',
+      limit,
       verify: (req: any, _res, buf) => {
         req.rawBody = buf;
       },
-    }),
-  );
-  app.use(express.urlencoded({ extended: true }));
+    });
+  // Small default body limit; only endpoints that carry files or bulk rows accept more.
+  // Registered first, these parse the body so the default parser below skips it.
+  app.use('/api/v1/storage/upload', jsonParser('15mb')); // base64 of a 10 MB file
+  app.use('/api/v1/import', jsonParser('10mb'));
+  app.use(jsonParser('1mb'));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
   // Request Context & Multi-Tenancy
   app.use(tenantContextMiddleware);

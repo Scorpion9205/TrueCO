@@ -1,3 +1,4 @@
+import { invalidateSubscriptionFeatureCache } from '../../common/decorators/require-feature.decorator.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import { isUuid } from '../../common/validation/is-uuid.js';
 import { StatusCodes } from 'http-status-codes';
@@ -83,6 +84,8 @@ export class BillingService {
       SubscriptionStatus.ACTIVE,
       currentPeriodEnd,
     );
+    // The access gate caches subscription state; the new plan must apply immediately
+    await invalidateSubscriptionFeatureCache(coachingId);
 
     // Grant default plan credits if any
     if (targetPlan.defaultCredits > 0) {

@@ -60,7 +60,7 @@ export class AuthController {
 
   public forgotPassword = async (req: Request, res: Response): Promise<void> => {
     const validated = (await import('./validators/auth.validator.js')).forgotPasswordSchema.parse(req.body);
-    const result = await this.authService.forgotPassword(validated.email);
+    const result = await this.authService.forgotPassword(validated.email, validated.coachingCode);
     res.status(StatusCodes.OK).json({ data: result });
   };
 

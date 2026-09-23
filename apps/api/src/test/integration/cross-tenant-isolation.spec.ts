@@ -193,6 +193,36 @@ describe.skipIf(!APP_URL || !OWNER_URL)('Cross-tenant isolation (real PostgreSQL
     });
   });
 
+  describe('same-tenant references (triggers)', () => {
+    it("rejects linking a record to another coaching's row, even from a system context", async () => {
+      // Tenant A enrolling tenant B's student in its batch
+      await expect(
+        asA(() => (db as any).batchStudent.create({ data: { batchId: BATCH_A, studentId: STUDENT_B } })),
+      ).rejects.toMatchObject({ code: 'P2003' });
+
+      // System context bypasses RLS, but the trigger still compares the two coachings
+      await expect(
+        asSystem(() =>
+          (db as any).batchStudent.create({ data: { coachingId: A, batchId: BATCH_A, studentId: STUDENT_B } }),
+        ),
+      ).rejects.toMatchObject({ code: 'P2003' });
+    });
+
+    it('rejects re-pointing an existing link at another coaching', async () => {
+      const link = await asA(() => (db as any).batchStudent.findFirst({ where: { studentId: STUDENT_A } }));
+      await expect(
+        asSystem(() => (db as any).batchStudent.update({ where: { id: link.id }, data: { studentId: STUDENT_B } })),
+      ).rejects.toMatchObject({ code: 'P2003' });
+    });
+
+    it('allows references within the same coaching', async () => {
+      const created = await asA(() => (db as any).student.create({ data: { firstName: 'Dev', lastName: 'A' } }));
+      await expect(
+        asA(() => (db as any).batchStudent.create({ data: { batchId: BATCH_A, studentId: created.id } })),
+      ).resolves.toMatchObject({ coachingId: A, studentId: created.id });
+    });
+  });
+
   describe('interactive transactions', () => {
     it('stay atomic: a thrown error rolls back writes made inside', async () => {
       await expect(

@@ -51,6 +51,11 @@ const ALL_PERMISSIONS = [
   { code: 'data:import', module: 'import', action: 'import', description: 'Execute bulk data import' },
   { code: 'billing:read', module: 'billing', action: 'read', description: 'View subscription and invoices' },
   { code: 'billing:manage', module: 'billing', action: 'manage', description: 'Manage TrueCO subscription plan' },
+  { code: 'dashboard:owner', module: 'dashboard', action: 'owner', description: 'View owner business dashboard' },
+  { code: 'dashboard:teacher', module: 'dashboard', action: 'teacher', description: 'View teacher dashboard' },
+  { code: 'audit:read', module: 'audit', action: 'read', description: 'View audit trail' },
+  { code: 'ai:manage_credits', module: 'ai', action: 'manage_credits', description: 'Top up AI credit wallet' },
+  { code: 'ai:view_logs', module: 'ai', action: 'view_logs', description: 'View AI usage ledger' },
 ];
 
 const TEACHER_PERMISSION_CODES = [
@@ -67,6 +72,7 @@ const TEACHER_PERMISSION_CODES = [
   'homework:delete',
   'ai:generate',
   'notices:read',
+  'dashboard:teacher',
 ];
 
 async function main() {

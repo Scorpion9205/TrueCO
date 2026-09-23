@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { createRouter } from '../../common/http/async-router.js';
 import { ExpenseController } from './expense.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
+import { requireActiveSubscription } from '../../common/decorators/require-feature.decorator.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 
 export function createExpenseRoutes(controller: ExpenseController): Router {
   const router = createRouter();
 
-  router.use(authenticateMiddleware);
+  router.use(authenticateMiddleware, requireActiveSubscription());
 
   router.post('/', requirePermission('expenses:create'), controller.create);
   router.get('/summary', requirePermission('expenses:read'), controller.summary);

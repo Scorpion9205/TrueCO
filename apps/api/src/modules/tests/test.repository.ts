@@ -71,7 +71,8 @@ export class PrismaTestRepository implements ITestRepository {
   public async findByStudent(studentId: string): Promise<any[]> {
     const rawPrisma = this.prisma as any;
     return rawPrisma.testResult.findMany({
-      where: { studentId, deletedAt: null },
+      // test_results has no deletedAt; hide results of deleted tests instead
+      where: { studentId, test: { deletedAt: null } },
       include: {
         test: true,
       },
