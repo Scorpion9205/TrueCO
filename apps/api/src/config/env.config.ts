@@ -23,6 +23,17 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // Express "trust proxy": number of proxy hops in front of the API (e.g. 1 behind an ingress),
+  // "false" when clients connect directly, or a subnet list. Controls whether X-Forwarded-For
+  // is believed when resolving the client IP used for rate limiting and lockout.
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((v): boolean | number | string => {
+      if (v === 'false') return false;
+      if (v === 'true') return true;
+      return /^\d+$/.test(v) ? Number(v) : v;
+    }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   // WhatsApp Cloud API
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),

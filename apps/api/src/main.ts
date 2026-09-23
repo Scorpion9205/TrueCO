@@ -40,6 +40,7 @@ import { registerProcessErrorHandlers } from './common/logger/process-error-hand
 
 export function createApp(): Express {
   const app = express();
+  app.set('trust proxy', envConfig.get('TRUST_PROXY'));
 
   // Security & Transport
   app.use(helmet());
