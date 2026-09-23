@@ -48,6 +48,10 @@ export interface IFeeRepository {
   findPlansByStudent(studentId: string): Promise<any[]>;
   findInstallmentById(id: string): Promise<any | null>;
   findPendingInstallments(dueBeforeDate: Date): Promise<any[]>;
+  /** Active coachings in id order, for schedulers that page through tenants. */
+  listCoachingsForReminders(afterId: string | undefined, take: number): Promise<Array<{ id: string; timezone: string | null }>>;
+  /** Unpaid installments of the current tenant due within [from, to], in id order. */
+  findInstallmentsDueBetween(from: Date, to: Date, afterId: string | undefined, take: number): Promise<any[]>;
   /**
    * Records a payment atomically: serialises payments on the installment, rejects overpayment,
    * collapses repeats of the same gateway payment, and issues the next receipt number.
@@ -149,6 +153,38 @@ export class PrismaFeeRepository implements IFeeRepository {
         },
       },
       orderBy: { dueDate: 'asc' },
+    });
+  }
+
+  public async listCoachingsForReminders(
+    afterId: string | undefined,
+    take: number,
+  ): Promise<Array<{ id: string; timezone: string | null }>> {
+    const rawPrisma = this.prisma as any;
+    return rawPrisma.coaching.findMany({
+      where: { isActive: true, ...(afterId ? { id: { gt: afterId } } : {}) },
+      select: { id: true, timezone: true },
+      orderBy: { id: 'asc' },
+      take,
+    });
+  }
+
+  public async findInstallmentsDueBetween(
+    from: Date,
+    to: Date,
+    afterId: string | undefined,
+    take: number,
+  ): Promise<any[]> {
+    const rawPrisma = this.prisma as any;
+    return rawPrisma.feeInstallment.findMany({
+      where: {
+        status: { in: [FeeInstallmentStatus.PENDING, FeeInstallmentStatus.PARTIAL] },
+        dueDate: { gte: from, lte: to },
+        ...(afterId ? { id: { gt: afterId } } : {}),
+      },
+      include: { feePlan: { select: { studentId: true } } },
+      orderBy: { id: 'asc' },
+      take,
     });
   }
 
