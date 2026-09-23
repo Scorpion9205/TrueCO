@@ -7,6 +7,8 @@ import {
   PaymentLinkResult,
 } from './payment-gateway.interface.js';
 import { envConfig } from '../../../config/env.config.js';
+import { logger } from '../../../common/logger/logger.service.js';
+import { hmacSha256Hex, isUnsignedWebhookAllowed, safeEqual } from '../../../common/security/webhook-signature.js';
 
 export class MockPaymentGatewayAdapter implements IPaymentGatewayAdapter {
   public async createOrder(input: CreateOrderInput): Promise<PaymentOrderResult> {
@@ -39,23 +41,20 @@ export class MockPaymentGatewayAdapter implements IPaymentGatewayAdapter {
     signature: string,
     secret?: string,
   ): boolean {
+    // The mock gateway is never a trusted payment source in production.
+    if (!isUnsignedWebhookAllowed()) {
+      logger.error('[MockPaymentGateway] Rejecting webhook: mock gateway is active in production (set RAZORPAY_KEY_ID)');
+      return false;
+    }
     if (signature === 'invalid-signature') {
       return false;
     }
-    // In test suite or mock mode, accept mock/test signatures
-    if (envConfig.get('NODE_ENV') === 'test' || signature === 'any-signature' || signature === 'signature') {
+    if (envConfig.get('NODE_ENV') === 'test') {
       return true;
     }
 
     const webhookSecret = secret || envConfig.get('RAZORPAY_WEBHOOK_SECRET');
-    if (!webhookSecret) return true; // dev bypass if not configured
-
-    try {
-      const raw = typeof payload === 'string' ? payload : payload.toString('utf-8');
-      const expected = crypto.createHmac('sha256', webhookSecret).update(raw).digest('hex');
-      return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-    } catch {
-      return false;
-    }
+    if (!webhookSecret) return true;
+    return safeEqual(signature, hmacSha256Hex(payload, webhookSecret));
   }
 }

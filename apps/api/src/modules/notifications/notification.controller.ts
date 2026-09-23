@@ -6,9 +6,9 @@ import { RequestContextService } from '../../common/services/request-context.ser
 import { envConfig } from '../../config/env.config.js';
 import { NotificationStatus } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
+import { hmacSha256Hex, isUnsignedWebhookAllowed, safeEqual } from '../../common/security/webhook-signature.js';
 import { queueRegistry, QUEUE_NAMES } from '../../queues/queue.registry.js';
 
-import crypto from 'node:crypto';
 import { WhatsAppAssistantService } from '../whatsapp-assistant/whatsapp-assistant.service.js';
 
 export class NotificationController {
@@ -35,18 +35,17 @@ export class NotificationController {
 
   private verifySignature(req: Request): boolean {
     const appSecret = envConfig.get('WHATSAPP_APP_SECRET');
-    if (!appSecret) return true; // dev mode fallback
-
-    const signature = req.headers['x-hub-signature-256'] as string;
-    if (!signature) return false;
-
-    const rawPayload = (req as any).rawBody || JSON.stringify(req.body);
-    const expected = 'sha256=' + crypto.createHmac('sha256', appSecret).update(rawPayload).digest('hex');
-    try {
-      return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-    } catch {
+    if (!appSecret) {
+      if (isUnsignedWebhookAllowed()) return true;
+      logger.error('[NotificationController] WHATSAPP_APP_SECRET is not configured; rejecting webhook');
       return false;
     }
+
+    const signature = req.headers['x-hub-signature-256'];
+    if (typeof signature !== 'string') return false;
+
+    const rawPayload = (req as any).rawBody || JSON.stringify(req.body);
+    return safeEqual(signature, 'sha256=' + hmacSha256Hex(rawPayload, appSecret));
   }
 
   public handleWebhook = async (req: Request, res: Response): Promise<void> => {
