@@ -38,6 +38,12 @@ export class TokenService implements ITokenService {
       return;
     }
 
+    // Every replica must verify tokens signed by every other replica, so a
+    // per-process generated key is never acceptable in production.
+    if (envConfig.get('NODE_ENV') === 'production') {
+      throw new Error('JWT_PRIVATE_KEY and JWT_PUBLIC_KEY must be set in production');
+    }
+
     // In local development, persist keypair to avoid invalidating sessions across restarts
     const keysDir = path.resolve(process.cwd(), '.keys');
     const privPath = path.join(keysDir, 'jwt_rs256.key');
