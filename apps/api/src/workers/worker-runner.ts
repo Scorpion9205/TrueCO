@@ -1,6 +1,7 @@
 import { workerRegistry } from './worker.registry.js';
 import { queueRegistry } from '../queues/queue.registry.js';
 import { getPrismaClient } from '../database/prisma/tenant-prisma.extension.js';
+import { assertDatabaseRoleEnforcesRls } from '../database/prisma/database-role.check.js';
 import { logger } from '../common/logger/logger.service.js';
 import { registerProcessErrorHandlers } from '../common/logger/process-error-handlers.js';
 
@@ -15,11 +16,14 @@ async function bootstrapWorkers(): Promise<void> {
     const redisPing = await redis.ping();
     logger.info(`[WorkerRunner] Redis connection verified: ${redisPing}`);
 
-    // 2. Start all workers
+    // 2. Refuse to run with a database role that bypasses tenant row-level security
+    await assertDatabaseRoleEnforcesRls(getPrismaClient());
+
+    // 3. Start all workers
     await workerRegistry.startAll();
     logger.info('[WorkerRunner] All background queue workers active & listening');
 
-    // 3. Graceful shutdown handler
+    // 4. Graceful shutdown handler
     const shutdown = async (signal: string) => {
       logger.info(`[WorkerRunner] Received ${signal}. Starting graceful shutdown of workers...`);
       try {
