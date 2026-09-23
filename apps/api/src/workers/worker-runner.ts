@@ -2,6 +2,7 @@ import { workerRegistry } from './worker.registry.js';
 import { queueRegistry } from '../queues/queue.registry.js';
 import { getPrismaClient } from '../database/prisma/tenant-prisma.extension.js';
 import { logger } from '../common/logger/logger.service.js';
+import { registerProcessErrorHandlers } from '../common/logger/process-error-handlers.js';
 
 async function bootstrapWorkers(): Promise<void> {
   logger.info('=====================================================');
@@ -42,4 +43,5 @@ async function bootstrapWorkers(): Promise<void> {
   }
 }
 
+registerProcessErrorHandlers('WorkerRunner');
 bootstrapWorkers();

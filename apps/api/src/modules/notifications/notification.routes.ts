@@ -1,10 +1,11 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { NotificationController } from './notification.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 
 export function createNotificationRoutes(controller: NotificationController): Router {
-  const router = Router();
+  const router = createRouter();
 
   // Public Meta Webhook Endpoints (unauthenticated, handshake & payload verification)
   router.get('/webhook', controller.verifyWebhook);

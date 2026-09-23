@@ -36,6 +36,7 @@ import { RiskEngineModule } from './modules/risk-engine/risk-engine.module.js';
 import { AiModule } from './modules/ai/ai.module.js';
 import { StorageModule } from './modules/storage/storage.module.js';
 import { workerRegistry } from './workers/worker.registry.js';
+import { registerProcessErrorHandlers } from './common/logger/process-error-handlers.js';
 
 export function createApp(): Express {
   const app = express();
@@ -232,6 +233,7 @@ async function startServer(): Promise<void> {
 
 // Auto-start server if executed directly
 if (process.env.NODE_ENV !== 'test') {
+  registerProcessErrorHandlers('Api');
   startServer().catch((err) => {
     logger.error('Failed to start TrueCO API server:', err);
     process.exit(1);

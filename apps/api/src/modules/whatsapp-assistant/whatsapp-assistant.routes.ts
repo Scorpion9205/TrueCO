@@ -1,8 +1,9 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { WhatsAppAssistantController } from './whatsapp-assistant.controller.js';
 
 export function createWhatsAppAssistantRoutes(controller: WhatsAppAssistantController): Router {
-  const router = Router();
+  const router = createRouter();
 
   // Public webhook receiving incoming parent messages
   router.post('/inbound', controller.handleInbound);

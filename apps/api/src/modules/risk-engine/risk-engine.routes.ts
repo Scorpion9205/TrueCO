@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { RiskEngineController } from './risk-engine.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 import { requireFeature } from '../../common/decorators/require-feature.decorator.js';
 
 export function createRiskEngineRoutes(controller: RiskEngineController): Router {
-  const router = Router();
+  const router = createRouter();
 
   router.use(authenticateMiddleware);
   router.use(requireFeature('ai.risk_engine'));

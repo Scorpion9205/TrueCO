@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { AuthController } from './auth.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 
 export function createAuthRoutes(controller: AuthController): Router {
-  const router = Router();
+  const router = createRouter();
 
   router.post('/login', controller.login);
   router.post('/refresh', controller.refresh);
