@@ -14,6 +14,7 @@ export const QUEUE_NAMES = {
   IMPORT: 'import-queue',
   ANALYTICS: 'analytics-queue',
   CLEANUP: 'cleanup-queue',
+  EVENTS: 'events-queue',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
