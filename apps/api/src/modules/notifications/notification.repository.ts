@@ -26,7 +26,15 @@ export interface INotificationRepository {
   findFailed(coachingId: string, limit?: number, offset?: number): Promise<any[]>;
   findById(id: string): Promise<any | null>;
   findByIdempotencyKey(key: string): Promise<any | null>;
+  /**
+   * Atomically claims a notification for sending (QUEUED/FAILED -> SENDING, or a SENDING claim
+   * abandoned by a crashed worker). Only the caller that gets true may send it.
+   */
+  claimForSending(idempotencyKey: string): Promise<boolean>;
 }
+
+// A worker that crashed after claiming leaves SENDING behind; after this long another may retry it
+const SENDING_CLAIM_STALE_MS = 10 * 60 * 1000;
 
 export class PrismaNotificationRepository implements INotificationRepository {
   public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
@@ -106,6 +114,22 @@ export class PrismaNotificationRepository implements INotificationRepository {
     return rawPrisma.notificationHistory.findFirst({
       where: { id },
     });
+  }
+
+  public async claimForSending(idempotencyKey: string): Promise<boolean> {
+    const rawPrisma = this.prisma as any;
+    const staleBefore = new Date(Date.now() - SENDING_CLAIM_STALE_MS);
+    const { count } = await rawPrisma.notificationHistory.updateMany({
+      where: {
+        idempotencyKey,
+        OR: [
+          { status: { in: [NotificationStatus.QUEUED, NotificationStatus.FAILED] } },
+          { status: NotificationStatus.SENDING, updatedAt: { lt: staleBefore } },
+        ],
+      },
+      data: { status: NotificationStatus.SENDING },
+    });
+    return count === 1;
   }
 
   public async findByIdempotencyKey(key: string): Promise<any | null> {
