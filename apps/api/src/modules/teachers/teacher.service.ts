@@ -1,3 +1,4 @@
+import { IAccessCacheInvalidator } from '../../common/security/permission-resolver.service.js';
 import { StatusCodes } from 'http-status-codes';
 import { ITeacherRepository } from './teacher.repository.js';
 import { IPasswordService } from '../../common/security/password.service.js';
@@ -12,6 +13,7 @@ export class TeacherService {
     private readonly teacherRepository: ITeacherRepository,
     private readonly passwordService: IPasswordService,
     private readonly eventBus: IEventBus,
+    private readonly accessInvalidator?: IAccessCacheInvalidator,
   ) {}
 
   public async createTeacher(
@@ -82,6 +84,10 @@ export class TeacherService {
     }
 
     const updated = await this.teacherRepository.update(id, dto);
+    // Activation status gates the teaching role; apply it on the teacher's next request
+    if (dto.isActive !== undefined && existing.userId) {
+      await this.accessInvalidator?.invalidate(existing.userId);
+    }
     return TeacherMapper.toResponseDto(updated);
   }
 }

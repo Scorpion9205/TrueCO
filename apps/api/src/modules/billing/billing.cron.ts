@@ -1,3 +1,4 @@
+import { invalidateSubscriptionFeatureCache } from '../../common/decorators/require-feature.decorator.js';
 import { IBillingRepository } from './billing.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { createSubscriptionExpiringEvent } from './billing.events.js';
@@ -34,6 +35,7 @@ export class SubscriptionExpirationScheduler {
       if (daysRemaining === 0 && sub.status !== SubscriptionStatus.EXPIRED) {
         // Expire subscription
         await this.billingRepository.updateSubscriptionStatus(sub.id, SubscriptionStatus.EXPIRED);
+        await invalidateSubscriptionFeatureCache(sub.coachingId);
         await this.eventBus.publish(
           createSubscriptionExpiringEvent(
             {

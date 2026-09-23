@@ -1,38 +1,57 @@
 import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { tokenService } from '../security/token.service.js';
+import { tokenService, TokenPayload } from '../security/token.service.js';
+import { permissionResolver } from '../security/permission-resolver.service.js';
 import { RequestContextService } from '../services/request-context.service.js';
 import { AppError } from './error-handler.middleware.js';
 import { RequestContextData } from '@trueco/types';
 
-export function authenticateMiddleware(req: Request, _res: Response, next: NextFunction): void {
+export async function authenticateMiddleware(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AppError('UNAUTHORIZED', 'Missing or invalid Authorization header', StatusCodes.UNAUTHORIZED);
+    throw new AppError(
+      'UNAUTHORIZED',
+      'Missing or invalid Authorization header',
+      StatusCodes.UNAUTHORIZED,
+    );
   }
 
-  const token = authHeader.substring(7).trim();
-
+  let payload: TokenPayload;
   try {
-    const payload = tokenService.verifyAccessToken(token);
-
-    // Merge or update the RequestContextData with authenticated identity
-    const currentContext = RequestContextService.getContext();
-    const updatedContext: RequestContextData = {
-      traceId: currentContext?.traceId || 'auth-trace',
-      coachingId: payload.coachingId,
-      userId: payload.sub,
-      userEmail: payload.email,
-      roles: payload.roles,
-      permissions: payload.permissions,
-      features: currentContext?.features || [],
-    };
-
-    // Run remaining middleware and handlers in the updated context
-    RequestContextService.run(updatedContext, () => {
-      next();
-    });
-  } catch (err) {
-    throw new AppError('INVALID_TOKEN', 'Access token is expired or invalid', StatusCodes.UNAUTHORIZED);
+    payload = tokenService.verifyAccessToken(authHeader.substring(7).trim());
+  } catch {
+    throw new AppError(
+      'INVALID_TOKEN',
+      'Access token is expired or invalid',
+      StatusCodes.UNAUTHORIZED,
+    );
   }
+
+  // The token proves identity only. Roles and permissions are re-read from the database
+  // (briefly cached) so revocations and deactivation take effect immediately.
+  const access = await permissionResolver.resolve(payload.sub, payload.coachingId);
+  if (!access) {
+    throw new AppError(
+      'ACCOUNT_INACTIVE',
+      'This account is no longer active',
+      StatusCodes.UNAUTHORIZED,
+    );
+  }
+
+  const currentContext = RequestContextService.getContext();
+  const authenticatedContext: RequestContextData = {
+    traceId: currentContext?.traceId || 'auth-trace',
+    coachingId: payload.coachingId,
+    userId: payload.sub,
+    userEmail: payload.email,
+    roles: access.roles,
+    permissions: access.permissions,
+    features: currentContext?.features || [],
+  };
+
+  RequestContextService.run(authenticatedContext, () => next());
 }
