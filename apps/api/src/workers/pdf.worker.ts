@@ -4,6 +4,7 @@ import { QueueRegistry, QUEUE_NAMES } from '../queues/queue.registry.js';
 import { IStorageService } from '../common/storage/storage.interface.js';
 import { MockStorageService } from '../common/storage/mock-storage.service.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobForTenant } from './job-context.js';
 
 export interface PdfJobPayload {
   readonly coachingId: string;
@@ -35,7 +36,7 @@ export class PdfWorker {
       QUEUE_NAMES.PDF,
       async (job: Job<PdfJobPayload>): Promise<PdfJobResult> => {
         logger.info(`[PdfWorker] Generating PDF for ${job.data.type} (ref: ${job.data.referenceId})`);
-        return this.processJob(job.data);
+        return runJobForTenant(job, () => this.processJob(job.data));
       },
       {
         connection: redis,

@@ -2,6 +2,8 @@ import { EventEmitter } from 'node:events';
 import { DomainEvent } from '@trueco/types';
 import { EventHandler, IEventBus } from './event-bus.interface.js';
 import { logger } from '../common/logger/logger.service.js';
+import { RequestContextService } from '../common/services/request-context.service.js';
+import { isUuid } from '../common/validation/is-uuid.js';
 
 export class EventBus implements IEventBus {
   private static instance: EventBus;
@@ -32,10 +34,19 @@ export class EventBus implements IEventBus {
       return;
     }
 
+    // Subscribers act on behalf of the event's coaching, whoever published it (a request,
+    // a queue job, a webhook or a cross-tenant scheduler), so their queries are confined to it.
+    // Platform-level events use placeholder ids such as 'platform' or 'SYSTEM'; those keep the
+    // publisher's context.
+    const runHandler = (handler: EventHandler<T>) =>
+      isUuid(event.coachingId)
+        ? RequestContextService.runForTenant(event.coachingId, () => handler(event))
+        : handler(event);
+
     // Execute all subscribers concurrently without blocking the main write path
     const promises = listeners.map(async (handler) => {
       try {
-        await handler(event);
+        await runHandler(handler);
       } catch (err) {
         logger.error(`[EventBus] Error executing subscriber for ${event.eventName}:`, err, {
           eventId: event.eventId,

@@ -4,6 +4,7 @@ import { FeeReminderScheduler } from '../modules/fees/fee.cron.js';
 import { PrismaFeeRepository } from '../modules/fees/fee.repository.js';
 import { eventBus } from '../events/event-bus.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobAsSystem } from './job-context.js';
 
 export class ReminderWorker {
   private worker: Worker | null = null;
@@ -36,7 +37,8 @@ export class ReminderWorker {
       QUEUE_NAMES.REMINDER,
       async (job: Job) => {
         logger.info(`[ReminderWorker] Processing reminder job: ${job.name} (id: ${job.id})`);
-        const count = await this.scheduler.runDailyReminderCheck();
+        // Scans installments across all coachings; reminder events then run per tenant
+        const count = await runJobAsSystem(job, () => this.scheduler.runDailyReminderCheck());
         return { triggeredCount: count };
       },
       {

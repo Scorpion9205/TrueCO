@@ -1,3 +1,5 @@
+import { RequestContextService } from '../../common/services/request-context.service.js';
+import { isUuid } from '../../common/validation/is-uuid.js';
 import { StatusCodes } from 'http-status-codes';
 import { IBillingRepository } from './billing.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
@@ -171,26 +173,31 @@ export class BillingService {
       const notes = payload.payload?.payment?.entity?.notes || payload.payload?.order?.entity?.notes || {};
       const coachingId = notes.coachingId;
 
-      if (coachingId) {
-        if (notes.type === 'PLAN_UPGRADE' && notes.planCode) {
-          await this.upgradePlan(
-            {
-              planCode: notes.planCode,
-              billingCycle: (notes.billingCycle as any) || 'MONTHLY',
-            },
-            coachingId,
-          );
-        } else if (notes.type === 'AI_CREDITS' && notes.credits) {
-          await this.purchaseCredits(
-            {
-              credits: Number(notes.credits),
-            },
-            coachingId,
-          );
-        }
+      if (isUuid(coachingId)) {
+        // Webhooks carry no session: act as the coaching named in the signed payment notes
+        await RequestContextService.runForTenant(coachingId, () => this.applyPaidOrder(notes, coachingId));
       }
     }
 
     return { status: 'PROCESSED' };
+  }
+
+  private async applyPaidOrder(notes: Record<string, any>, coachingId: string): Promise<void> {
+    if (notes.type === 'PLAN_UPGRADE' && notes.planCode) {
+      await this.upgradePlan(
+        {
+          planCode: notes.planCode,
+          billingCycle: (notes.billingCycle as any) || 'MONTHLY',
+        },
+        coachingId,
+      );
+    } else if (notes.type === 'AI_CREDITS' && notes.credits) {
+      await this.purchaseCredits(
+        {
+          credits: Number(notes.credits),
+        },
+        coachingId,
+      );
+    }
   }
 }

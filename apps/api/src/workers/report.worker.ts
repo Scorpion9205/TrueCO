@@ -4,6 +4,7 @@ import { QueueRegistry, QUEUE_NAMES } from '../queues/queue.registry.js';
 import { IStorageService } from '../common/storage/storage.interface.js';
 import { MockStorageService } from '../common/storage/mock-storage.service.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobForTenant } from './job-context.js';
 
 export interface ReportJobPayload {
   readonly coachingId: string;
@@ -40,7 +41,7 @@ export class ReportWorker {
         logger.info(
           `[ReportWorker] Compiling ${job.data.reportType} report for coaching ${job.data.coachingId}`,
         );
-        return this.processJob(job.data);
+        return runJobForTenant(job, () => this.processJob(job.data));
       },
       {
         connection: redis,

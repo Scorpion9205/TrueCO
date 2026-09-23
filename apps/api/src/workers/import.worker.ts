@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { QueueRegistry, QUEUE_NAMES } from '../queues/queue.registry.js';
 import { getPrismaClient, ExtendedPrismaClient } from '../database/prisma/tenant-prisma.extension.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobForTenant } from './job-context.js';
 
 export interface ImportJobPayload {
   readonly coachingId: string;
@@ -38,7 +39,7 @@ export class ImportWorker {
         logger.info(
           `[ImportWorker] Processing bulk ${job.data.entityType} import (${job.data.rows?.length || 0} rows)`,
         );
-        return this.processJob(job.data);
+        return runJobForTenant(job, () => this.processJob(job.data));
       },
       {
         connection: redis,
