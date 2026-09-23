@@ -10,7 +10,7 @@ export class AuthController {
 
   public login = async (req: Request, res: Response): Promise<void> => {
     const validated = loginSchema.parse(req.body) as LoginDto;
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip;
+    const ipAddress = req.ip; // resolved from X-Forwarded-For only for trusted proxies (TRUST_PROXY)
     const userAgent = req.headers['user-agent'];
     const traceId = RequestContextService.getTraceId();
 
@@ -20,7 +20,7 @@ export class AuthController {
 
   public refresh = async (req: Request, res: Response): Promise<void> => {
     const validated = refreshSchema.parse(req.body) as RefreshDto;
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip;
+    const ipAddress = req.ip; // resolved from X-Forwarded-For only for trusted proxies (TRUST_PROXY)
     const userAgent = req.headers['user-agent'];
 
     const result = await this.authService.refresh(validated.refreshToken, ipAddress, userAgent);
@@ -92,7 +92,7 @@ export class AuthController {
       res.status(StatusCodes.BAD_REQUEST).json({ error: { code: 'INVALID_INPUT', message: 'identifier and code are required' } });
       return;
     }
-    const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip;
+    const ipAddress = req.ip; // resolved from X-Forwarded-For only for trusted proxies (TRUST_PROXY)
     const userAgent = req.headers['user-agent'];
     const result = await this.authService.verifyOtp(identifier, code, purpose, ipAddress, userAgent, coachingCode);
     res.status(StatusCodes.OK).json({ data: result });
