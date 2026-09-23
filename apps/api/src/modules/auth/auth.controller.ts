@@ -87,14 +87,14 @@ export class AuthController {
   };
 
   public verifyOtp = async (req: Request, res: Response): Promise<void> => {
-    const { identifier, code, purpose } = req.body;
+    const { identifier, code, purpose, coachingCode } = req.body;
     if (!identifier || !code) {
       res.status(StatusCodes.BAD_REQUEST).json({ error: { code: 'INVALID_INPUT', message: 'identifier and code are required' } });
       return;
     }
     const ipAddress = (req.headers['x-forwarded-for'] as string) || req.ip;
     const userAgent = req.headers['user-agent'];
-    const result = await this.authService.verifyOtp(identifier, code, purpose, ipAddress, userAgent);
+    const result = await this.authService.verifyOtp(identifier, code, purpose, ipAddress, userAgent, coachingCode);
     res.status(StatusCodes.OK).json({ data: result });
   };
 }

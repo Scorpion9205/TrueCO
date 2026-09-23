@@ -244,7 +244,11 @@ export class AuthService {
     // Generate development terminal OTP
     await this.otpService.generateOtp(user.email, 'PASSWORD_RESET', 600);
 
-    logger.info(`[AuthService] Password reset token generated for ${user.email}: ${resetToken}`);
+    // Reset tokens grant account takeover; they may only surface on a local dev terminal
+    // until email delivery is implemented.
+    if (envConfig.get('NODE_ENV') === 'development') {
+      logger.debug(`[AuthService] Password reset token generated for ${user.email}: ${resetToken}`);
+    }
     return { message: 'If an account exists with that email, a password reset link has been dispatched.' };
   }
 
@@ -254,7 +258,7 @@ export class AuthService {
   ): Promise<{ message: string; identifier: string }> {
     await this.otpService.generateOtp(identifier, purpose, 600);
     return {
-      message: `OTP dispatched for ${purpose}. Check server terminal in development.`,
+      message: 'If the identifier is registered, a one-time code has been sent.',
       identifier,
     };
   }
@@ -265,6 +269,7 @@ export class AuthService {
     purpose: 'SIGNUP' | 'LOGIN' | 'PASSWORD_RESET' | string = 'LOGIN',
     ipAddress?: string,
     userAgent?: string,
+    coachingCode?: string,
   ): Promise<AuthResponseDto | { message: string }> {
     const isValid = await this.otpService.verifyOtp(identifier, code, purpose);
     if (!isValid) {
@@ -272,9 +277,9 @@ export class AuthService {
     }
 
     if (purpose === 'LOGIN') {
-      const user = await this.userRepository.findByEmail(identifier);
-      if (!user) {
-        throw new AppError('USER_NOT_FOUND', 'No account found associated with this email', StatusCodes.NOT_FOUND);
+      const user = await this.userRepository.findByEmail(identifier, coachingCode);
+      if (!user || !user.isActive) {
+        throw new AppError('INVALID_OR_EXPIRED_OTP', 'The entered OTP is invalid or has expired', StatusCodes.UNAUTHORIZED);
       }
 
       const userDto = AuthMapper.toUserDto(user);
