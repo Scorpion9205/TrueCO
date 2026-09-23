@@ -10,33 +10,8 @@ import { metricsMiddleware, getMetricsHandler } from './common/metrics/metrics.s
 import { queueRegistry } from './queues/queue.registry.js';
 import { getPrismaClient } from './database/prisma/tenant-prisma.extension.js';
 import { assertDatabaseRoleEnforcesRls } from './database/prisma/database-role.check.js';
-import { AuthModule } from './modules/auth/auth.module.js';
-import { RbacModule } from './modules/rbac/rbac.module.js';
-import { CoachingModule } from './modules/coaching/coaching.module.js';
-import { StudentModule } from './modules/students/student.module.js';
-import { ParentModule } from './modules/parents/parent.module.js';
-import { TeacherModule } from './modules/teachers/teacher.module.js';
-import { BatchModule } from './modules/batches/batch.module.js';
-import { AttendanceModule } from './modules/attendance/attendance.module.js';
-import { TestModule } from './modules/tests/test.module.js';
-import { HomeworkModule } from './modules/homework/homework.module.js';
-import { NotificationModule } from './modules/notifications/notification.module.js';
-import { TimelineModule } from './modules/timeline/timeline.module.js';
-import { AuditModule } from './modules/audit/audit.module.js';
-import { FeeModule } from './modules/fees/fee.module.js';
-import { SalaryModule } from './modules/salary/salary.module.js';
-import { ExpenseModule } from './modules/expenses/expense.module.js';
-import { BillingModule } from './modules/billing/billing.module.js';
-import { NoticeModule } from './modules/notice-board/notice.module.js';
-import { SettingsModule } from './modules/settings/settings.module.js';
-import { ReportModule } from './modules/reports/report.module.js';
-import { DashboardModule } from './modules/dashboard/dashboard.module.js';
-import { ImportModule } from './modules/import/import.module.js';
-import { WhatsAppAssistantModule } from './modules/whatsapp-assistant/whatsapp-assistant.module.js';
-import { RiskEngineModule } from './modules/risk-engine/risk-engine.module.js';
-import { AiModule } from './modules/ai/ai.module.js';
-import { StorageModule } from './modules/storage/storage.module.js';
 import { workerRegistry } from './workers/worker.registry.js';
+import { initModules } from './bootstrap/modules.js';
 import { registerProcessErrorHandlers } from './common/logger/process-error-handlers.js';
 
 export function createApp(): Express {
@@ -120,82 +95,34 @@ export function createApp(): Express {
     });
   });
 
-  // Storage Module (Attachments, uploads & receipts)
-  const storageModule = StorageModule.init();
-  app.use('/api/v1/storage', storageModule.router);
-
-  // Domain Module Routes (Phase 1: Identity, Tenancy & Security)
-  const authModule = AuthModule.init();
-  const rbacModule = RbacModule.init();
-  const coachingModule = CoachingModule.init();
-
-  app.use('/api/v1/auth', authModule.router);
-  app.use('/api/v1/rbac', rbacModule.router);
-  app.use('/api/v1/coachings', coachingModule.router);
-
-  // Domain Module Routes (Phase 2: Core Academic Domain)
-  const studentModule = StudentModule.init();
-  const parentModule = ParentModule.init();
-  const teacherModule = TeacherModule.init();
-  const batchModule = BatchModule.init();
-  const attendanceModule = AttendanceModule.init();
-  const testModule = TestModule.init();
-  const homeworkModule = HomeworkModule.init();
-
-  app.use('/api/v1/students', studentModule.router);
-  app.use('/api/v1/parents', parentModule.router);
-  app.use('/api/v1/teachers', teacherModule.router);
-  app.use('/api/v1/batches', batchModule.router);
-  app.use('/api/v1/attendance', attendanceModule.router);
-  app.use('/api/v1/tests', testModule.router);
-  app.use('/api/v1/homework', homeworkModule.router);
-
-  // Domain Module Routes (Phase 7: AI Service Layer & pgvector RAG Knowledge Base)
-  const aiModule = AiModule.init();
-
-  // Domain Module Routes (Phase 6: Smart WhatsApp Assistant & Student Risk Engine)
-  const whatsappAssistantModule = WhatsAppAssistantModule.init({
-    knowledgeBaseService: aiModule.knowledgeBaseService,
-    aiService: aiModule.service,
-  });
-  workerRegistry.setWhatsAppAssistantService(whatsappAssistantModule.service);
-  const riskEngineModule = RiskEngineModule.init();
-
-  // Domain Module Routes (Phase 3: Notifications, Timeline & Audit)
-  const notificationModule = NotificationModule.init({ assistantService: whatsappAssistantModule.service });
-  const timelineModule = TimelineModule.init();
-  const auditModule = AuditModule.init();
-
-  app.use('/api/v1/notifications', notificationModule.router);
-  app.use('/api/v1/timeline', timelineModule.router);
-  app.use('/api/v1/audit', auditModule.router);
-  app.use('/api/v1/whatsapp-assistant', whatsappAssistantModule.router);
-  app.use('/api/v1/risk-engine', riskEngineModule.router);
-  app.use('/api/v1/ai', aiModule.router);
-
-  // Domain Module Routes (Phase 4: Fees, Salary, Expenses & Billing)
-  const feeModule = FeeModule.init();
-  const salaryModule = SalaryModule.init();
-  const expenseModule = ExpenseModule.init();
-  const billingModule = BillingModule.init();
-
-  app.use('/api/v1/fees', feeModule.router);
-  app.use('/api/v1/salary', salaryModule.router);
-  app.use('/api/v1/expenses', expenseModule.router);
-  app.use('/api/v1/billing', billingModule.router);
-
-  // Domain Module Routes (Phase 5: Reports, Notice Board, Settings & Import)
-  const noticeModule = NoticeModule.init();
-  const settingsModule = SettingsModule.init();
-  const reportModule = ReportModule.init();
-  const dashboardModule = DashboardModule.init();
-  const importModule = ImportModule.init();
-
-  app.use('/api/v1/notices', noticeModule.router);
-  app.use('/api/v1/settings', settingsModule.router);
-  app.use('/api/v1/reports', reportModule.router);
-  app.use('/api/v1/dashboard', dashboardModule.router);
-  app.use('/api/v1/import', importModule.router);
+  // Modules are initialised once per process (see bootstrap/modules.ts)
+  const m = initModules();
+  app.use('/api/v1/storage', m.storage.router);
+  app.use('/api/v1/auth', m.auth.router);
+  app.use('/api/v1/rbac', m.rbac.router);
+  app.use('/api/v1/coachings', m.coaching.router);
+  app.use('/api/v1/students', m.student.router);
+  app.use('/api/v1/parents', m.parent.router);
+  app.use('/api/v1/teachers', m.teacher.router);
+  app.use('/api/v1/batches', m.batch.router);
+  app.use('/api/v1/attendance', m.attendance.router);
+  app.use('/api/v1/tests', m.test.router);
+  app.use('/api/v1/homework', m.homework.router);
+  app.use('/api/v1/notifications', m.notification.router);
+  app.use('/api/v1/timeline', m.timeline.router);
+  app.use('/api/v1/audit', m.audit.router);
+  app.use('/api/v1/whatsapp-assistant', m.whatsappAssistant.router);
+  app.use('/api/v1/risk-engine', m.riskEngine.router);
+  app.use('/api/v1/ai', m.ai.router);
+  app.use('/api/v1/fees', m.fee.router);
+  app.use('/api/v1/salary', m.salary.router);
+  app.use('/api/v1/expenses', m.expense.router);
+  app.use('/api/v1/billing', m.billing.router);
+  app.use('/api/v1/notices', m.notice.router);
+  app.use('/api/v1/settings', m.settings.router);
+  app.use('/api/v1/reports', m.report.router);
+  app.use('/api/v1/dashboard', m.dashboard.router);
+  app.use('/api/v1/import', m.import.router);
 
   // Global Error Handler (must be last)
   app.use(errorHandlerMiddleware);
@@ -209,8 +136,10 @@ async function startServer(): Promise<void> {
   const app = createApp();
   const port = envConfig.get('PORT');
 
-  // Start background queue workers in non-test environments
-  if (envConfig.get('NODE_ENV') !== 'test') {
+  // Background workers normally run in their own process (worker-runner). Running them
+  // inside the API as well doubled the work and competed with requests; it remains available
+  // for single-process local development (RUN_WORKERS_IN_API).
+  if (envConfig.get('RUN_WORKERS_IN_API') === 'true') {
     await workerRegistry.startAll();
   }
 

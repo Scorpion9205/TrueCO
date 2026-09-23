@@ -4,6 +4,7 @@ import { getPrismaClient } from '../database/prisma/tenant-prisma.extension.js';
 import { assertDatabaseRoleEnforcesRls } from '../database/prisma/database-role.check.js';
 import { logger } from '../common/logger/logger.service.js';
 import { registerProcessErrorHandlers } from '../common/logger/process-error-handlers.js';
+import { initModules } from '../bootstrap/modules.js';
 
 async function bootstrapWorkers(): Promise<void> {
   logger.info('=====================================================');
@@ -19,11 +20,15 @@ async function bootstrapWorkers(): Promise<void> {
     // 2. Refuse to run with a database role that bypasses tenant row-level security
     await assertDatabaseRoleEnforcesRls(getPrismaClient());
 
-    // 3. Start all workers
+    // 3. Initialise modules exactly as the API does: registers the same event subscribers
+    //    (events published by jobs were previously dropped here) and the WhatsApp assistant
+    initModules();
+
+    // 4. Start all workers
     await workerRegistry.startAll();
     logger.info('[WorkerRunner] All background queue workers active & listening');
 
-    // 4. Graceful shutdown handler
+    // 5. Graceful shutdown handler
     const shutdown = async (signal: string) => {
       logger.info(`[WorkerRunner] Received ${signal}. Starting graceful shutdown of workers...`);
       try {
