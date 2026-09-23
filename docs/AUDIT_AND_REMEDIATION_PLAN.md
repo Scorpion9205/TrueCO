@@ -35,9 +35,9 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | H3 | `requireBatchAccess` only checks `batchId` from params or body. `PUT /homework/:id`, `POST /tests/:id/marks`, `GET /attendance/sessions/:id` and `GET /tests/student/:id` bypass it. | 2 | ✅ |
 | H4 | Permissions are frozen in the JWT, so revocation waits for token expiry. `features` is always `[]`. `requireFeature` is only on the AI and risk-engine routes, so an expired subscription doesn't block the rest of the product. | 2 | ✅ |
 | H5 | Reset tokens are HS256 with the access secret and reusable. `verifyEmail` accepts any such token and never persists verification. | 2 | ✅ |
-| H6 | The in-process event bus is not durable. The standalone worker process registers **zero** subscribers, so events it publishes (e.g. fee reminders) are dropped. | 4 | ⬜ |
-| H7 | Fee reminders re-send daily to every overdue installment with no limit, use UTC instead of the coaching's timezone, and load all tenants' installments into memory in one query. | 4 | ⬜ |
-| H8 | WhatsApp assistant: conversation state lives in an in-process `Map`. Parents are resolved by `phone contains last-10-digits` across all tenants. No WABA `phone_number_id` → coaching mapping exists. Dedupe via `jobId` is defeated by `removeOnComplete: true`. | 4 | ⬜ |
+| H6 | The in-process event bus is not durable. The standalone worker process registers **zero** subscribers, so events it publishes (e.g. fee reminders) are dropped. | 4 | ✅ |
+| H7 | Fee reminders re-send daily to every overdue installment with no limit, use UTC instead of the coaching's timezone, and load all tenants' installments into memory in one query. | 4 | ✅ |
+| H8 | WhatsApp assistant: conversation state lives in an in-process `Map`. Parents are resolved by `phone contains last-10-digits` across all tenants. No WABA `phone_number_id` → coaching mapping exists. Dedupe via `jobId` is defeated by `removeOnComplete: true`. | 4 | ✅ |
 | H9 | `SmtpEmailAdapter` never sends mail: it returns `SENT` with a fabricated ID even when SMTP is configured. | 5 | ⬜ |
 
 ### 🟡 Medium
@@ -47,7 +47,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | M1 | No Prisma migrations (`db push` only). RLS, pgvector and a vector (HNSW) index are not part of deploys. | 1 ✅ |
 | M2 | Schema gaps: `Salary` has no teacher FK and no unique `(teacher, month, year)`. `FeePlan`, `Salary` and `Expense` lack a `Coaching` FK. No billing invoice/payment table. `AiUsageLog` has no `coachingId`. Nothing enforces a single active subscription. | 3 🚧 (FKs, salary, billing tables done; usage-log coachingId and single active subscription open) |
 | M3 | Insecure defaults are accepted in production. Without `JWT_*_KEY`, each pod generates its own key, so multi-replica deploys return random 401s. | 0 |
-| M4 | Workers start inside the API process as well as in the worker container. | 4 |
+| M4 | Workers start inside the API process as well as in the worker container. | 4 ✅ |
 | M5 | Gemini 768-d embeddings are zero-padded to 1536. Switching provider silently corrupts retrieval. | 5 |
 | M6 | Hard-coded default AI model IDs are outdated. | 5 |
 | M7 | 10 MB global JSON limit, base64 uploads, no file-type or size validation. | 2 ✅ |
@@ -147,8 +147,23 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - AI usage logs still carry no `coachingId` (they are reached through the wallet)
 - Paid periods use calendar months and years; proration on plan changes is not implemented
 
-### Phase 4: Reliable async
-Transactional outbox → BullMQ; subscribers registered in the worker; separate API and worker processes; notification idempotency keys; reminder policy (once per stage, coaching's timezone, quiet hours, paged per tenant); WhatsApp state in Redis, `phone_number_id` → coaching routing, inbound message table keyed by `wamid`.
+### Phase 4: Reliable async ✅
+- [x] Durable events: every published event is recorded in `domain_events` before its handlers run, with the outcome per handler. Failed handlers are retried with backoff (30 s doubling, up to 1 h, 10 attempts, then `DEAD`) by an event relay worker; events interrupted by a crash are recovered; only handlers that have not succeeded are re-run. Relays lease events with `FOR UPDATE SKIP LOCKED`, so several workers never process the same one
+- [x] One composition root (`bootstrap/modules.ts`) used by the API and the worker process: the worker now registers all 69 subscribers (it had none, so events published by jobs were dropped) and the WhatsApp assistant gets its AI and knowledge-base services. Modules initialise once per process
+- [x] Workers no longer run inside the API in staging/production (`RUN_WORKERS_IN_API`, on by default only in development)
+- [x] Notifications are sent once: workers atomically claim a notification (`SENDING`) before sending, instead of reading its status; a claim abandoned by a crashed worker can be retaken after 10 minutes. `READ` notifications are no longer resent
+- [x] Fee reminders: one reminder per stage (7 and 3 days before, due day, 3/7/14 days overdue, then stop) instead of every day forever; sent at 10:00 in each coaching's own time zone; coachings and installments are processed in pages
+- [x] WhatsApp assistant: conversation state in Redis (shared across processes, survives restarts, 24 h); inbound messages claimed once in Redis across workers and released if handling fails; parents matched by exact phone number instead of substring; a parent registered at several institutes is asked which one and the choice is remembered
+
+**Exit:** met. Real-database tests prove: a failed handler is retried alone and the event ends dispatched; an event left by a crashed process is recovered with its dates intact; concurrent relays never take the same event; 8 concurrent workers claim a notification once and a sent one is never re-claimed; a WhatsApp message delivered 6 times is claimed once; conversation state is shared between processes. Both processes were started for real: 69 subscribers each, event relay running, API ready.
+
+**Known limitations, tracked for later phases:**
+- Events are recorded right after the business change commits, not in the same transaction, so a crash in that instant can still lose one; a full transactional outbox needs services to write events through their repository transaction
+- Handlers must tolerate re-running after a failure; handlers that write rows (timeline, audit) could duplicate a row if they fail after writing
+- `DEAD` events and payments marked `RECONCILE` are only visible in logs and the database; they need alerting and an admin view (Phase 6)
+- One TrueCO WhatsApp number serves every institute; routing by per-coaching WhatsApp numbers is not implemented
+- The reminder hour (10:00 local) is fixed, not configurable per coaching
+- Notification sending is at-least-once: a worker that crashes after sending but before recording it can cause one resend after 10 minutes
 
 ### Phase 5: Real integrations
 Nodemailer SMTP; fail instead of simulating when credentials are missing in production; config-driven AI model IDs; embedding model and dimension stored per index; implement or delete stub crons.
