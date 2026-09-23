@@ -3,8 +3,10 @@ import { FeeService } from '../../modules/fees/fee.service.js';
 import {
   CreateFeePlanInput,
   IFeeRepository,
+  RecordPaymentResult,
   RecordPaymentTxInput,
 } from '../../modules/fees/fee.repository.js';
+import { money } from '../../common/money/money.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
 import {
@@ -18,7 +20,7 @@ class InMemoryFeeRepository implements IFeeRepository {
   public plans: Map<string, any> = new Map();
   public installments: Map<string, any> = new Map();
   public transactions: Map<string, any> = new Map();
-  private receiptCounter = 1000;
+  private receiptCounter = 0;
 
   public async createFeePlan(input: CreateFeePlanInput): Promise<any> {
     const planId = `plan-${crypto.randomUUID()}`;
@@ -92,58 +94,64 @@ class InMemoryFeeRepository implements IFeeRepository {
     );
   }
 
-  public async recordPaymentTransaction(
-    input: RecordPaymentTxInput,
-  ): Promise<{ transaction: any; installment: any; plan: any }> {
+  public async recordPaymentTransaction(input: RecordPaymentTxInput): Promise<RecordPaymentResult> {
     const installment = this.installments.get(input.installmentId);
-    if (!installment) throw new Error('Installment not found');
-
-    const txId = `tx-${crypto.randomUUID()}`;
-    const newPaidAmount = Number(installment.paidAmount || 0) + input.amount;
-    const totalAmount = Number(installment.amount);
-    const newStatus =
-      newPaidAmount >= totalAmount
-        ? FeeInstallmentStatus.PAID
-        : FeeInstallmentStatus.PARTIAL;
-
-    installment.paidAmount = newPaidAmount;
-    installment.status = newStatus;
-    if (newStatus === FeeInstallmentStatus.PAID) {
-      installment.paidAt = new Date();
+    if (!installment) {
+      throw new AppError('INSTALLMENT_NOT_FOUND', 'Fee installment not found', 404);
+    }
+    if (input.transactionRef) {
+      const existing = [...this.transactions.values()].find((t) => t.transactionRef === input.transactionRef);
+      if (existing) return { kind: 'duplicate', transaction: existing };
+    }
+    if (installment.status === FeeInstallmentStatus.PAID) {
+      throw new AppError('INSTALLMENT_ALREADY_PAID', 'This installment is already fully paid', 409);
+    }
+    if (installment.status === FeeInstallmentStatus.WAIVED) {
+      throw new AppError('INSTALLMENT_WAIVED', 'Cannot accept payment for a waived installment', 409);
     }
 
+    const amount = money(input.amount);
+    const total = money(installment.amount);
+    const alreadyPaid = money(installment.paidAmount);
+    if (amount.greaterThan(total.minus(alreadyPaid))) {
+      throw new AppError('AMOUNT_EXCEEDS_BALANCE', 'Payment amount exceeds remaining balance', 400);
+    }
+
+    const newPaid = alreadyPaid.plus(amount);
+    installment.paidAmount = newPaid.toNumber();
+    installment.status = newPaid.greaterThanOrEqualTo(total) ? FeeInstallmentStatus.PAID : FeeInstallmentStatus.PARTIAL;
+
+    this.receiptCounter++;
     const tx = {
-      id: txId,
+      id: `tx-${crypto.randomUUID()}`,
       coachingId: input.coachingId,
       installmentId: input.installmentId,
-      amount: input.amount,
+      amount: amount.toNumber(),
       paymentMethod: input.paymentMethod,
       transactionRef: input.transactionRef || null,
-      receiptNumber: input.receiptNumber,
+      receiptNumber: `RCT/2026-27/${String(this.receiptCounter).padStart(5, '0')}`,
       remarks: input.remarks || null,
       createdAt: new Date(),
     };
+    this.transactions.set(tx.id, tx);
 
-    this.transactions.set(txId, tx);
-    const plan = this.plans.get(installment.feePlanId);
-
-    return { transaction: tx, installment, plan };
+    return {
+      kind: 'recorded',
+      transaction: tx,
+      installment,
+      plan: this.plans.get(installment.feePlanId),
+      remainingBalance: total.minus(newPaid),
+    };
   }
 
-  public async waiveInstallment(installmentId: string, remarks?: string): Promise<any> {
+  public async waiveInstallment(installmentId: string, remarks?: string): Promise<any | null> {
     const installment = this.installments.get(installmentId);
-    if (!installment) throw new Error('Installment not found');
+    if (!installment) return null;
+    if (![FeeInstallmentStatus.PENDING, FeeInstallmentStatus.PARTIAL].includes(installment.status)) return null;
 
     installment.status = FeeInstallmentStatus.WAIVED;
     installment.remarks = remarks;
-
-    const plan = this.plans.get(installment.feePlanId);
-    return { ...installment, feePlan: plan };
-  }
-
-  public async generateReceiptNumber(_coachingId: string): Promise<string> {
-    this.receiptCounter++;
-    return `RCP-2026-${this.receiptCounter}`;
+    return { ...installment, feePlan: this.plans.get(installment.feePlanId) };
   }
 }
 
@@ -258,7 +266,7 @@ describe('FeeService (Phase 4 Domain Unit Tests)', () => {
         testUserId,
       );
 
-      expect(tx.receiptNumber).toMatch(/^RCP-2026-/);
+      expect(tx.receiptNumber).toMatch(/^RCT\/\d{4}-\d{2}\/\d{5}$/);
       expect(tx.amount).toBe(2000);
       expect(tx.paymentMethod).toBe(PaymentMethod.UPI);
 

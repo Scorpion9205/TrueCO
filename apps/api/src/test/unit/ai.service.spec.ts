@@ -80,21 +80,46 @@ describe('AiService (Phase 7 AI Service Layer Unit Tests)', () => {
       }
     });
 
-    it('should allow admin to top-up credits and emit AiCreditsAdded event', async () => {
-      const updated = await aiService.addCredits(
-        testCoachingId,
-        { credits: 250, reason: 'Monthly Pro AI allotment' },
-        testUserId,
+    it('never overdraws the wallet under concurrent generations', async () => {
+      const wallet = await repository.createOrGetWallet(testCoachingId, 3);
+
+      const results = await Promise.allSettled(
+        Array.from({ length: 6 }, (_, n) =>
+          aiService.generateCompletion({ prompt: `Distinct prompt ${n}` }, testCoachingId, testUserId),
+        ),
       );
 
-      expect(updated.balance).toBe(350); // 100 default + 250
-      expect(updated.totalAllocated).toBe(350);
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(3);
+      const rejected = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+      expect(rejected).toHaveLength(3);
+      expect(rejected.every((r) => r.reason instanceof InsufficientAiCreditsError)).toBe(true);
+      expect(wallet.balance).toBe(0);
+      expect(await repository.findUsageLogsCount(wallet.id)).toBe(3);
+    });
 
-      const addedEvent = publishedEvents.find((e) => e.eventName === AI_EVENTS.CREDITS_ADDED);
-      expect(addedEvent).toBeDefined();
-      expect(addedEvent.payload.creditsAdded).toBe(250);
-      expect(addedEvent.payload.newBalance).toBe(350);
-      expect(addedEvent.payload.reason).toBe('Monthly Pro AI allotment');
+    it('refunds the reserved credits when the provider call fails', async () => {
+      const failing = {
+        providerType: AiProviderType.OPENAI,
+        generateCompletion: vi.fn().mockRejectedValue(new Error('provider down')),
+      };
+      const failingService = new AiService(
+        repository,
+        new AiProviderFactory({
+          [AiProviderType.OPENAI]: failing as any,
+          [AiProviderType.CLAUDE]: failing as any,
+          [AiProviderType.GEMINI]: failing as any,
+        }),
+        promptCache,
+        mockEventBus,
+      );
+      const wallet = await repository.createOrGetWallet(testCoachingId, 5);
+
+      await expect(
+        failingService.generateCompletion({ prompt: 'Will fail' }, testCoachingId, testUserId),
+      ).rejects.toThrow('provider down');
+      expect(wallet.balance).toBe(5);
+      expect(wallet.totalConsumed).toBe(0);
+      expect(await repository.findUsageLogsCount(wallet.id)).toBe(0);
     });
   });
 
