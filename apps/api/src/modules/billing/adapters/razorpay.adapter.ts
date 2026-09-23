@@ -8,6 +8,7 @@ import {
 } from './payment-gateway.interface.js';
 import { envConfig } from '../../../config/env.config.js';
 import { logger } from '../../../common/logger/logger.service.js';
+import { hmacSha256Hex, isUnsignedWebhookAllowed, safeEqual } from '../../../common/security/webhook-signature.js';
 
 export class RazorpayAdapter implements IPaymentGatewayAdapter {
   private readonly keyId: string;
@@ -130,14 +131,12 @@ export class RazorpayAdapter implements IPaymentGatewayAdapter {
     secret?: string,
   ): boolean {
     const webhookSecret = secret || this.webhookSecret;
-    if (!webhookSecret) return true; // dev bypass
-
-    try {
-      const raw = typeof payload === 'string' ? payload : payload.toString('utf-8');
-      const expected = crypto.createHmac('sha256', webhookSecret).update(raw).digest('hex');
-      return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-    } catch {
+    if (!webhookSecret) {
+      if (isUnsignedWebhookAllowed()) return true;
+      logger.error('[RazorpayAdapter] RAZORPAY_WEBHOOK_SECRET is not configured; rejecting webhook');
       return false;
     }
+
+    return safeEqual(signature, hmacSha256Hex(payload, webhookSecret));
   }
 }
