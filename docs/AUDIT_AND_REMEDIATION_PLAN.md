@@ -29,9 +29,9 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 |----|---------|-------|--------|
 | H1 | Fee payments: installment balance is read outside a row lock, and money is summed as JS `Number`. Receipt numbers are `date + random(4)` and globally unique, so they collide and are not sequential per coaching. | 3 | ⬜ |
 | H2 | The login lockout key trusts the client-supplied `X-Forwarded-For`. `trust proxy` is not set. No rate limiting exists on auth, OTP, registration or AI. | 0 | ✅ |
-| H3 | `requireBatchAccess` only checks `batchId` from params or body. `PUT /homework/:id`, `POST /tests/:id/marks`, `GET /attendance/sessions/:id` and `GET /tests/student/:id` bypass it. | 2 | ⬜ |
-| H4 | Permissions are frozen in the JWT, so revocation waits for token expiry. `features` is always `[]`. `requireFeature` is only on the AI and risk-engine routes, so an expired subscription doesn't block the rest of the product. | 2 | ⬜ |
-| H5 | Reset tokens are HS256 with the access secret and reusable. `verifyEmail` accepts any such token and never persists verification. | 2 | ⬜ |
+| H3 | `requireBatchAccess` only checks `batchId` from params or body. `PUT /homework/:id`, `POST /tests/:id/marks`, `GET /attendance/sessions/:id` and `GET /tests/student/:id` bypass it. | 2 | ✅ |
+| H4 | Permissions are frozen in the JWT, so revocation waits for token expiry. `features` is always `[]`. `requireFeature` is only on the AI and risk-engine routes, so an expired subscription doesn't block the rest of the product. | 2 | ✅ |
+| H5 | Reset tokens are HS256 with the access secret and reusable. `verifyEmail` accepts any such token and never persists verification. | 2 | ✅ |
 | H6 | The in-process event bus is not durable. The standalone worker process registers **zero** subscribers, so events it publishes (e.g. fee reminders) are dropped. | 4 | ⬜ |
 | H7 | Fee reminders re-send daily to every overdue installment with no limit, use UTC instead of the coaching's timezone, and load all tenants' installments into memory in one query. | 4 | ⬜ |
 | H8 | WhatsApp assistant: conversation state lives in an in-process `Map`. Parents are resolved by `phone contains last-10-digits` across all tenants. No WABA `phone_number_id` → coaching mapping exists. Dedupe via `jobId` is defeated by `removeOnComplete: true`. | 4 | ⬜ |
@@ -47,7 +47,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | M4 | Workers start inside the API process as well as in the worker container. | 4 |
 | M5 | Gemini 768-d embeddings are zero-padded to 1536. Switching provider silently corrupts retrieval. | 5 |
 | M6 | Hard-coded default AI model IDs are outdated. | 5 |
-| M7 | 10 MB global JSON limit, base64 uploads, no file-type or size validation. | 2 |
+| M7 | 10 MB global JSON limit, base64 uploads, no file-type or size validation. | 2 ✅ |
 | M8 | 15 `*.cron.ts` files are stubs that only log. | 5 |
 
 ### ⚙️ Infra, CI & frontend
@@ -97,8 +97,29 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - Each statement outside an interactive transaction now runs as a small transaction (`set_config` + statement); measure latency under load before scaling (Phase 6)
 - `app.rls_bypass` is a session setting: code able to run arbitrary SQL as the app role can set it. RLS guards against missing filters in application code, not against SQL injection
 
-### Phase 2: AuthN / AuthZ correctness
-Service-level resource ownership checks; permissions resolved server-side from a versioned Redis cache; one global subscription gate middleware; hashed, single-use reset and verification tokens; upload validation.
+### Phase 2: AuthN / AuthZ correctness ✅
+- [x] Teachers confined to their batches on every route that identifies a record: homework, tests and marks, attendance sessions, students, timeline, AI student/teacher endpoints. A teacher request whose batch cannot be determined is refused (was: allowed)
+- [x] Roles and permissions re-read from the database on each request (60 s Redis cache, dropped on role assignment and teacher (de)activation); deactivated users get 401 and deactivated teachers lose the teaching role immediately
+- [x] One subscription rule (`evaluateSubscriptionAccess`) applied to 20 business modules; lapsed trials and periods get 402 even when the status column was not updated. Auth, coaching profile and billing stay open so a lapsed coaching can pay. Subscription cache is now invalidated on upgrade and expiry (was never invalidated)
+- [x] Password reset and email verification use random single-use tokens stored as SHA-256 hashes (`auth_action_tokens`), consumed atomically; email verification is recorded (`users.email_verified_at`); registration issues a verification token. Reset passwords now need 8+ characters, matching registration
+- [x] Uploads: per-category type and size limits, content signature check, SVG/HTML refused, file names sanitised; default JSON body limit lowered from 10 MB to 1 MB (uploads 15 MB, bulk import 10 MB)
+- [x] Same-tenant references: 23 database triggers reject any link to another coaching's record (Phase 1 leftover)
+- [x] Five permission codes used by routes were never seeded (`dashboard:*`, `audit:read`, `ai:manage_credits`, `ai:view_logs`); teachers now receive `dashboard:teacher`
+- [x] Prisma not-found / duplicate / invalid-reference errors now return 404 / 409 / 400 instead of 500
+
+**Bugs found and fixed along the way:** batch-wide notifications (homework and test alerts) always failed, and `GET /tests/student/:id` always returned 500. Both queries filtered on a `deletedAt` column those tables do not have.
+
+**Exit:** met. Tests prove a teacher gets 403 on another batch's homework, tests and students; a deactivated teacher loses access on the next request with the same token; a lapsed trial gets 402 while sign-in and billing work; a reset link works once, including under 8 concurrent attempts.
+
+**Upgrading an existing database:** `pnpm prisma:migrate:deploy`, then re-run `pnpm --filter @trueco/api db:seed:rbac` to add the new permissions.
+
+**Known limitations, tracked for later phases:**
+- List endpoints (`GET /students`, `/batches`, `/parents`) still return coaching-wide lists to teachers; per-batch filtering belongs in the services
+- Marks upload checks the test's batch, but not that each student in the payload belongs to it
+- After a password reset, existing access tokens keep working until they expire (up to 15 min); refresh tokens are revoked
+- Reset and verification tokens are only printed on a development terminal until email delivery exists (Phase 5)
+- Presigned (direct-to-Cloudinary) uploads are checked by declared type only, at the time the URL is issued
+- Knowledge-base sync calls the real Gemini API from tests when a key is present in `.env` (Phase 6: stub external providers in tests)
 
 ### Phase 3: Money & data integrity
 Row locks or conditional updates on payments; `Decimal` arithmetic; per-coaching sequential receipt counters; a `payment_events` table with a unique provider event ID; unique `(coachingId, transactionRef)`; billing invoice and payment tables; salary uniqueness; missing FKs.
