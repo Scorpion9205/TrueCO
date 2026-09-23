@@ -47,12 +47,13 @@ export interface TeacherMetricsSnapshot {
 export interface IAiRepository {
   findWalletByCoachingId(coachingId: string): Promise<any | null>;
   createOrGetWallet(coachingId: string, initialBalance?: number): Promise<any>;
-  deductCredits(
-    walletId: string,
-    credits: number,
-    usageLogData: CreateAiUsageLogInput,
-  ): Promise<{ wallet: any; log: any }>;
-  addCredits(walletId: string, credits: number): Promise<any>;
+  /**
+   * Atomically takes credits from the wallet if the balance covers them; returns the updated
+   * wallet, or null when it does not. Reserve before calling a provider, refund on failure.
+   */
+  reserveCredits(walletId: string, credits: number): Promise<any | null>;
+  refundCredits(walletId: string, credits: number): Promise<void>;
+  logUsage(usageLogData: CreateAiUsageLogInput): Promise<any>;
   findUsageLogs(walletId: string, limit?: number, offset?: number): Promise<any[]>;
   findUsageLogsCount(walletId: string): Promise<number>;
   getStudentAcademicSnapshot(studentId: string, coachingId: string): Promise<StudentMetricsSnapshot | null>;
@@ -89,46 +90,37 @@ export class PrismaAiRepository implements IAiRepository {
     });
   }
 
-  public async deductCredits(
-    walletId: string,
-    credits: number,
-    usageLogData: CreateAiUsageLogInput,
-  ): Promise<{ wallet: any; log: any }> {
+  public async reserveCredits(walletId: string, credits: number): Promise<any | null> {
     const rawPrisma = this.prisma as any;
+    // Conditional decrement: concurrent requests cannot take the balance below zero
+    const { count } = await rawPrisma.aiCreditWallet.updateMany({
+      where: { id: walletId, balance: { gte: credits } },
+      data: { balance: { decrement: credits }, totalConsumed: { increment: credits } },
+    });
+    if (count === 0) return null;
+    return rawPrisma.aiCreditWallet.findUnique({ where: { id: walletId } });
+  }
 
-    return rawPrisma.$transaction(async (tx: any) => {
-      const updatedWallet = await tx.aiCreditWallet.update({
-        where: { id: walletId },
-        data: {
-          balance: { decrement: credits },
-          totalConsumed: { increment: credits },
-        },
-      });
-
-      const log = await tx.aiUsageLog.create({
-        data: {
-          walletId,
-          feature: usageLogData.feature,
-          provider: usageLogData.provider,
-          model: usageLogData.model,
-          promptTokens: usageLogData.promptTokens,
-          completionTokens: usageLogData.completionTokens,
-          creditsDeducted: credits,
-          inputHash: usageLogData.inputHash,
-        },
-      });
-
-      return { wallet: updatedWallet, log };
+  public async refundCredits(walletId: string, credits: number): Promise<void> {
+    const rawPrisma = this.prisma as any;
+    await rawPrisma.aiCreditWallet.update({
+      where: { id: walletId },
+      data: { balance: { increment: credits }, totalConsumed: { decrement: credits } },
     });
   }
 
-  public async addCredits(walletId: string, credits: number): Promise<any> {
+  public async logUsage(usageLogData: CreateAiUsageLogInput): Promise<any> {
     const rawPrisma = this.prisma as any;
-    return rawPrisma.aiCreditWallet.update({
-      where: { id: walletId },
+    return rawPrisma.aiUsageLog.create({
       data: {
-        balance: { increment: credits },
-        totalAllocated: { increment: credits },
+        walletId: usageLogData.walletId,
+        feature: usageLogData.feature,
+        provider: usageLogData.provider,
+        model: usageLogData.model,
+        promptTokens: usageLogData.promptTokens,
+        completionTokens: usageLogData.completionTokens,
+        creditsDeducted: usageLogData.creditsDeducted,
+        inputHash: usageLogData.inputHash,
       },
     });
   }
@@ -311,47 +303,40 @@ export class InMemoryAiRepository implements IAiRepository {
     return newWallet;
   }
 
-  public async deductCredits(
-    walletId: string,
-    credits: number,
-    usageLogData: CreateAiUsageLogInput,
-  ): Promise<{ wallet: any; log: any }> {
-    let targetWallet: any = null;
-    for (const w of this.wallets.values()) {
-      if (w.id === walletId) {
-        targetWallet = w;
-        break;
-      }
-    }
+  private walletById(walletId: string): any {
+    for (const w of this.wallets.values()) if (w.id === walletId) return w;
+    throw new Error(`Wallet not found: ${walletId}`);
+  }
 
-    if (!targetWallet) {
-      throw new Error(`Wallet not found: ${walletId}`);
-    }
+  public async reserveCredits(walletId: string, credits: number): Promise<any | null> {
+    const wallet = this.walletById(walletId);
+    if (wallet.balance < credits) return null;
+    wallet.balance -= credits;
+    wallet.totalConsumed += credits;
+    wallet.updatedAt = new Date();
+    return wallet;
+  }
 
-    targetWallet.balance -= credits;
-    targetWallet.totalConsumed += credits;
-    targetWallet.updatedAt = new Date();
+  public async refundCredits(walletId: string, credits: number): Promise<void> {
+    const wallet = this.walletById(walletId);
+    wallet.balance += credits;
+    wallet.totalConsumed -= credits;
+  }
 
+  public async logUsage(usageLogData: CreateAiUsageLogInput): Promise<any> {
     const log = {
       id: crypto.randomUUID(),
-      walletId,
-      feature: usageLogData.feature,
-      provider: usageLogData.provider,
-      model: usageLogData.model,
-      promptTokens: usageLogData.promptTokens,
-      completionTokens: usageLogData.completionTokens,
-      creditsDeducted: credits,
+      ...usageLogData,
       inputHash: usageLogData.inputHash || null,
       createdAt: new Date(),
     };
-
-    const logs = this.usageLogs.get(walletId) || [];
+    const logs = this.usageLogs.get(usageLogData.walletId) || [];
     logs.unshift(log);
-    this.usageLogs.set(walletId, logs);
-
-    return { wallet: targetWallet, log };
+    this.usageLogs.set(usageLogData.walletId, logs);
+    return log;
   }
 
+  /** Test helper: tops up a wallet directly. */
   public async addCredits(walletId: string, credits: number): Promise<any> {
     let targetWallet: any = null;
     for (const w of this.wallets.values()) {

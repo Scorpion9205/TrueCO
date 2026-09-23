@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes';
 import { AiService, InsufficientAiCreditsError } from './ai.service.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import {
-  addAiCreditsSchema,
   aiPaginationSchema,
   generateAiCompletionSchema,
   generateParentReportCardSchema,
@@ -25,25 +24,6 @@ export class AiController {
       }
 
       const wallet = await this.aiService.getWalletBalance(coachingId);
-      res.status(StatusCodes.OK).json({ data: wallet });
-    } catch (err) {
-      this.handleError(res, err);
-    }
-  };
-
-  public addCredits = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const coachingId = RequestContextService.getCoachingId();
-      const userId = RequestContextService.getUserId();
-      if (!coachingId) {
-        res.status(StatusCodes.UNAUTHORIZED).json({
-          error: { code: 'UNAUTHENTICATED', message: 'Tenant context missing' },
-        });
-        return;
-      }
-
-      const dto = addAiCreditsSchema.parse(req.body);
-      const wallet = await this.aiService.addCredits(coachingId, dto, userId);
       res.status(StatusCodes.OK).json({ data: wallet });
     } catch (err) {
       this.handleError(res, err);

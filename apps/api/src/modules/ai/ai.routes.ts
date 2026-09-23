@@ -15,7 +15,7 @@ export function createAiRouter(controller: AiController): Router {
 
   // Credit & Wallet Management
   router.get('/wallet', controller.getWalletBalance);
-  router.post('/wallet/add-credits', requirePermission('ai:manage_credits'), controller.addCredits);
+  // Credits are bought through POST /api/v1/billing/orders and granted by the payment webhook
   router.get('/usage-logs', requirePermission('ai:view_logs'), controller.getUsageLogs);
 
   // AI Generation Endpoints
