@@ -1,10 +1,11 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { BillingController } from './billing.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 
 export function createBillingRoutes(controller: BillingController): Router {
-  const router = Router();
+  const router = createRouter();
 
   // Public plan listing
   router.get('/plans', controller.listPlans);

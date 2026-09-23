@@ -23,6 +23,17 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // Express "trust proxy": number of proxy hops in front of the API (e.g. 1 behind an ingress),
+  // "false" when clients connect directly, or a subnet list. Controls whether X-Forwarded-For
+  // is believed when resolving the client IP used for rate limiting and lockout.
+  TRUST_PROXY: z
+    .string()
+    .default('false')
+    .transform((v): boolean | number | string => {
+      if (v === 'false') return false;
+      if (v === 'true') return true;
+      return /^\d+$/.test(v) ? Number(v) : v;
+    }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   // WhatsApp Cloud API
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
@@ -60,14 +71,60 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:3000'),
 });
 
+// Values that ship in code or .env.example. They are public, so they must never secure production.
+const KNOWN_INSECURE_VALUES = new Set([
+  '0123456789abcdef0123456789abcdef',
+  'trueco_webhook_secret_token',
+  'trueco_dev_access_super_secret_key_change_in_production_32char',
+  'trueco_dev_refresh_super_secret_key_change_in_production_32char',
+  'test_jwt_access_secret_key_at_least_32_chars_long',
+  'test_jwt_refresh_secret_key_at_least_32_chars_long',
+]);
+
+const PRODUCTION_SECRETS = [
+  'JWT_ACCESS_SECRET',
+  'JWT_REFRESH_SECRET',
+  'DATABASE_ENCRYPTION_KEY',
+  'WHATSAPP_WEBHOOK_VERIFY_TOKEN',
+] as const;
+
+const productionEnvSchema = envSchema.superRefine((cfg, ctx) => {
+  if (cfg.NODE_ENV !== 'production') return;
+
+  for (const key of PRODUCTION_SECRETS) {
+    const value = cfg[key];
+    if (KNOWN_INSECURE_VALUES.has(value) || value.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} must be a unique secret of at least 32 characters in production (not a default)`,
+      });
+    }
+  }
+
+  for (const key of ['JWT_PRIVATE_KEY', 'JWT_PUBLIC_KEY'] as const) {
+    if (!cfg[key]) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `${key} is required in production so all replicas share one signing keypair`,
+      });
+    }
+  }
+});
+
 export type EnvConfig = z.infer<typeof envSchema>;
+
+export function parseEnvConfig(source: NodeJS.ProcessEnv) {
+  return productionEnvSchema.safeParse(source);
+}
 
 class ConfigService {
   private static instance: ConfigService;
   private readonly config: EnvConfig;
 
   private constructor() {
-    const parsed = envSchema.safeParse(process.env);
+    const parsed = parseEnvConfig(process.env);
     if (!parsed.success) {
       console.error('❌ Invalid environment variables:', JSON.stringify(parsed.error.format(), null, 2));
       throw new Error('Invalid environment configuration');

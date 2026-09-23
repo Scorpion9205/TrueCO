@@ -40,6 +40,18 @@ describe('OtpService (Development Terminal OTP)', () => {
     expect(isValid).toBe(false);
   });
 
+  it('burns the OTP after too many wrong guesses, even if the right code follows', async () => {
+    const email = 'bruteforce@trueco.in';
+    const otp = await otpService.generateOtp(email, 'LOGIN', 60);
+    const wrong = otp === '111111' ? '222222' : '111111';
+
+    for (let i = 0; i < OtpService.MAX_VERIFY_ATTEMPTS; i++) {
+      expect(await otpService.verifyOtp(email, wrong, 'LOGIN')).toBe(false);
+    }
+
+    expect(await otpService.verifyOtp(email, otp, 'LOGIN')).toBe(false);
+  });
+
   it('rejects verification with wrong purpose', async () => {
     const email = 'director@trueco.in';
     const otp = await otpService.generateOtp(email, 'SIGNUP', 60);
