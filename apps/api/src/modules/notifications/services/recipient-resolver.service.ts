@@ -131,7 +131,8 @@ export class RecipientResolverService {
     if (parts[0] === 'batch') {
       const batchId = parts[1];
       const enrollments = await (this.prisma as any).batchStudent.findMany({
-        where: { batchId, coachingId, leftAt: null, deletedAt: null },
+        // batch_students has no deletedAt; exclude deleted students via the relation
+        where: { batchId, coachingId, leftAt: null, student: { deletedAt: null } },
         include: {
           student: true,
         },

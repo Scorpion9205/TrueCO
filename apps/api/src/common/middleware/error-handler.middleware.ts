@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { ApiErrorResponse } from '@trueco/types';
 import { logger } from '../logger/logger.service.js';
 
@@ -15,6 +16,26 @@ export class AppError extends Error {
     this.name = 'AppError';
   }
 }
+
+// Prisma failures that describe the request, not a server fault. P2003 includes references
+// rejected by the same-tenant triggers (another coaching's record).
+const PRISMA_ERRORS: Record<string, { status: number; code: string; message: string }> = {
+  P2025: {
+    status: StatusCodes.NOT_FOUND,
+    code: 'NOT_FOUND',
+    message: 'The requested record was not found',
+  },
+  P2002: {
+    status: StatusCodes.CONFLICT,
+    code: 'DUPLICATE_RECORD',
+    message: 'A record with these details already exists',
+  },
+  P2003: {
+    status: StatusCodes.BAD_REQUEST,
+    code: 'INVALID_REFERENCE',
+    message: 'The request refers to a record that does not exist in this coaching',
+  },
+};
 
 export function errorHandlerMiddleware(
   err: Error | AppError,
@@ -61,7 +82,21 @@ export function errorHandlerMiddleware(
     return;
   }
 
-  // 3. Handle Unexpected Server Errors
+  // 3. Handle known Prisma request errors (not-found, duplicate, invalid reference)
+  const prismaError =
+    err instanceof Prisma.PrismaClientKnownRequestError ? PRISMA_ERRORS[err.code] : undefined;
+  if (prismaError) {
+    logger.warn(
+      `[PrismaError] ${(err as Prisma.PrismaClientKnownRequestError).code} on ${req.method} ${req.originalUrl}`,
+    );
+    const response: ApiErrorResponse = {
+      error: { code: prismaError.code, message: prismaError.message },
+    };
+    res.status(prismaError.status).json(response);
+    return;
+  }
+
+  // 4. Handle Unexpected Server Errors
   logger.error(`[UnhandledError] Internal Server Error on ${req.method} ${req.originalUrl}`, err);
 
   const response: ApiErrorResponse = {
