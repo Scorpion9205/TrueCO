@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { AiController } from './ai.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { requireFeature } from '../../common/decorators/require-feature.decorator.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 
 export function createAiRouter(controller: AiController): Router {
-  const router = Router();
+  const router = createRouter();
 
   // All AI routes require authentication and feature entitlement
   router.use(authenticateMiddleware);

@@ -1,10 +1,11 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { FeeController } from './fee.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 
 export function createFeeRoutes(controller: FeeController): Router {
-  const router = Router();
+  const router = createRouter();
 
   // Webhook endpoint (unauthenticated, HMAC verified)
   router.post('/webhook', controller.handleWebhook);

@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { createRouter } from '../../common/http/async-router.js';
 import { TestController } from './test.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 import { requireBatchAccess } from '../../common/decorators/require-batch-access.decorator.js';
 
 export function createTestRoutes(controller: TestController): Router {
-  const router = Router();
+  const router = createRouter();
 
   router.use(authenticateMiddleware);
 
