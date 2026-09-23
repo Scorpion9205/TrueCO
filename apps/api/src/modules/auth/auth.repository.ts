@@ -1,5 +1,8 @@
 import { RequestContextService } from '../../common/services/request-context.service.js';
-import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import {
+  getPrismaClient,
+  ExtendedPrismaClient,
+} from '../../database/prisma/tenant-prisma.extension.js';
 import { UserAggregate } from './auth.mapper.js';
 
 export interface StoredRefreshToken {
@@ -18,6 +21,21 @@ export interface IAuthUserRepository {
   findById(id: string): Promise<UserAggregate | null>;
   updateLastLogin(userId: string): Promise<void>;
   updatePassword(userId: string, passwordHash: string): Promise<void>;
+  markEmailVerified(userId: string): Promise<void>;
+}
+
+export type AuthActionPurpose = 'PASSWORD_RESET' | 'EMAIL_VERIFICATION';
+
+export interface IAuthActionTokenRepository {
+  /** Stores a new token hash and invalidates the user's earlier unused tokens of the same purpose. */
+  issue(
+    userId: string,
+    purpose: AuthActionPurpose,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<void>;
+  /** Marks the token used if it is unused and unexpired; returns its user, or null. Succeeds at most once. */
+  consume(tokenHash: string, purpose: AuthActionPurpose): Promise<string | null>;
 }
 
 export interface IRefreshTokenRepository {
@@ -118,6 +136,15 @@ export class PrismaAuthUserRepository implements IAuthUserRepository {
       });
     });
   }
+
+  public async markEmailVerified(userId: string): Promise<void> {
+    return RequestContextService.runAsSystem('auth:markEmailVerified', async () => {
+      await (this.prisma as any).user.update({
+        where: { id: userId },
+        data: { emailVerifiedAt: new Date() },
+      });
+    });
+  }
 }
 
 export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
@@ -170,5 +197,38 @@ export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
       where: { userId },
       data: { isRevoked: true },
     });
+  }
+}
+
+// Action tokens are looked up by hash before any tenant is known and carry no tenant data.
+export class PrismaAuthActionTokenRepository implements IAuthActionTokenRepository {
+  public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
+
+  public async issue(
+    userId: string,
+    purpose: AuthActionPurpose,
+    tokenHash: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    const db = this.prisma as any;
+    await db.authActionToken.updateMany({
+      where: { userId, purpose, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    await db.authActionToken.create({ data: { userId, purpose, tokenHash, expiresAt } });
+  }
+
+  public async consume(tokenHash: string, purpose: AuthActionPurpose): Promise<string | null> {
+    const db = this.prisma as any;
+    const token = await db.authActionToken.findUnique({ where: { tokenHash } });
+    if (!token || token.purpose !== purpose) return null;
+
+    // Conditional update: of two concurrent attempts, only one can flip usedAt
+    const now = new Date();
+    const { count } = await db.authActionToken.updateMany({
+      where: { id: token.id, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+    return count === 1 ? token.userId : null;
   }
 }

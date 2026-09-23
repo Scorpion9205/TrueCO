@@ -27,7 +27,7 @@ export class AuthModule {
     const router = createAuthRoutes(controller);
 
     // Register event subscribers
-    AuthSubscribers.register(eventBus);
+    AuthSubscribers.register(eventBus, service);
 
     return { router, service };
   }

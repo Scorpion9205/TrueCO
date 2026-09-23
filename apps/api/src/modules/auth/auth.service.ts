@@ -1,17 +1,26 @@
 import { StatusCodes } from 'http-status-codes';
-import { IAuthUserRepository, IRefreshTokenRepository } from './auth.repository.js';
+import {
+  AuthActionPurpose,
+  IAuthActionTokenRepository,
+  IAuthUserRepository,
+  IRefreshTokenRepository,
+  PrismaAuthActionTokenRepository,
+} from './auth.repository.js';
 import { IPasswordService } from '../../common/security/password.service.js';
 import { ITokenService } from '../../common/security/token.service.js';
 import { IAccountLockoutService } from '../../common/security/account-lockout.service.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { envConfig } from '../../config/env.config.js';
 import { AuthMapper } from './auth.mapper.js';
 import { AuthResponseDto, AuthUserDto, LoginDto } from './dto/auth.dto.js';
 import { createUserLoggedInEvent, createUserLoggedOutEvent } from './auth.events.js';
 import { logger } from '../../common/logger/logger.service.js';
 import { IOtpService, otpService as defaultOtpService } from '../../common/security/otp.service.js';
+
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const EMAIL_VERIFICATION_TTL_MS = 48 * 60 * 60 * 1000;
 
 export class AuthService {
   public constructor(
@@ -22,6 +31,7 @@ export class AuthService {
     private readonly lockoutService: IAccountLockoutService,
     private readonly eventBus: IEventBus,
     private readonly otpService: IOtpService = defaultOtpService,
+    private readonly actionTokenRepository: IAuthActionTokenRepository = new PrismaAuthActionTokenRepository(),
   ) {}
 
   public async login(
@@ -48,11 +58,19 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(dto.email, dto.coachingCode);
     if (!user) {
       await this.lockoutService.recordFailedAttempt(lockoutKey);
-      throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'INVALID_CREDENTIALS',
+        'Invalid email or password',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     if (!user.isActive) {
-      throw new AppError('ACCOUNT_INACTIVE', 'Your account has been deactivated. Please contact support.', StatusCodes.FORBIDDEN);
+      throw new AppError(
+        'ACCOUNT_INACTIVE',
+        'Your account has been deactivated. Please contact support.',
+        StatusCodes.FORBIDDEN,
+      );
     }
 
     // 3. Verify Argon2id Password Hash
@@ -66,7 +84,11 @@ export class AuthService {
           StatusCodes.TOO_MANY_REQUESTS,
         );
       }
-      throw new AppError('INVALID_CREDENTIALS', 'Invalid email or password', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'INVALID_CREDENTIALS',
+        'Invalid email or password',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     // 4. Reset lockout counter on success
@@ -135,19 +157,33 @@ export class AuthService {
     const storedToken = await this.refreshTokenRepository.findByTokenHash(hashedToken);
 
     if (!storedToken) {
-      throw new AppError('INVALID_TOKEN', 'Refresh token is invalid or unrecognized', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'INVALID_TOKEN',
+        'Refresh token is invalid or unrecognized',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     // Reuse Detection: If token is already revoked, revoke its entire family to stop token theft!
     if (storedToken.isRevoked) {
-      logger.warn(`[AuthService] Refresh token replay attack detected for family ${storedToken.family}`);
+      logger.warn(
+        `[AuthService] Refresh token replay attack detected for family ${storedToken.family}`,
+      );
       await this.refreshTokenRepository.revokeFamily(storedToken.family);
-      throw new AppError('TOKEN_REUSED', 'Token reuse detected. All sessions in this family revoked for security.', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'TOKEN_REUSED',
+        'Token reuse detected. All sessions in this family revoked for security.',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     // Check expiration
     if (storedToken.expiresAt.getTime() < Date.now()) {
-      throw new AppError('TOKEN_EXPIRED', 'Refresh token has expired. Please login again.', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'TOKEN_EXPIRED',
+        'Refresh token has expired. Please login again.',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     // Revoke the old token (one-time rotation)
@@ -156,7 +192,11 @@ export class AuthService {
     // Fetch user
     const user = await this.userRepository.findById(storedToken.userId);
     if (!user || !user.isActive) {
-      throw new AppError('USER_INACTIVE', 'User associated with token no longer active', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'USER_INACTIVE',
+        'User associated with token no longer active',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     const userDto = AuthMapper.toUserDto(user);
@@ -191,7 +231,10 @@ export class AuthService {
     };
   }
 
-  public async logout(rawRefreshToken: string, correlationId: string = crypto.randomUUID()): Promise<void> {
+  public async logout(
+    rawRefreshToken: string,
+    correlationId: string = crypto.randomUUID(),
+  ): Promise<void> {
     const hashedToken = this.tokenService.hashToken(rawRefreshToken);
     const storedToken = await this.refreshTokenRepository.findByTokenHash(hashedToken);
     if (storedToken) {
@@ -208,7 +251,10 @@ export class AuthService {
     }
   }
 
-  public async logoutAllDevices(userId: string, correlationId: string = crypto.randomUUID()): Promise<void> {
+  public async logoutAllDevices(
+    userId: string,
+    correlationId: string = crypto.randomUUID(),
+  ): Promise<void> {
     await this.refreshTokenRepository.revokeAllForUser(userId);
     await this.eventBus.publish(
       createUserLoggedOutEvent(
@@ -229,27 +275,53 @@ export class AuthService {
     return AuthMapper.toUserDto(user);
   }
 
-  public async forgotPassword(email: string): Promise<{ message: string }> {
-    const user = await this.userRepository.findByEmail(email);
-    if (!user) {
-      return { message: 'If an account exists with that email, a password reset link has been dispatched.' };
-    }
+  public async forgotPassword(email: string, coachingCode?: string): Promise<{ message: string }> {
+    const genericReply = {
+      message: 'If an account exists with that email, a password reset link has been dispatched.',
+    };
+    const user = await this.userRepository.findByEmail(email, coachingCode);
+    if (!user || !user.isActive) return genericReply;
 
-    const resetToken = jwt.sign(
-      { sub: user.id, email: user.email, type: 'PASSWORD_RESET' },
-      envConfig.get('JWT_ACCESS_SECRET'),
-      { expiresIn: '1h' },
+    const resetToken = await this.issueActionToken(
+      user.id,
+      'PASSWORD_RESET',
+      PASSWORD_RESET_TTL_MS,
     );
 
-    // Generate development terminal OTP
-    await this.otpService.generateOtp(user.email, 'PASSWORD_RESET', 600);
-
-    // Reset tokens grant account takeover; they may only surface on a local dev terminal
-    // until email delivery is implemented.
+    // Reset tokens grant account takeover; until email delivery exists (Phase 5) they may only
+    // surface on a local development terminal.
     if (envConfig.get('NODE_ENV') === 'development') {
       logger.debug(`[AuthService] Password reset token generated for ${user.email}: ${resetToken}`);
     }
-    return { message: 'If an account exists with that email, a password reset link has been dispatched.' };
+    return genericReply;
+  }
+
+  /** Issues an email verification token for a user; returns the raw token for delivery. */
+  public async issueEmailVerification(userId: string, email: string): Promise<string> {
+    const token = await this.issueActionToken(
+      userId,
+      'EMAIL_VERIFICATION',
+      EMAIL_VERIFICATION_TTL_MS,
+    );
+    if (envConfig.get('NODE_ENV') === 'development') {
+      logger.debug(`[AuthService] Email verification token generated for ${email}: ${token}`);
+    }
+    return token;
+  }
+
+  private async issueActionToken(
+    userId: string,
+    purpose: AuthActionPurpose,
+    ttlMs: number,
+  ): Promise<string> {
+    const rawToken = crypto.randomBytes(32).toString('base64url');
+    await this.actionTokenRepository.issue(
+      userId,
+      purpose,
+      this.tokenService.hashToken(rawToken),
+      new Date(Date.now() + ttlMs),
+    );
+    return rawToken;
   }
 
   public async sendOtp(
@@ -273,13 +345,21 @@ export class AuthService {
   ): Promise<AuthResponseDto | { message: string }> {
     const isValid = await this.otpService.verifyOtp(identifier, code, purpose);
     if (!isValid) {
-      throw new AppError('INVALID_OR_EXPIRED_OTP', 'The entered OTP is invalid or has expired', StatusCodes.UNAUTHORIZED);
+      throw new AppError(
+        'INVALID_OR_EXPIRED_OTP',
+        'The entered OTP is invalid or has expired',
+        StatusCodes.UNAUTHORIZED,
+      );
     }
 
     if (purpose === 'LOGIN') {
       const user = await this.userRepository.findByEmail(identifier, coachingCode);
       if (!user || !user.isActive) {
-        throw new AppError('INVALID_OR_EXPIRED_OTP', 'The entered OTP is invalid or has expired', StatusCodes.UNAUTHORIZED);
+        throw new AppError(
+          'INVALID_OR_EXPIRED_OTP',
+          'The entered OTP is invalid or has expired',
+          StatusCodes.UNAUTHORIZED,
+        );
       }
 
       const userDto = AuthMapper.toUserDto(user);
@@ -321,31 +401,41 @@ export class AuthService {
   }
 
   public async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    let payload: any;
-    try {
-      payload = jwt.verify(token, envConfig.get('JWT_ACCESS_SECRET'));
-    } catch {
-      throw new AppError('INVALID_OR_EXPIRED_TOKEN', 'Password reset token is invalid or has expired', StatusCodes.BAD_REQUEST);
-    }
-
-    if (payload.type !== 'PASSWORD_RESET' || !payload.sub) {
-      throw new AppError('INVALID_TOKEN_TYPE', 'Invalid token type', StatusCodes.BAD_REQUEST);
+    const userId = await this.actionTokenRepository.consume(
+      this.tokenService.hashToken(token),
+      'PASSWORD_RESET',
+    );
+    if (!userId) {
+      throw new AppError(
+        'INVALID_OR_EXPIRED_TOKEN',
+        'Password reset link is invalid, expired or already used',
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const newHash = await this.passwordService.hash(newPassword);
-    await this.userRepository.updatePassword(payload.sub, newHash);
-    await this.refreshTokenRepository.revokeAllForUser(payload.sub);
+    await this.userRepository.updatePassword(userId, newHash);
+    await this.refreshTokenRepository.revokeAllForUser(userId);
 
-    return { message: 'Password has been reset successfully. Please log in with your new password.' };
+    return {
+      message: 'Password has been reset successfully. Please log in with your new password.',
+    };
   }
 
   public async verifyEmail(token: string): Promise<{ message: string }> {
-    try {
-      jwt.verify(token, envConfig.get('JWT_ACCESS_SECRET'));
-    } catch {
-      throw new AppError('INVALID_OR_EXPIRED_TOKEN', 'Verification token is invalid or has expired', StatusCodes.BAD_REQUEST);
+    const userId = await this.actionTokenRepository.consume(
+      this.tokenService.hashToken(token),
+      'EMAIL_VERIFICATION',
+    );
+    if (!userId) {
+      throw new AppError(
+        'INVALID_OR_EXPIRED_TOKEN',
+        'Verification link is invalid, expired or already used',
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
+    await this.userRepository.markEmailVerified(userId);
     return { message: 'Email verified successfully.' };
   }
 }

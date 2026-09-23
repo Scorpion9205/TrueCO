@@ -17,13 +17,14 @@ export const refreshSchema = z
 export const forgotPasswordSchema = z
   .object({
     email: z.string().email('Please enter a valid email address').trim().toLowerCase(),
+    coachingCode: z.string().trim().toLowerCase().optional(),
   })
   .strict();
 
 export const resetPasswordSchema = z
   .object({
     token: z.string().min(10, 'Invalid or expired password reset token'),
-    newPassword: z.string().min(6, 'New password must be at least 6 characters long'),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters long'),
   })
   .strict();
 
