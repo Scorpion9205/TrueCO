@@ -38,7 +38,10 @@ export class PrismaAuthUserRepository implements IAuthUserRepository {
   public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
 
   public async findByEmail(email: string, coachingCode?: string): Promise<UserAggregate | null> {
-    const user = await (this.prisma as any).user.findFirst({
+    // Email is only unique per coaching. Without a coaching code, an email registered at
+    // several institutes is ambiguous and must not resolve to an arbitrary tenant's account.
+    const users = await (this.prisma as any).user.findMany({
+      take: 2,
       where: {
         email: email.toLowerCase().trim(),
         deletedAt: null,
@@ -61,7 +64,8 @@ export class PrismaAuthUserRepository implements IAuthUserRepository {
       },
     });
 
-    return user as UserAggregate | null;
+    if (users.length !== 1) return null;
+    return users[0] as UserAggregate;
   }
 
   public async findById(id: string): Promise<UserAggregate | null> {

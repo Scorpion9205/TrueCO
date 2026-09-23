@@ -19,8 +19,10 @@ export interface IOtpService {
 
 export class OtpService implements IOtpService {
   private static instance: OtpService;
+  /** Wrong guesses allowed before the code is burned (6 digits must not be brute-forceable) */
+  public static readonly MAX_VERIFY_ATTEMPTS = 5;
   // Local in-memory fallback if Redis is unreachable or during unit tests
-  private readonly memoryStore: Map<string, { code: string; expiresAt: number }> = new Map();
+  private readonly memoryStore: Map<string, { code: string; expiresAt: number; attempts: number }> = new Map();
 
   public static getInstance(): OtpService {
     if (!OtpService.instance) {
@@ -44,22 +46,24 @@ export class OtpService implements IOtpService {
     const expiresAt = Date.now() + ttlSeconds * 1000;
 
     // Save to memory fallback
-    this.memoryStore.set(key, { code, expiresAt });
+    this.memoryStore.set(key, { code, expiresAt, attempts: 0 });
 
     // Save to Redis if available and connected
     if (envConfig.get('NODE_ENV') !== 'test') {
       try {
         const redis = queueRegistry.getRedisClient();
         if (redis.status === 'ready') {
-          await redis.setex(key, ttlSeconds, code);
+          await redis.multi().setex(key, ttlSeconds, code).del(this.getAttemptsKey(key)).exec();
         }
       } catch {
         // Redis optional in local dev mode
       }
     }
 
-    // High-visibility terminal output for developers
-    this.printDevOtpBanner(identifier, code, purpose, ttlSeconds);
+    // OTPs are credentials: only ever surface them on a local development terminal
+    if (envConfig.get('NODE_ENV') === 'development') {
+      this.printDevOtpBanner(identifier, code, purpose, ttlSeconds);
+    }
 
     return code;
   }
@@ -78,10 +82,14 @@ export class OtpService implements IOtpService {
         const redis = queueRegistry.getRedisClient();
         if (redis.status === 'ready') {
           const stored = await redis.get(key);
-          if (stored && stored === cleanCode) {
-            await redis.del(key);
-            this.memoryStore.delete(key);
-            return true;
+          if (stored) {
+            if (stored === cleanCode) {
+              await redis.del(key, this.getAttemptsKey(key));
+              this.memoryStore.delete(key);
+              return true;
+            }
+            await this.recordFailedRedisAttempt(key);
+            return false;
           }
         }
       } catch {
@@ -100,9 +108,33 @@ export class OtpService implements IOtpService {
         this.memoryStore.delete(key);
         return true;
       }
+      memEntry.attempts += 1;
+      if (memEntry.attempts >= OtpService.MAX_VERIFY_ATTEMPTS) {
+        this.memoryStore.delete(key);
+        logger.warn(`[OtpService] OTP invalidated after ${memEntry.attempts} failed attempts`);
+      }
     }
 
     return false;
+  }
+
+  private getAttemptsKey(key: string): string {
+    return `${key}:attempts`;
+  }
+
+  private async recordFailedRedisAttempt(key: string): Promise<void> {
+    const redis = queueRegistry.getRedisClient();
+    const attemptsKey = this.getAttemptsKey(key);
+    const attempts = await redis.incr(attemptsKey);
+    if (attempts === 1) {
+      const ttl = await redis.ttl(key);
+      await redis.expire(attemptsKey, ttl > 0 ? ttl : 600);
+    }
+    if (attempts >= OtpService.MAX_VERIFY_ATTEMPTS) {
+      await redis.del(key, attemptsKey);
+      this.memoryStore.delete(key);
+      logger.warn(`[OtpService] OTP invalidated after ${attempts} failed attempts`);
+    }
   }
 
   private printDevOtpBanner(
@@ -124,9 +156,8 @@ export class OtpService implements IOtpService {
       '',
     ].join('\n');
 
-    // Always output directly to stdout for instant developer visibility
+    // stdout only: never route OTPs through the structured logger, which is shipped to log storage
     console.log('\x1b[36m%s\x1b[0m', banner);
-    logger.info(`[OtpService] OTP generated for ${identifier} [${purpose}]: ${code}`);
   }
 }
 
