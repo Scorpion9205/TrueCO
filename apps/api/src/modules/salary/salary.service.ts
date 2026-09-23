@@ -36,14 +36,27 @@ export class SalaryService {
       amount = defaultSalary;
     }
 
-    const salary = await this.salaryRepository.create({
-      coachingId,
-      teacherId: dto.teacherId,
-      amount,
-      month: dto.month,
-      year: dto.year,
-      remarks: dto.remarks,
-    });
+    let salary: any;
+    try {
+      salary = await this.salaryRepository.create({
+        coachingId,
+        teacherId: dto.teacherId,
+        amount,
+        month: dto.month,
+        year: dto.year,
+        remarks: dto.remarks,
+      });
+    } catch (err) {
+      // Unique (teacher, year, month): payroll for a month can only be generated once
+      if ((err as { code?: string }).code === 'P2002') {
+        throw new AppError(
+          'SALARY_ALREADY_GENERATED',
+          `Salary for ${dto.month}/${dto.year} has already been generated for this teacher`,
+          StatusCodes.CONFLICT,
+        );
+      }
+      throw err;
+    }
 
     const responseDto = SalaryMapper.toResponseDto(salary);
 
@@ -87,6 +100,9 @@ export class SalaryService {
       paidAt,
       remarks: dto.remarks,
     });
+    if (!updated) {
+      throw new AppError('SALARY_ALREADY_PAID', 'This salary has already been paid', StatusCodes.CONFLICT);
+    }
 
     const responseDto = SalaryMapper.toResponseDto(updated);
 
