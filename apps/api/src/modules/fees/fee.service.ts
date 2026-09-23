@@ -24,6 +24,7 @@ import { MockPaymentGatewayAdapter } from '../billing/adapters/mock-payment-gate
 import { RazorpayAdapter } from '../billing/adapters/razorpay.adapter.js';
 import { envConfig } from '../../config/env.config.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { fromPaise, money, toRupees } from '../../common/money/money.js';
 
 export class FeeService {
   private readonly paymentAdapter: IPaymentGatewayAdapter;
@@ -44,23 +45,26 @@ export class FeeService {
     userId?: string,
     correlationId: string = crypto.randomUUID(),
   ): Promise<FeePlanResponseDto> {
-    // 1. Calculate discount and final amount
-    let finalAmount = dto.totalAmount;
+    // 1. Calculate discount and final amount in exact decimals, rounded to the paisa
+    const total = money(dto.totalAmount);
+    let final = total;
     if (dto.discountType && dto.discountValue && dto.discountValue > 0) {
-      if (dto.discountType === DiscountType.PERCENTAGE) {
-        const discountAmt = (dto.totalAmount * dto.discountValue) / 100;
-        finalAmount = Math.max(0, dto.totalAmount - discountAmt);
-      } else if (dto.discountType === DiscountType.FIXED) {
-        finalAmount = Math.max(0, dto.totalAmount - dto.discountValue);
-      }
+      const discount =
+        dto.discountType === DiscountType.PERCENTAGE
+          ? total.times(dto.discountValue).dividedBy(100)
+          : money(dto.discountValue);
+      final = total.minus(discount);
+      if (final.isNegative()) final = money(0);
     }
+    final = final.toDecimalPlaces(2);
+    const finalAmount = final.toNumber();
 
-    // 2. Validate installment sum matches finalAmount (allowing a 0.05 rounding epsilon)
-    const installmentTotal = dto.installments.reduce((acc, inst) => acc + inst.amount, 0);
-    if (Math.abs(installmentTotal - finalAmount) > 0.1) {
+    // 2. Installments must add up to the final amount exactly (to the paisa)
+    const installmentTotal = dto.installments.reduce((acc, inst) => acc.plus(inst.amount), money(0));
+    if (!installmentTotal.equals(final)) {
       throw new AppError(
         'INVALID_INSTALLMENT_SUM',
-        `Sum of installments (${installmentTotal}) must equal final amount (${finalAmount})`,
+        `Sum of installments (${installmentTotal.toFixed(2)}) must equal final amount (${final.toFixed(2)})`,
         StatusCodes.BAD_REQUEST,
       );
     }
@@ -106,57 +110,25 @@ export class FeeService {
     coachingId: string,
     userId?: string,
     correlationId: string = crypto.randomUUID(),
-  ): Promise<FeeTransactionResponseDto> {
-    const installment = await this.feeRepository.findInstallmentById(dto.installmentId);
-    if (!installment || installment.coachingId !== coachingId) {
-      throw new AppError('INSTALLMENT_NOT_FOUND', 'Fee installment not found', StatusCodes.NOT_FOUND);
+  ): Promise<FeeTransactionResponseDto & { duplicate?: boolean }> {
+    // Balance, status and duplicate checks run inside the repository's locked transaction;
+    // checking here first would race with concurrent payments.
+    const result = await this.feeRepository.recordPaymentTransaction({
+      coachingId,
+      installmentId: dto.installmentId,
+      amount: dto.amount,
+      paymentMethod: dto.paymentMethod,
+      transactionRef: dto.transactionRef,
+      remarks: dto.remarks,
+      createdBy: userId,
+    });
+
+    if (result.kind === 'duplicate') {
+      logger.info(`[FeeService] Payment ${dto.transactionRef} already recorded; ignoring repeat`);
+      return { ...FeeMapper.toTransactionDto(result.transaction), duplicate: true };
     }
 
-    if (installment.status === FeeInstallmentStatus.PAID) {
-      throw new AppError(
-        'INSTALLMENT_ALREADY_PAID',
-        'This installment is already fully paid',
-        StatusCodes.BAD_REQUEST,
-      );
-    }
-
-    if (installment.status === FeeInstallmentStatus.WAIVED) {
-      throw new AppError(
-        'INSTALLMENT_WAIVED',
-        'Cannot accept payment for a waived installment',
-        StatusCodes.BAD_REQUEST,
-      );
-    }
-
-    const currentPaid = Number(installment.paidAmount || 0);
-    const totalAmount = Number(installment.amount);
-    const remainingBalance = totalAmount - currentPaid;
-
-    if (dto.amount > remainingBalance + 0.01) {
-      throw new AppError(
-        'AMOUNT_EXCEEDS_BALANCE',
-        `Payment amount (${dto.amount}) exceeds remaining balance (${remainingBalance})`,
-        StatusCodes.BAD_REQUEST,
-      );
-    }
-
-    const receiptNumber = await this.feeRepository.generateReceiptNumber(coachingId);
-
-    const { transaction, installment: updatedInstallment, plan } =
-      await this.feeRepository.recordPaymentTransaction({
-        coachingId,
-        installmentId: dto.installmentId,
-        amount: dto.amount,
-        paymentMethod: dto.paymentMethod,
-        transactionRef: dto.transactionRef,
-        receiptNumber,
-        remarks: dto.remarks,
-        createdBy: userId,
-      });
-
-    const isFullyPaid = updatedInstallment.status === FeeInstallmentStatus.PAID;
-    const newRemaining = Math.max(0, remainingBalance - dto.amount);
-
+    const { transaction, installment: updatedInstallment, plan, remainingBalance } = result;
     await this.eventBus.publish(
       createFeePaidEvent(
         {
@@ -164,11 +136,11 @@ export class FeeService {
           coachingId,
           studentId: plan.studentId,
           installmentId: dto.installmentId,
-          amount: dto.amount,
+          amount: toRupees(transaction.amount),
           paymentMethod: dto.paymentMethod,
-          receiptNumber,
-          remainingBalance: newRemaining,
-          isFullyPaid,
+          receiptNumber: transaction.receiptNumber,
+          remainingBalance: toRupees(remainingBalance),
+          isFullyPaid: updatedInstallment.status === FeeInstallmentStatus.PAID,
         },
         correlationId,
         userId,
@@ -195,6 +167,13 @@ export class FeeService {
     }
 
     const waived = await this.feeRepository.waiveInstallment(installmentId, dto.remarks);
+    if (!waived) {
+      throw new AppError(
+        'INSTALLMENT_NOT_WAIVABLE',
+        'The installment was paid or waived in the meantime',
+        StatusCodes.CONFLICT,
+      );
+    }
     const responseDto = FeeMapper.toInstallmentDto(waived);
 
     await this.eventBus.publish(
@@ -230,7 +209,7 @@ export class FeeService {
     const installments = await this.feeRepository.findPendingInstallments(new Date());
     const filtered = installments.filter((i: any) => i.coachingId === coachingId);
     return filtered.map((inst: any) => {
-      const balance = Number(inst.amount) - Number(inst.paidAmount || 0);
+      const balance = toRupees(money(inst.amount).minus(money(inst.paidAmount)));
       return {
         installmentId: inst.id,
         installmentNo: inst.installmentNo,
@@ -267,9 +246,7 @@ export class FeeService {
       throw new AppError('WAIVED', 'Installment is waived', StatusCodes.BAD_REQUEST);
     }
 
-    const currentPaid = Number(installment.paidAmount || 0);
-    const totalAmount = Number(installment.amount);
-    const balance = totalAmount - currentPaid;
+    const balance = toRupees(money(installment.amount).minus(money(installment.paidAmount)));
 
     return this.paymentAdapter.createPaymentLink({
       amount: balance,
@@ -307,32 +284,57 @@ export class FeeService {
     const eventName = payload.event;
     logger.info(`[FeeService] Processing fee payment webhook event: ${eventName}`);
 
-    if (eventName === 'payment.captured' || eventName === 'payment_link.paid') {
-      const paymentEntity = payload.payload?.payment?.entity;
-      const notes = paymentEntity?.notes || payload.payload?.payment_link?.entity?.notes || {};
-      const installmentId = notes.installmentId || paymentEntity?.description?.split('#')?.[1];
-      const coachingId = notes.coachingId;
-      const amount = paymentEntity?.amount ? paymentEntity.amount / 100 : undefined;
-
-      if (installmentId && isUuid(coachingId) && amount) {
-        try {
-          // Webhooks carry no session: act as the coaching named in the signed payment notes
-          await RequestContextService.runForTenant(coachingId, () => this.recordPayment(
-            {
-              installmentId,
-              amount,
-              paymentMethod: PaymentMethod.ONLINE,
-              transactionRef: paymentEntity.id,
-              remarks: `Online payment via Razorpay (${paymentEntity.id})`,
-            },
-            coachingId,
-          ));
-        } catch (err) {
-          logger.error(`[FeeService] Error auto-recording fee payment from webhook:`, err);
-        }
-      }
+    if (eventName !== 'payment.captured' && eventName !== 'payment_link.paid') {
+      return { status: 'IGNORED' };
     }
 
-    return { status: 'PROCESSED' };
+    const paymentEntity = payload.payload?.payment?.entity;
+    const notes = paymentEntity?.notes || payload.payload?.payment_link?.entity?.notes || {};
+    const installmentId = notes.installmentId || paymentEntity?.description?.split('#')?.[1];
+    const coachingId = notes.coachingId;
+    if (!paymentEntity?.id || !isUuid(installmentId) || !isUuid(coachingId) || !paymentEntity.amount) {
+      logger.error('[FeeService] Payment webhook missing payment, installment or coaching reference', {
+        event: eventName,
+        paymentId: paymentEntity?.id,
+      });
+      return { status: 'IGNORED' };
+    }
+    if (paymentEntity.currency && paymentEntity.currency !== 'INR') {
+      logger.error(`[FeeService] Unsupported currency ${paymentEntity.currency} for payment ${paymentEntity.id}`);
+      return { status: 'REJECTED' };
+    }
+
+    try {
+      // Webhooks carry no session: act as the coaching named in the signed payment notes.
+      // payment.captured and payment_link.paid both arrive for one payment; the gateway
+      // payment id makes the second (and any retry) a no-op.
+      const result = await RequestContextService.runForTenant(coachingId, () =>
+        this.recordPayment(
+          {
+            installmentId,
+            amount: fromPaise(paymentEntity.amount).toNumber(),
+            paymentMethod: PaymentMethod.ONLINE,
+            transactionRef: paymentEntity.id,
+            remarks: `Online payment via Razorpay (${paymentEntity.id})`,
+          },
+          coachingId,
+        ),
+      );
+      return { status: result.duplicate ? 'DUPLICATE' : 'PROCESSED' };
+    } catch (err) {
+      if (err instanceof AppError && err.statusCode < 500) {
+        // Money was taken but cannot be applied (e.g. installment already paid or waived).
+        // Retrying will not help; this needs a person to reconcile or refund.
+        logger.error('[FeeService] RECONCILE: online payment could not be applied to its installment', err, {
+          paymentId: paymentEntity.id,
+          installmentId,
+          coachingId,
+          reason: err.code,
+        });
+        return { status: 'REJECTED' };
+      }
+      // Transient failure: surface it so the gateway retries the webhook
+      throw err;
+    }
   }
 }
