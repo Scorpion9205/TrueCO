@@ -21,7 +21,7 @@ describe('WhatsAppWorker (Phase 3 BullMQ Worker Unit Tests)', () => {
     };
 
     mockRepo = {
-      findByIdempotencyKey: vi.fn().mockResolvedValue(null),
+      claimForSending: vi.fn().mockResolvedValue(true),
       updateStatus: vi.fn().mockResolvedValue({}),
     };
 
@@ -52,8 +52,8 @@ describe('WhatsAppWorker (Phase 3 BullMQ Worker Unit Tests)', () => {
 
     await worker.processJob({ data: jobData } as any);
 
-    // 1. Checked idempotency
-    expect(mockRepo.findByIdempotencyKey).toHaveBeenCalledWith('idemp-1');
+    // 1. Claimed the notification atomically before sending
+    expect(mockRepo.claimForSending).toHaveBeenCalledWith('idemp-1');
 
     // 2. Sent via adapter
     expect(mockAdapter.sendMessage).toHaveBeenCalledWith(
@@ -84,11 +84,8 @@ describe('WhatsAppWorker (Phase 3 BullMQ Worker Unit Tests)', () => {
     );
   });
 
-  it('should enforce idempotency by skipping send if already marked SENT', async () => {
-    mockRepo.findByIdempotencyKey.mockResolvedValue({
-      id: 'notif-1',
-      status: NotificationStatus.SENT,
-    });
+  it('should skip sending when another job already claimed or sent the notification', async () => {
+    mockRepo.claimForSending.mockResolvedValue(false);
 
     const jobData: any = {
       notificationId: 'notif-1',
