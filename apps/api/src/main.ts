@@ -9,6 +9,7 @@ import { errorHandlerMiddleware } from './common/middleware/error-handler.middle
 import { metricsMiddleware, getMetricsHandler } from './common/metrics/metrics.service.js';
 import { queueRegistry } from './queues/queue.registry.js';
 import { getPrismaClient } from './database/prisma/tenant-prisma.extension.js';
+import { assertDatabaseRoleEnforcesRls } from './database/prisma/database-role.check.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { RbacModule } from './modules/rbac/rbac.module.js';
 import { CoachingModule } from './modules/coaching/coaching.module.js';
@@ -198,6 +199,8 @@ export function createApp(): Express {
 }
 
 async function startServer(): Promise<void> {
+  await assertDatabaseRoleEnforcesRls(getPrismaClient());
+
   const app = createApp();
   const port = envConfig.get('PORT');
 

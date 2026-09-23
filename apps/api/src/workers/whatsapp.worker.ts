@@ -11,6 +11,7 @@ import {
 } from '../modules/notifications/notification.events.js';
 import { NotificationChannel, NotificationStatus } from '@trueco/types';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobForTenant } from './job-context.js';
 
 export interface WhatsAppJobPayload {
   readonly notificationId: string;
@@ -42,7 +43,7 @@ export class WhatsAppWorker {
     this.worker = new Worker(
       QUEUE_NAMES.WHATSAPP,
       async (job: Job<WhatsAppJobPayload>) => {
-        return this.processJob(job);
+        return runJobForTenant(job, () => this.processJob(job));
       },
       {
         connection: redis,

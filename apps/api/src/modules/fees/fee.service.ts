@@ -1,3 +1,5 @@
+import { RequestContextService } from '../../common/services/request-context.service.js';
+import { isUuid } from '../../common/validation/is-uuid.js';
 import { StatusCodes } from 'http-status-codes';
 import { IFeeRepository } from './fee.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
@@ -312,9 +314,10 @@ export class FeeService {
       const coachingId = notes.coachingId;
       const amount = paymentEntity?.amount ? paymentEntity.amount / 100 : undefined;
 
-      if (installmentId && coachingId && amount) {
+      if (installmentId && isUuid(coachingId) && amount) {
         try {
-          await this.recordPayment(
+          // Webhooks carry no session: act as the coaching named in the signed payment notes
+          await RequestContextService.runForTenant(coachingId, () => this.recordPayment(
             {
               installmentId,
               amount,
@@ -323,7 +326,7 @@ export class FeeService {
               remarks: `Online payment via Razorpay (${paymentEntity.id})`,
             },
             coachingId,
-          );
+          ));
         } catch (err) {
           logger.error(`[FeeService] Error auto-recording fee payment from webhook:`, err);
         }

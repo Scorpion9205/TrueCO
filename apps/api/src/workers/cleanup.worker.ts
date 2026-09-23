@@ -1,6 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { QueueRegistry, QUEUE_NAMES } from '../queues/queue.registry.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobAsSystem } from './job-context.js';
 
 export interface CleanupJobPayload {
   readonly dryRun?: boolean;
@@ -39,7 +40,7 @@ export class CleanupWorker {
       QUEUE_NAMES.CLEANUP,
       async (job: Job<CleanupJobPayload>): Promise<CleanupJobResult> => {
         logger.info(`[CleanupWorker] Running system cleanup job: ${job.name} (id: ${job.id})`);
-        return this.processJob(job.data);
+        return runJobAsSystem(job, () => this.processJob(job.data));
       },
       {
         connection: redis,

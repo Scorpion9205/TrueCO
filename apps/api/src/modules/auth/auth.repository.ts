@@ -1,3 +1,4 @@
+import { RequestContextService } from '../../common/services/request-context.service.js';
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { UserAggregate } from './auth.mapper.js';
 
@@ -34,74 +35,87 @@ export interface IRefreshTokenRepository {
   revokeAllForUser(userId: string): Promise<void>;
 }
 
+/**
+ * Identity lookups are cross-tenant by nature: credentials arrive before any tenant is known,
+ * and emails are only unique per coaching. These methods therefore run as explicit system
+ * operations; callers must still bind the result to the user's own coaching.
+ */
 export class PrismaAuthUserRepository implements IAuthUserRepository {
   public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
 
   public async findByEmail(email: string, coachingCode?: string): Promise<UserAggregate | null> {
-    // Email is only unique per coaching. Without a coaching code, an email registered at
-    // several institutes is ambiguous and must not resolve to an arbitrary tenant's account.
-    const users = await (this.prisma as any).user.findMany({
-      take: 2,
-      where: {
-        email: email.toLowerCase().trim(),
-        deletedAt: null,
-        ...(coachingCode ? { coaching: { code: coachingCode.trim() } } : {}),
-      },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
+    return RequestContextService.runAsSystem('auth:findByEmail', async () => {
+      // Email is only unique per coaching. Without a coaching code, an email registered at
+      // several institutes is ambiguous and must not resolve to an arbitrary tenant's account.
+      const users = await (this.prisma as any).user.findMany({
+        take: 2,
+        where: {
+          email: email.toLowerCase().trim(),
+          deletedAt: null,
+          ...(coachingCode ? { coaching: { code: coachingCode.trim() } } : {}),
+        },
+        include: {
+          userRoles: {
+            include: {
+              role: {
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    if (users.length !== 1) return null;
-    return users[0] as UserAggregate;
+      if (users.length !== 1) return null;
+      return users[0] as UserAggregate;
+    });
   }
 
   public async findById(id: string): Promise<UserAggregate | null> {
-    const user = await (this.prisma as any).user.findFirst({
-      where: { id, deletedAt: null },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
+    return RequestContextService.runAsSystem('auth:findById', async () => {
+      const user = await (this.prisma as any).user.findFirst({
+        where: { id, deletedAt: null },
+        include: {
+          userRoles: {
+            include: {
+              role: {
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    return user as UserAggregate | null;
+      return user as UserAggregate | null;
+    });
   }
 
   public async updateLastLogin(userId: string): Promise<void> {
-    await (this.prisma as any).user.update({
-      where: { id: userId },
-      data: { lastLoginAt: new Date() },
+    return RequestContextService.runAsSystem('auth:updateLastLogin', async () => {
+      await (this.prisma as any).user.update({
+        where: { id: userId },
+        data: { lastLoginAt: new Date() },
+      });
     });
   }
 
   public async updatePassword(userId: string, passwordHash: string): Promise<void> {
-    await (this.prisma as any).user.update({
-      where: { id: userId },
-      data: { passwordHash },
+    return RequestContextService.runAsSystem('auth:updatePassword', async () => {
+      await (this.prisma as any).user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
     });
   }
 }

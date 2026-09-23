@@ -1,4 +1,8 @@
-import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import { RequestContextService } from '../../common/services/request-context.service.js';
+import {
+  getPrismaClient,
+  ExtendedPrismaClient,
+} from '../../database/prisma/tenant-prisma.extension.js';
 import { ConversationContext } from './dto/whatsapp-assistant.dto.js';
 
 export interface StudentAcademicSnapshot {
@@ -42,28 +46,34 @@ export class PrismaWhatsAppAssistantRepository implements IWhatsAppAssistantRepo
     const rawPrisma = this.prisma as any;
     const cleanPhone = phone.replace(/\D/g, '').slice(-10); // Match last 10 digits
 
-    return rawPrisma.parent.findFirst({
-      where: {
-        phone: { contains: cleanPhone },
-      },
-      include: {
-        studentParents: {
-          include: {
-            student: {
-              include: {
-                batchStudents: {
-                  where: { leftAt: null },
-                  include: { batch: true },
+    // The sender's coaching is unknown until this lookup succeeds, so it spans all tenants.
+    // (Phone-to-coaching routing via the receiving WABA number is tracked for Phase 4.)
+    return RequestContextService.runAsSystem('whatsapp:resolve-parent', () =>
+      rawPrisma.parent.findFirst({
+        where: {
+          phone: { contains: cleanPhone },
+        },
+        include: {
+          studentParents: {
+            include: {
+              student: {
+                include: {
+                  batchStudents: {
+                    where: { leftAt: null },
+                    include: { batch: true },
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+    );
   }
 
-  public async getStudentAcademicSnapshot(studentId: string): Promise<StudentAcademicSnapshot | null> {
+  public async getStudentAcademicSnapshot(
+    studentId: string,
+  ): Promise<StudentAcademicSnapshot | null> {
     const rawPrisma = this.prisma as any;
 
     const student = await rawPrisma.student.findUnique({

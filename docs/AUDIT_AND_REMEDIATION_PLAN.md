@@ -20,7 +20,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | C2 | `POST /api/v1/whatsapp-assistant/inbound` has no authentication and takes the sender phone from the request body. Anyone can read any parent's fee and attendance data and spend the coaching's AI credits. | `whatsapp-assistant.routes.ts` | 0 | ✅ |
 | C3 | The RS256 JWT private key is committed (`apps/api/.keys/`, first added in `95c30cd`). Anyone with repo access can forge tokens. | `apps/api/.keys/` | 0 | ✅ (history purge pending) |
 | C4 | OTP codes and password-reset tokens are logged in plaintext in every environment. Email delivery is not implemented, so logs are the only place they go. `send-otp` / `verify-otp` are public. OTPs have no attempt limit. | `otp.service.ts`, `auth.service.ts` | 0 | ✅ |
-| C5 | Tenant isolation fails open. With no `coachingId` in context (workers, cron jobs, webhooks, public routes), the Prisma extension applies no tenant filter. The RLS SQL is never applied and `withTenantRlsContext` is unused (and interpolates SQL). `findUnique` rewriting drops `select`/`include`. `aggregate`, `groupBy`, `*OrThrow` and the update branch of `upsert` are unscoped. Knowledge-base, `AiUsageLog` and `Role` models are not tenant-registered. The "cross-tenant isolation" test runs against a mocked client, not a database. | `tenant-prisma.extension.ts`, `rls-init.sql` | 1 | ⬜ |
+| C5 | Tenant isolation fails open. With no `coachingId` in context (workers, cron jobs, webhooks, public routes), the Prisma extension applies no tenant filter. The RLS SQL is never applied and `withTenantRlsContext` is unused (and interpolates SQL). `findUnique` rewriting drops `select`/`include`. `aggregate`, `groupBy`, `*OrThrow` and the update branch of `upsert` are unscoped. Knowledge-base, `AiUsageLog` and `Role` models are not tenant-registered. The "cross-tenant isolation" test runs against a mocked client, not a database. | `tenant-prisma.extension.ts`, `rls-init.sql` | 1 | ✅ |
 | C6 | Webhooks: the WhatsApp HMAC check passes everything when `WHATSAPP_APP_SECRET` is unset. The Razorpay fee and billing webhooks are not idempotent, so provider retries double-record payments, upgrades and credit purchases. | `notification.controller.ts`, `fee.service.ts`, `billing.service.ts` | 0 (fail-closed) / 3 (idempotency) | 🚧 |
 
 ### 🟠 High
@@ -41,7 +41,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 
 | ID | Finding | Phase |
 |----|---------|-------|
-| M1 | No Prisma migrations (`db push` only). RLS, pgvector and a vector (HNSW) index are not part of deploys. | 1 |
+| M1 | No Prisma migrations (`db push` only). RLS, pgvector and a vector (HNSW) index are not part of deploys. | 1 ✅ |
 | M2 | Schema gaps: `Salary` has no teacher FK and no unique `(teacher, month, year)`. `FeePlan`, `Salary` and `Expense` lack a `Coaching` FK. No billing invoice/payment table. `AiUsageLog` has no `coachingId`. Nothing enforces a single active subscription. | 3 |
 | M3 | Insecure defaults are accepted in production. Without `JWT_*_KEY`, each pod generates its own key, so multi-replica deploys return random 401s. | 0 |
 | M4 | Workers start inside the API process as well as in the worker container. | 4 |
@@ -76,9 +76,26 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 
 **Exit criteria:** a failed login returns 401 and the process stays up; the inbound route returns 404; the production config refuses default secrets; all unit tests pass.
 
-### Phase 1: Tenant isolation
-Fail-closed extension with explicit `runForTenant()` / `runAsSystem()` contexts; cover every Prisma operation; fix `findUnique`; register the missing models. Introduce Prisma migrations and apply RLS via a migration with a non-owner app role and parameterised `set_config` per transaction. Replace the mocked isolation test with a real Postgres suite.
-**Exit:** the isolation suite passes against a real database in CI.
+### Phase 1: Tenant isolation ✅
+- [x] Fail-closed tenant extension: tenant-scoped queries with no tenant throw `TENANT_CONTEXT_REQUIRED`; explicit `RequestContextService.runForTenant()` / `runAsSystem()` contexts
+- [x] Every Prisma operation scoped (incl. `aggregate`, `groupBy`, `*OrThrow`, `upsert`); writes naming another coaching are refused; `findUnique` keeps `select`/`include`; knowledge-base models registered
+- [x] Prisma migrations introduced (baseline + RLS). RLS policies on all 29 tenant tables, `FORCE`d, set per transaction with parameterised `set_config`; interactive transactions keep atomicity (tenant set once on the transaction's connection); HNSW index for RAG search
+- [x] Startup refuses (production) or warns (dev) when the DB role is a superuser/BYPASSRLS, since RLS would be skipped; `infra/docker/postgres/create-app-role.sql` creates the application role
+- [x] Entrypoints declare their tenant: queue jobs (from `job.data.coachingId`), event subscribers (from `event.coachingId`), payment webhooks (signed notes), WhatsApp inbound (after parent lookup); identity lookup at login, coaching provisioning, delivery receipts and schedulers run as system
+- [x] Real-database tests: 14-case isolation suite (both layers, transactions, role check) and an HTTP end-to-end suite; CI `integration` job with Postgres + Redis
+
+**Exit:** met. The isolation suite passes against a real database, and runs in CI.
+
+**Upgrading an existing database** (created with `prisma db push`), as the schema owner:
+1. `prisma migrate resolve --applied 20260923000000_init` (mark the baseline as already present)
+2. `pnpm prisma:migrate:deploy` (applies RLS and the HNSW index)
+3. `psql "$OWNER_URL" -v app_password=... -f infra/docker/postgres/create-app-role.sql`, then point the API's `DATABASE_URL` at `trueco_app`
+
+**Known limitations, tracked for later phases:**
+- Relation `connect` to another tenant's row by id is not blocked by RLS (the policy checks the written row, not the referenced one); services must validate referenced ids (Phase 2)
+- The WhatsApp parent lookup still matches phone numbers across all tenants (H8, Phase 4)
+- Each statement outside an interactive transaction now runs as a small transaction (`set_config` + statement); measure latency under load before scaling (Phase 6)
+- `app.rls_bypass` is a session setting: code able to run arbitrary SQL as the app role can set it. RLS guards against missing filters in application code, not against SQL injection
 
 ### Phase 2: AuthN / AuthZ correctness
 Service-level resource ownership checks; permissions resolved server-side from a versioned Redis cache; one global subscription gate middleware; hashed, single-use reset and verification tokens; upload validation.

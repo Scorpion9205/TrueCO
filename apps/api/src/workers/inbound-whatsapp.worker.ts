@@ -36,6 +36,8 @@ export class InboundWhatsAppWorker {
     this.worker = new Worker(
       QUEUE_NAMES.INBOUND_WHATSAPP,
       async (job: Job<InboundWhatsAppJobPayload>) => {
+        // No tenant yet: WhatsAppAssistantService resolves the sender's coaching as a system
+        // lookup, then handles the message inside that coaching's tenant context.
         return this.processJob(job);
       },
       {

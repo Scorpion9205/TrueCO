@@ -16,6 +16,7 @@ import { KnowledgeBaseService } from '../ai/rag/knowledge-base.service.js';
 import { AiService } from '../ai/ai.service.js';
 import { buildWhatsAppRagSystemPrompt } from './prompts/whatsapp-rag-system.prompt.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { RequestContextService } from '../../common/services/request-context.service.js';
 
 export class WhatsAppAssistantService {
   private readonly intentClassifier: NlpIntentClassifier;
@@ -58,6 +59,17 @@ export class WhatsAppAssistantService {
       return reply;
     }
 
+    // Everything after identification acts on behalf of the parent's coaching only
+    return RequestContextService.runForTenant(parent.coachingId, () =>
+      this.replyForParent(dto, parent, correlationId),
+    );
+  }
+
+  private async replyForParent(
+    dto: InboundWhatsAppMessageDto,
+    parent: any,
+    correlationId: string,
+  ): Promise<AssistantReplyDto | null> {
     const coachingId = parent.coachingId;
     const studentParents = parent.studentParents || [];
     const students = studentParents.map((sp: any) => sp.student).filter(Boolean);

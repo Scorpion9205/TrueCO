@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import { QueueRegistry, QUEUE_NAMES } from '../queues/queue.registry.js';
 import { getPrismaClient, ExtendedPrismaClient } from '../database/prisma/tenant-prisma.extension.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobForTenant } from './job-context.js';
 
 export interface AnalyticsJobPayload {
   readonly coachingId: string;
@@ -31,7 +32,7 @@ export class AnalyticsWorker {
       QUEUE_NAMES.ANALYTICS,
       async (job: Job<AnalyticsJobPayload>): Promise<CoachingAnalyticsSummary> => {
         logger.info(`[AnalyticsWorker] Computing analytics rollup for coaching ${job.data.coachingId}`);
-        return this.processJob(job.data);
+        return runJobForTenant(job, () => this.processJob(job.data));
       },
       {
         connection: redis,

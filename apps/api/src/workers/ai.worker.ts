@@ -7,6 +7,7 @@ import { RedisPromptCache } from '../modules/ai/cache/redis-prompt.cache.js';
 import { eventBus } from '../events/event-bus.js';
 import { AiGenerationJobPayload } from '../modules/ai/ai.jobs.js';
 import { logger } from '../common/logger/logger.service.js';
+import { runJobForTenant } from './job-context.js';
 
 export class AiWorker {
   private worker: Worker | null = null;
@@ -27,7 +28,7 @@ export class AiWorker {
     this.worker = new Worker(
       QUEUE_NAMES.AI,
       async (job: Job<AiGenerationJobPayload>) => {
-        return this.processJob(job);
+        return runJobForTenant(job, () => this.processJob(job));
       },
       {
         connection: redis,

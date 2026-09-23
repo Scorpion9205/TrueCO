@@ -2,6 +2,7 @@ import { IBillingRepository } from './billing.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { createSubscriptionExpiringEvent } from './billing.events.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { RequestContextService } from '../../common/services/request-context.service.js';
 import { SubscriptionStatus } from '@trueco/types';
 
 export class SubscriptionExpirationScheduler {
@@ -10,7 +11,12 @@ export class SubscriptionExpirationScheduler {
     private readonly eventBus: IEventBus,
   ) {}
 
+  /** Scans subscriptions of every coaching; per-tenant events then run in that tenant's context. */
   public async runDailyExpirationCheck(): Promise<number> {
+    return RequestContextService.runAsSystem('scheduler:subscription-expiration', () => this.scanSubscriptions());
+  }
+
+  private async scanSubscriptions(): Promise<number> {
     logger.info('[SubscriptionExpirationScheduler] Running daily scan for expiring coaching subscriptions...');
 
     const now = new Date();

@@ -1,3 +1,4 @@
+import { RequestContextService } from '../../common/services/request-context.service.js';
 import { StatusCodes } from 'http-status-codes';
 import { INotificationRepository } from './notification.repository.js';
 import { QueueRegistry, QUEUE_NAMES } from '../../queues/queue.registry.js';
@@ -136,10 +137,9 @@ export class NotificationService {
     if (status === NotificationStatus.DELIVERED) data.deliveredAt = new Date();
     if (status === NotificationStatus.READ) data.readAt = new Date();
 
-    const updated = await this.notificationRepository.updateStatusByProviderId(
-      providerMessageId,
-      status,
-      data,
+    // Meta's delivery receipts identify the message only by its provider id, not the tenant
+    const updated = await RequestContextService.runAsSystem('whatsapp:delivery-status', () =>
+      this.notificationRepository.updateStatusByProviderId(providerMessageId, status, data),
     );
 
     if (updated) {
