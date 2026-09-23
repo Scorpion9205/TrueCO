@@ -81,6 +81,13 @@ class InMemoryNotificationRepository implements INotificationRepository {
     return this.notifications.get(id) || null;
   }
 
+  public async claimForSending(key: string): Promise<boolean> {
+    const record = this.findByIdempotencyKeySync(key);
+    if (!record || !['QUEUED', 'FAILED'].includes(record.status)) return false;
+    record.status = 'SENDING';
+    return true;
+  }
+
   public async findByIdempotencyKey(key: string): Promise<any | null> {
     return this.findByIdempotencyKeySync(key);
   }

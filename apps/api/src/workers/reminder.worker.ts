@@ -22,13 +22,17 @@ export class ReminderWorker {
 
     // Register daily scan job if not already scheduled
     const reminderQueue = queueRegistry.getQueue(QUEUE_NAMES.REMINDER);
+    // Hourly: each coaching is reminded when it is 10:00 in its own time zone
+    await reminderQueue
+      .removeRepeatable('daily_fee_reminder_scan', { pattern: '0 8 * * *' }, 'daily_fee_reminder_scan')
+      .catch(() => undefined);
     await reminderQueue.add(
-      'daily_fee_reminder_scan',
+      'hourly_fee_reminder_scan',
       {},
       {
-        jobId: 'daily_fee_reminder_scan',
+        jobId: 'hourly_fee_reminder_scan',
         repeat: {
-          pattern: '0 8 * * *', // Daily at 8:00 AM
+          pattern: '0 * * * *',
         },
       },
     );

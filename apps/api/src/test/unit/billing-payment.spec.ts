@@ -58,6 +58,14 @@ class FakeFeeRepository implements IFeeRepository {
     return this.installments.get(id) || null;
   }
 
+  public async listCoachingsForReminders(): Promise<Array<{ id: string; timezone: string | null }>> {
+    return [];
+  }
+
+  public async findInstallmentsDueBetween(): Promise<any[]> {
+    return [];
+  }
+
   public async recordPaymentTransaction(input: RecordPaymentTxInput): Promise<RecordPaymentResult> {
     const inst = this.installments.get(input.installmentId);
     if (!inst) throw new Error('Not found');

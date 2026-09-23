@@ -34,6 +34,8 @@ export interface FeeReminderTriggeredPayload {
   readonly amount: number;
   readonly dueDate: Date;
   readonly daysUntilDue: number;
+  /** Reminder stage, e.g. "D-7", "D0", "D+3"; each stage is sent once per installment. */
+  readonly stage: string;
 }
 
 export const FEE_EVENTS = {

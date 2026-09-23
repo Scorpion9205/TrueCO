@@ -37,6 +37,7 @@ enum NotificationChannel {
 
 enum NotificationStatus {
   QUEUED
+  SENDING // claimed by a worker; prevents two workers sending the same notification
   SENT
   DELIVERED
   READ
@@ -977,4 +978,41 @@ model BillingPayment {
 
   @@index([coachingId, createdAt])
   @@map("billing_payments")
+}
+
+// ==========================================
+// 12. Durable domain events (outbox)
+// ==========================================
+
+enum DomainEventStatus {
+  PENDING    // recorded, handlers not yet finished
+  DISPATCHED // every handler succeeded
+  FAILED     // at least one handler failed; retried with backoff
+  DEAD       // gave up after the maximum attempts; needs a person
+
+  @@map("domain_event_status")
+}
+
+// Every published domain event is recorded here before its handlers run. Handlers that
+// succeed are listed in completedHandlers, so a retry (after a handler error or a process
+// crash) re-runs only the ones that have not finished. Internal table: no tenant RLS;
+// coachingId can hold platform placeholders such as "platform".
+model DomainEventRecord {
+  id                String            @id @db.VarChar(64) // the event's eventId
+  eventName         String            @map("event_name") @db.VarChar(100)
+  coachingId        String            @map("coaching_id") @db.VarChar(64)
+  payload           Json
+  metadata          Json
+  occurredAt        DateTime          @map("occurred_at") @db.Timestamptz()
+  status            DomainEventStatus @default(PENDING)
+  attempts          Int               @default(0)
+  completedHandlers String[]          @default([]) @map("completed_handlers")
+  lastError         String?           @map("last_error") @db.Text
+  nextAttemptAt     DateTime          @default(now()) @map("next_attempt_at") @db.Timestamptz()
+  dispatchedAt      DateTime?         @map("dispatched_at") @db.Timestamptz()
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([status, nextAttemptAt])
+  @@map("domain_events")
 }

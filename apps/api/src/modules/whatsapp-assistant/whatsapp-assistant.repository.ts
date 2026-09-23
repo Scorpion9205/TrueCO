@@ -4,6 +4,9 @@ import {
   ExtendedPrismaClient,
 } from '../../database/prisma/tenant-prisma.extension.js';
 import { ConversationContext } from './dto/whatsapp-assistant.dto.js';
+import { Redis } from 'ioredis';
+import { queueRegistry } from '../../queues/queue.registry.js';
+import { logger } from '../../common/logger/logger.service.js';
 
 export interface StudentAcademicSnapshot {
   readonly student: any;
@@ -27,33 +30,56 @@ export interface StudentAcademicSnapshot {
 }
 
 export interface IWhatsAppAssistantRepository {
-  resolveParentByPhone(phone: string): Promise<any | null>;
+  /**
+   * Parents whose phone number matches exactly (last 10 digits, ignoring formatting), across all
+   * coachings: one TrueCO WhatsApp number serves every institute, so a parent may be registered
+   * at several. Each result includes `coaching: { name }`.
+   */
+  resolveParentsByPhone(phone: string): Promise<any[]>;
   getStudentAcademicSnapshot(studentId: string): Promise<StudentAcademicSnapshot | null>;
   getRecentNotices(coachingId: string, batchId?: string): Promise<any[]>;
-  saveConversationContext(phone: string, context: ConversationContext): Promise<void>;
-  getConversationContext(phone: string): Promise<ConversationContext | null>;
-  isMessageProcessed(messageId: string): Promise<boolean>;
-  markMessageProcessed(messageId: string): Promise<void>;
+  saveConversationContext(coachingId: string, phone: string, context: ConversationContext): Promise<void>;
+  getConversationContext(coachingId: string, phone: string): Promise<ConversationContext | null>;
+  /** Which coaching a parent registered at several institutes chose to talk to. */
+  saveCoachingChoice(phone: string, coachingId: string): Promise<void>;
+  getCoachingChoice(phone: string): Promise<string | null>;
+  /**
+   * Atomically claims an inbound message id; false if it was already claimed (Meta redelivers
+   * webhooks). Release the claim if processing fails so a retry can handle it.
+   */
+  claimMessage(messageId: string): Promise<boolean>;
+  releaseMessage(messageId: string): Promise<void>;
 }
 
+/** Last 10 digits of a phone number, ignoring spaces, dashes and country code. */
+export function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, '').slice(-10);
+}
+
+const MESSAGE_CLAIM_TTL_SECONDS = 7 * 24 * 60 * 60;
+const CONVERSATION_TTL_SECONDS = 24 * 60 * 60;
+const COACHING_CHOICE_TTL_SECONDS = 30 * 24 * 60 * 60;
+
 export class PrismaWhatsAppAssistantRepository implements IWhatsAppAssistantRepository {
-  private readonly processedMessages = new Set<string>();
-  private readonly conversationStates = new Map<string, ConversationContext>();
 
-  public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
+  public constructor(
+    private readonly prisma: ExtendedPrismaClient = getPrismaClient(),
+    private readonly redis: () => Redis = () => queueRegistry.getRedisClient(),
+  ) {}
 
-  public async resolveParentByPhone(phone: string): Promise<any | null> {
+  public async resolveParentsByPhone(phone: string): Promise<any[]> {
     const rawPrisma = this.prisma as any;
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10); // Match last 10 digits
+    const cleanPhone = normalizePhone(phone);
+    if (cleanPhone.length < 10) return [];
 
     // The sender's coaching is unknown until this lookup succeeds, so it spans all tenants.
-    // (Phone-to-coaching routing via the receiving WABA number is tracked for Phase 4.)
-    return RequestContextService.runAsSystem('whatsapp:resolve-parent', () =>
-      rawPrisma.parent.findFirst({
-        where: {
-          phone: { contains: cleanPhone },
-        },
+    // `contains` narrows the search; the exact comparison below drops partial matches such as a
+    // longer number that merely contains these digits.
+    const candidates = await RequestContextService.runAsSystem('whatsapp:resolve-parent', () =>
+      rawPrisma.parent.findMany({
+        where: { phone: { contains: cleanPhone } },
         include: {
+          coaching: { select: { name: true } },
           studentParents: {
             include: {
               student: {
@@ -69,6 +95,7 @@ export class PrismaWhatsAppAssistantRepository implements IWhatsAppAssistantRepo
         },
       }),
     );
+    return candidates.filter((p: any) => normalizePhone(p.phone) === cleanPhone);
   }
 
   public async getStudentAcademicSnapshot(
@@ -183,19 +210,63 @@ export class PrismaWhatsAppAssistantRepository implements IWhatsAppAssistantRepo
     });
   }
 
-  public async saveConversationContext(phone: string, context: ConversationContext): Promise<void> {
-    this.conversationStates.set(phone, context);
+  public async saveConversationContext(
+    coachingId: string,
+    phone: string,
+    context: ConversationContext,
+  ): Promise<void> {
+    await this.redisSet(`wa:conv:${coachingId}:${normalizePhone(phone)}`, JSON.stringify(context), CONVERSATION_TTL_SECONDS);
   }
 
-  public async getConversationContext(phone: string): Promise<ConversationContext | null> {
-    return this.conversationStates.get(phone) || null;
+  public async getConversationContext(coachingId: string, phone: string): Promise<ConversationContext | null> {
+    const raw = await this.redisGet(`wa:conv:${coachingId}:${normalizePhone(phone)}`);
+    if (!raw) return null;
+    const context = JSON.parse(raw);
+    return { ...context, lastInteractionAt: new Date(context.lastInteractionAt) };
   }
 
-  public async isMessageProcessed(messageId: string): Promise<boolean> {
-    return this.processedMessages.has(messageId);
+  public async saveCoachingChoice(phone: string, coachingId: string): Promise<void> {
+    await this.redisSet(`wa:coaching-choice:${normalizePhone(phone)}`, coachingId, COACHING_CHOICE_TTL_SECONDS);
   }
 
-  public async markMessageProcessed(messageId: string): Promise<void> {
-    this.processedMessages.add(messageId);
+  public async getCoachingChoice(phone: string): Promise<string | null> {
+    return this.redisGet(`wa:coaching-choice:${normalizePhone(phone)}`);
   }
+
+  public async claimMessage(messageId: string): Promise<boolean> {
+    try {
+      const result = await this.redis().set(`wa:inbound:${messageId}`, '1', 'EX', MESSAGE_CLAIM_TTL_SECONDS, 'NX');
+      return result === 'OK';
+    } catch (err) {
+      // Without Redis we cannot deduplicate; the queue's job id still drops most repeats
+      logger.warn('[WhatsAppAssistantRepository] Message claim unavailable; processing without dedupe', {
+        messageId,
+        error: (err as Error).message,
+      });
+      return true;
+    }
+  }
+
+  public async releaseMessage(messageId: string): Promise<void> {
+    await this.redis()
+      .del(`wa:inbound:${messageId}`)
+      .catch(() => undefined);
+  }
+
+  private async redisSet(key: string, value: string, ttlSeconds: number): Promise<void> {
+    try {
+      await this.redis().set(key, value, 'EX', ttlSeconds);
+    } catch (err) {
+      logger.warn('[WhatsAppAssistantRepository] Could not save conversation state', { key, error: (err as Error).message });
+    }
+  }
+
+  private async redisGet(key: string): Promise<string | null> {
+    try {
+      return await this.redis().get(key);
+    } catch {
+      return null;
+    }
+  }
+
 }

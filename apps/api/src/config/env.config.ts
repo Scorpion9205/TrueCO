@@ -35,6 +35,9 @@ const envSchema = z.object({
       return /^\d+$/.test(v) ? Number(v) : v;
     }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // Run the queue workers inside the API process too. Default: only in development, so a
+  // single `pnpm dev` works; staging/production run the separate worker process.
+  RUN_WORKERS_IN_API: z.enum(['true', 'false']).optional(),
   // WhatsApp Cloud API
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_API_TOKEN: z.string().optional(),
@@ -131,7 +134,11 @@ class ConfigService {
       console.error('❌ Invalid environment variables:', JSON.stringify(parsed.error.format(), null, 2));
       throw new Error('Invalid environment configuration');
     }
-    this.config = parsed.data;
+    this.config = {
+      ...parsed.data,
+      RUN_WORKERS_IN_API: (parsed.data.RUN_WORKERS_IN_API ??
+        (parsed.data.NODE_ENV === 'development' ? 'true' : 'false')) as 'true' | 'false',
+    };
   }
 
   public static getInstance(): ConfigService {

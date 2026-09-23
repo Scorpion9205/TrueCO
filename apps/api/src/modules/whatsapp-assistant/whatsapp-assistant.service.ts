@@ -35,12 +35,23 @@ export class WhatsAppAssistantService {
     dto: InboundWhatsAppMessageDto,
     correlationId: string = crypto.randomUUID(),
   ): Promise<AssistantReplyDto | null> {
-    // 1. Idempotency check
-    if (await this.repository.isMessageProcessed(dto.messageId)) {
+    // 1. Idempotency: Meta redelivers webhooks, and the claim is shared by every worker
+    if (!(await this.repository.claimMessage(dto.messageId))) {
       return null;
     }
-    await this.repository.markMessageProcessed(dto.messageId);
+    try {
+      return await this.handleClaimedMessage(dto, correlationId);
+    } catch (err) {
+      // Let the queue's retry process the message instead of treating it as a duplicate
+      await this.repository.releaseMessage(dto.messageId);
+      throw err;
+    }
+  }
 
+  private async handleClaimedMessage(
+    dto: InboundWhatsAppMessageDto,
+    correlationId: string,
+  ): Promise<AssistantReplyDto | null> {
     await this.eventBus.publish(
       createInboundMessageReceivedEvent(
         { messageId: dto.messageId, from: dto.from, body: dto.body },
@@ -48,21 +59,64 @@ export class WhatsAppAssistantService {
       ),
     );
 
-    // 2. Identity resolution
-    const parent = await this.repository.resolveParentByPhone(dto.from);
-    if (!parent) {
-      const reply = WhatsAppAssistantMapper.toReplyDto(
+    // 2. Identity resolution: exact phone match, possibly at several coachings
+    const parents = await this.repository.resolveParentsByPhone(dto.from);
+    if (parents.length === 0) {
+      return WhatsAppAssistantMapper.toReplyDto(
         dto.from,
         'Hello! This mobile number is not registered with our coaching institute. Please contact the front office to register your phone number.',
         'UNKNOWN',
       );
-      return reply;
     }
 
+    const chosen = await this.chooseCoaching(dto, parents);
+    if ('reply' in chosen) return chosen.reply;
+
     // Everything after identification acts on behalf of the parent's coaching only
+    const parent = chosen.parent;
     return RequestContextService.runForTenant(parent.coachingId, () =>
       this.replyForParent(dto, parent, correlationId),
     );
+  }
+
+  /**
+   * One TrueCO number serves every institute. A parent registered at more than one is asked
+   * which to talk to, and the choice is remembered for later messages.
+   */
+  private async chooseCoaching(
+    dto: InboundWhatsAppMessageDto,
+    parents: any[],
+  ): Promise<{ parent: any } | { reply: AssistantReplyDto }> {
+    if (parents.length === 1) return { parent: parents[0] };
+
+    const options = [...parents].sort((a, b) =>
+      String(a.coaching?.name ?? '').localeCompare(String(b.coaching?.name ?? '')),
+    );
+    const remembered = await this.repository.getCoachingChoice(dto.from);
+    const rememberedParent = options.find((p) => p.coachingId === remembered);
+    if (rememberedParent) return { parent: rememberedParent };
+
+    const picked = Number.parseInt(dto.body.trim(), 10);
+    if (Number.isInteger(picked) && picked >= 1 && picked <= options.length) {
+      const parent = options[picked - 1];
+      await this.repository.saveCoachingChoice(dto.from, parent.coachingId);
+      return {
+        reply: WhatsAppAssistantMapper.toReplyDto(
+          dto.from,
+          `You are now connected to ${parent.coaching?.name ?? 'your coaching'}. How can I help? You can ask for fees, attendance, results, or homework.`,
+          'HELP',
+        ),
+      };
+    }
+
+    const list = options.map((p, n) => `${n + 1}. ${p.coaching?.name ?? 'Coaching'}`).join('\n');
+    return {
+      reply: WhatsAppAssistantMapper.toReplyDto(
+        dto.from,
+        `Your number is registered with more than one institute. Reply with a number to choose:\n${list}`,
+        'HELP',
+      ),
+    };
   }
 
   private async replyForParent(
@@ -83,7 +137,7 @@ export class WhatsAppAssistantService {
     }
 
     // 3. Conversation Context & Multi-child disambiguation
-    let context = await this.repository.getConversationContext(dto.from);
+    let context = await this.repository.getConversationContext(coachingId, dto.from);
     const bodyTrimmed = dto.body.trim();
 
     // Check if replying to child selection
@@ -99,7 +153,7 @@ export class WhatsAppAssistantService {
           awaitingChildSelection: false,
           lastInteractionAt: new Date(),
         };
-        await this.repository.saveConversationContext(dto.from, context);
+        await this.repository.saveConversationContext(coachingId, dto.from, context);
 
         const reply = WhatsAppAssistantMapper.toReplyDto(
           dto.from,
@@ -129,7 +183,7 @@ export class WhatsAppAssistantService {
           awaitingChildSelection: true,
           lastInteractionAt: new Date(),
         };
-        await this.repository.saveConversationContext(dto.from, newContext);
+        await this.repository.saveConversationContext(coachingId, dto.from, newContext);
 
         return WhatsAppAssistantMapper.toReplyDto(
           dto.from,

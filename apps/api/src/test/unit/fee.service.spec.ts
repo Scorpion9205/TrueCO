@@ -94,6 +94,14 @@ class InMemoryFeeRepository implements IFeeRepository {
     );
   }
 
+  public async listCoachingsForReminders(): Promise<Array<{ id: string; timezone: string | null }>> {
+    return [];
+  }
+
+  public async findInstallmentsDueBetween(): Promise<any[]> {
+    return [];
+  }
+
   public async recordPaymentTransaction(input: RecordPaymentTxInput): Promise<RecordPaymentResult> {
     const installment = this.installments.get(input.installmentId);
     if (!installment) {

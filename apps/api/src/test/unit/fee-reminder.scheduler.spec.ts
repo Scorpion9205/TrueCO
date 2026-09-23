@@ -1,17 +1,54 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { FeeReminderScheduler } from '../../modules/fees/fee.cron.js';
+import {
+  daysBetween,
+  FeeReminderScheduler,
+  localDateAndHour,
+  reminderStage,
+} from '../../modules/fees/fee.cron.js';
 import { IFeeRepository } from '../../modules/fees/fee.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { FEE_EVENTS } from '../../modules/fees/fee.events.js';
 import { FeeInstallmentStatus } from '@trueco/types';
 
-describe('FeeReminderScheduler (Phase 4 Cron Unit Tests)', () => {
-  let scheduler: FeeReminderScheduler;
-  let mockFeeRepo: Partial<IFeeRepository>;
-  let mockEventBus: IEventBus;
+const IST = '11111111-1111-1111-1111-111111111111';
+const LONDON = '33333333-3333-3333-3333-333333333333';
+const STUDENT = '22222222-2222-2222-2222-222222222222';
 
-  const testCoachingId = '11111111-1111-1111-1111-111111111111';
-  const testStudentId = '22222222-2222-2222-2222-222222222222';
+// 10:00 in Asia/Kolkata (UTC+5:30) is 04:30 UTC
+const IST_10AM = new Date('2026-09-24T04:30:00Z');
+
+function installment(id: string, dueDate: string, paid = 0) {
+  return {
+    id,
+    amount: 1000,
+    paidAmount: paid,
+    dueDate: new Date(`${dueDate}T00:00:00Z`),
+    status: paid ? FeeInstallmentStatus.PARTIAL : FeeInstallmentStatus.PENDING,
+    feePlan: { studentId: STUDENT },
+  };
+}
+
+describe('Fee reminder stages and time zones', () => {
+  it('maps days-until-due to one-off stages and nothing in between', () => {
+    expect([7, 3, 0, -3, -7, -14].map(reminderStage)).toEqual(['D-7', 'D-3', 'D0', 'D+3', 'D+7', 'D+14']);
+    expect([6, 1, -1, -2, -15, -30].map(reminderStage)).toEqual([null, null, null, null, null, null]);
+  });
+
+  it('computes the local date and hour in the coaching time zone', () => {
+    expect(localDateAndHour(IST_10AM, 'Asia/Kolkata')).toEqual({ date: '2026-09-24', hour: 10 });
+    // Just before midnight UTC it is already the next day in India
+    expect(localDateAndHour(new Date('2026-09-24T20:00:00Z'), 'Asia/Kolkata').date).toBe('2026-09-25');
+  });
+
+  it('counts whole calendar days to the due date', () => {
+    expect(daysBetween('2026-09-24', new Date('2026-10-01T00:00:00Z'))).toBe(7);
+    expect(daysBetween('2026-09-24', new Date('2026-09-21T00:00:00Z'))).toBe(-3);
+  });
+});
+
+describe('FeeReminderScheduler', () => {
+  let mockEventBus: IEventBus;
+  let repo: Pick<IFeeRepository, 'listCoachingsForReminders' | 'findInstallmentsDueBetween'>;
 
   beforeEach(() => {
     mockEventBus = {
@@ -20,95 +57,63 @@ describe('FeeReminderScheduler (Phase 4 Cron Unit Tests)', () => {
       subscribe: vi.fn(),
       unsubscribe: vi.fn(),
     };
+    repo = {
+      listCoachingsForReminders: vi.fn().mockResolvedValue([
+        { id: IST, timezone: 'Asia/Kolkata' },
+        { id: LONDON, timezone: 'Europe/London' },
+      ]),
+      findInstallmentsDueBetween: vi.fn().mockResolvedValue([
+        installment('due-in-7', '2026-10-01'),
+        installment('due-in-5', '2026-09-29'),
+        installment('due-today', '2026-09-24', 400),
+        installment('overdue-3', '2026-09-21'),
+        installment('overdue-2', '2026-09-22'),
+      ]),
+    };
   });
 
-  it('scans and triggers reminders for installments due in 7 days, 3 days, today, or overdue', async () => {
-    const now = new Date();
+  const scheduler = () => new FeeReminderScheduler(repo as IFeeRepository, mockEventBus);
+  const published = () => (mockEventBus.publish as any).mock.calls.map((c: any[]) => c[0]);
 
-    const dueIn7Days = new Date(now);
-    dueIn7Days.setDate(dueIn7Days.getDate() + 7);
+  it('reminds only on stage days, with the stage and outstanding balance', async () => {
+    const count = await scheduler().runDailyReminderCheck(IST_10AM);
 
-    const dueIn3Days = new Date(now);
-    dueIn3Days.setDate(dueIn3Days.getDate() + 3);
+    expect(count).toBe(3);
+    const events = published();
+    expect(events.map((e: any) => [e.payload.installmentId, e.payload.stage])).toEqual([
+      ['due-in-7', 'D-7'],
+      ['due-today', 'D0'],
+      ['overdue-3', 'D+3'],
+    ]);
+    expect(events[1]).toMatchObject({
+      eventName: FEE_EVENTS.FEE_REMINDER_TRIGGERED,
+      coachingId: IST,
+      payload: { amount: 600, daysUntilDue: 0 },
+    });
+  });
 
-    const dueToday = new Date(now);
+  it('processes a coaching only at 10:00 in its own time zone', async () => {
+    await scheduler().runDailyReminderCheck(IST_10AM);
+    // It is 05:30 in London at that moment: only the Indian coaching was scanned
+    expect(repo.findInstallmentsDueBetween).toHaveBeenCalledTimes(1);
 
-    const overdue = new Date(now);
-    overdue.setDate(overdue.getDate() - 2);
+    (repo.findInstallmentsDueBetween as any).mockClear();
+    await scheduler().runDailyReminderCheck(new Date('2026-09-24T12:00:00Z'));
+    expect(repo.findInstallmentsDueBetween).not.toHaveBeenCalled();
+  });
 
-    const dueIn15Days = new Date(now);
-    dueIn15Days.setDate(dueIn15Days.getDate() + 15);
+  it('pages through coachings instead of loading every tenant at once', async () => {
+    const page = (start: number, size: number) =>
+      Array.from({ length: size }, (_, i) => ({ id: `c-${String(start + i).padStart(4, '0')}`, timezone: 'Asia/Kolkata' }));
+    repo.listCoachingsForReminders = vi
+      .fn()
+      .mockResolvedValueOnce(page(0, 200))
+      .mockResolvedValueOnce(page(200, 10));
+    repo.findInstallmentsDueBetween = vi.fn().mockResolvedValue([]);
 
-    const pendingInstallments = [
-      {
-        id: 'inst-7d',
-        coachingId: testCoachingId,
-        amount: 5000,
-        paidAmount: 0,
-        dueDate: dueIn7Days,
-        status: FeeInstallmentStatus.PENDING,
-        feePlan: { studentId: testStudentId },
-      },
-      {
-        id: 'inst-3d',
-        coachingId: testCoachingId,
-        amount: 4000,
-        paidAmount: 1000, // 3000 balance
-        dueDate: dueIn3Days,
-        status: FeeInstallmentStatus.PARTIAL,
-        feePlan: { studentId: testStudentId },
-      },
-      {
-        id: 'inst-today',
-        coachingId: testCoachingId,
-        amount: 2500,
-        paidAmount: 0,
-        dueDate: dueToday,
-        status: FeeInstallmentStatus.PENDING,
-        feePlan: { studentId: testStudentId },
-      },
-      {
-        id: 'inst-overdue',
-        coachingId: testCoachingId,
-        amount: 3000,
-        paidAmount: 0,
-        dueDate: overdue,
-        status: FeeInstallmentStatus.OVERDUE,
-        feePlan: { studentId: testStudentId },
-      },
-      {
-        id: 'inst-15d',
-        coachingId: testCoachingId,
-        amount: 6000,
-        paidAmount: 0,
-        dueDate: dueIn15Days,
-        status: FeeInstallmentStatus.PENDING,
-        feePlan: { studentId: testStudentId },
-      },
-    ];
-
-    mockFeeRepo = {
-      findPendingInstallments: vi.fn().mockResolvedValue(pendingInstallments),
-    };
-
-    scheduler = new FeeReminderScheduler(mockFeeRepo as IFeeRepository, mockEventBus);
-
-    const count = await scheduler.runDailyReminderCheck();
-
-    // 4 reminders should be triggered (7d, 3d, today, overdue), 15d ignored
-    expect(count).toBe(4);
-    expect(mockEventBus.publish).toHaveBeenCalledTimes(4);
-
-    // Verify partial balance computation on inst-3d
-    expect(mockEventBus.publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        eventName: FEE_EVENTS.FEE_REMINDER_TRIGGERED,
-        payload: expect.objectContaining({
-          installmentId: 'inst-3d',
-          amount: 3000, // 4000 - 1000
-          daysUntilDue: 3,
-        }),
-      }),
-    );
+    await scheduler().runDailyReminderCheck(IST_10AM);
+    expect(repo.listCoachingsForReminders).toHaveBeenNthCalledWith(1, undefined, 200);
+    expect(repo.listCoachingsForReminders).toHaveBeenNthCalledWith(2, 'c-0199', 200);
+    expect(repo.findInstallmentsDueBetween).toHaveBeenCalledTimes(210);
   });
 });

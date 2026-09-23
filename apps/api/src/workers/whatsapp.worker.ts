@@ -70,11 +70,12 @@ export class WhatsAppWorker {
   public async processJob(job: Job<WhatsAppJobPayload>): Promise<void> {
     const payload = job.data;
 
-    // 1. Idempotency Check: Verify if already sent
-    const existing = await this.notificationRepository.findByIdempotencyKey(payload.idempotencyKey);
-    if (existing && (existing.status === NotificationStatus.SENT || existing.status === NotificationStatus.DELIVERED)) {
+    // 1. Idempotency: claim the notification atomically. A plain "already sent?" read let two
+    //    copies of a job both send; now only the job that wins the claim sends it.
+    const claimed = await this.notificationRepository.claimForSending(payload.idempotencyKey);
+    if (!claimed) {
       logger.info(
-        `[WhatsAppWorker] Skipping already-processed notification (idempotencyKey: ${payload.idempotencyKey})`,
+        `[WhatsAppWorker] Skipping notification already sent or being sent (idempotencyKey: ${payload.idempotencyKey})`,
       );
       return;
     }

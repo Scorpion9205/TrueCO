@@ -154,7 +154,8 @@ export class NotificationSubscribers {
       FEE_EVENTS.FEE_REMINDER_TRIGGERED,
       async (event: DomainEvent<FeeReminderTriggeredPayload>) => {
         const { coachingId, studentId, installmentId, amount, dueDate, daysUntilDue } = event.payload;
-        const idempotencyKey = `fee.reminder.${installmentId}.${new Date().toISOString().slice(0, 10)}`;
+        // Keyed by stage, not by date: each stage (D-7, D-3, D0, D+3, ...) reaches a parent once
+        const idempotencyKey = `fee.reminder.${installmentId}.${event.payload.stage}`;
         const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN');
         const dueText = daysUntilDue < 0 ? `is OVERDUE by ${Math.abs(daysUntilDue)} days` : `is due on ${dueDateStr}`;
         const content = `Fee Reminder: A payment of ₹${amount} ${dueText}. Please pay promptly.`;

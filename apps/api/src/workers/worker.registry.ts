@@ -8,6 +8,7 @@ import { ReportWorker } from './report.worker.js';
 import { ImportWorker } from './import.worker.js';
 import { AnalyticsWorker } from './analytics.worker.js';
 import { CleanupWorker } from './cleanup.worker.js';
+import { EventRelayWorker } from './event-relay.worker.js';
 import { logger } from '../common/logger/logger.service.js';
 import { WhatsAppAssistantService } from '../modules/whatsapp-assistant/whatsapp-assistant.service.js';
 
@@ -23,6 +24,7 @@ export class WorkerRegistry {
   private readonly importWorker: ImportWorker;
   private readonly analyticsWorker: AnalyticsWorker;
   private readonly cleanupWorker: CleanupWorker;
+  private readonly eventRelayWorker: EventRelayWorker;
   private isRunning: boolean = false;
 
   private constructor() {
@@ -36,6 +38,7 @@ export class WorkerRegistry {
     this.importWorker = new ImportWorker();
     this.analyticsWorker = new AnalyticsWorker();
     this.cleanupWorker = new CleanupWorker();
+    this.eventRelayWorker = new EventRelayWorker();
   }
 
   public static getInstance(): WorkerRegistry {
@@ -63,8 +66,9 @@ export class WorkerRegistry {
     this.importWorker.start();
     this.analyticsWorker.start();
     await this.cleanupWorker.start();
+    await this.eventRelayWorker.start();
     this.isRunning = true;
-    logger.info('[WorkerRegistry] All 10 BullMQ background workers started successfully');
+    logger.info('[WorkerRegistry] All BullMQ background workers started successfully');
   }
 
   public async closeAll(): Promise<void> {
@@ -82,9 +86,10 @@ export class WorkerRegistry {
       this.importWorker.close(),
       this.analyticsWorker.close(),
       this.cleanupWorker.close(),
+      this.eventRelayWorker.close(),
     ]);
     this.isRunning = false;
-    logger.info('[WorkerRegistry] All 10 workers stopped');
+    logger.info('[WorkerRegistry] All workers stopped');
   }
 }
 
