@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { isApiError } from '@trueco/api-client';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { useEffect, useState, type ReactNode } from 'react';
+import { Toaster } from '@/components/ui/toaster';
 import { getSession, subscribe } from '@/lib/auth/session';
 
 function makeQueryClient(): QueryClient {
@@ -37,6 +38,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <NuqsAdapter>{children}</NuqsAdapter>
+      <Toaster />
     </QueryClientProvider>
   );
 }

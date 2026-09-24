@@ -13,6 +13,8 @@ export const CLIENT_NAMESPACES = [
   'Shell',
   'Dashboard',
   'Common',
+  'Students',
+  'Batches',
 ] as const;
 
 export function pickClientMessages(messages: AbstractIntlMessages): AbstractIntlMessages {

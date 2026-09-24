@@ -2,7 +2,12 @@ import { StatusCodes } from 'http-status-codes';
 import { IStudentRepository } from './student.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { CreateStudentDto, StudentResponseDto, UpdateStudentDto } from './dto/student.dto.js';
+import {
+  CreateStudentDto,
+  StudentListFilters,
+  StudentResponseDto,
+  UpdateStudentDto,
+} from './dto/student.dto.js';
 import { StudentMapper } from './student.mapper.js';
 import { createStudentCreatedEvent, createStudentUpdatedEvent } from './student.events.js';
 
@@ -61,9 +66,18 @@ export class StudentService {
     return StudentMapper.toResponseDto(student);
   }
 
-  public async listStudents(filters?: { isActive?: boolean; search?: string }): Promise<StudentResponseDto[]> {
+  public async listStudents(filters?: StudentListFilters): Promise<StudentResponseDto[]> {
     const students = await this.studentRepository.findMany(filters);
     return students.map(StudentMapper.toResponseDto);
+  }
+
+  public async listStudentsPage(
+    filters: StudentListFilters,
+    page: number,
+    limit: number,
+  ): Promise<{ students: StudentResponseDto[]; total: number }> {
+    const { rows, total } = await this.studentRepository.findPage(filters, page, limit);
+    return { students: rows.map(StudentMapper.toResponseDto), total };
   }
 
   public async updateStudent(

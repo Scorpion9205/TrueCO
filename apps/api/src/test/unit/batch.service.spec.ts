@@ -52,6 +52,11 @@ class InMemoryBatchRepository implements IBatchRepository {
     return updated;
   }
 
+  public async softDelete(id: string): Promise<void> {
+    const b = this.batches.get(id);
+    if (b) b.deletedAt = new Date();
+  }
+
   public async enrollStudent(data: { batchId: string; studentId: string; coachingId: string }): Promise<any> {
     const entry = {
       batchId: data.batchId,
@@ -246,5 +251,53 @@ describe('BatchService (Phase 2 Domain Unit Tests)', () => {
         'coaching-1',
       ),
     ).rejects.toThrow(AppError);
+  });
+
+  describe('editing and deleting', () => {
+    const create = () =>
+      batchService.createBatch(
+        { name: 'Class 10', academicYear: '2026-27', startTime: '07:00', endTime: '08:30' },
+        'coaching-1',
+      );
+
+    it('updates details and can clear the subject', async () => {
+      const batch = await create();
+      const updated = await batchService.updateBatch(batch.id, {
+        name: 'Class 10 Morning',
+        subject: null,
+        isActive: false,
+      });
+      expect(updated).toMatchObject({ name: 'Class 10 Morning', subject: null, isActive: false });
+    });
+
+    it('rejects a schedule that ends before it starts, checking against saved times', async () => {
+      const batch = await create();
+      // Only the end time is sent; it is compared with the saved 07:00 start
+      await expect(batchService.updateBatch(batch.id, { endTime: '06:30' })).rejects.toMatchObject({
+        code: 'INVALID_SCHEDULE',
+      });
+    });
+
+    it('deletes an empty batch', async () => {
+      const batch = await create();
+      await batchService.deleteBatch(batch.id);
+      await expect(batchService.getBatchById(batch.id)).rejects.toMatchObject({
+        code: 'BATCH_NOT_FOUND',
+      });
+    });
+
+    it('refuses to delete a batch that still has students', async () => {
+      const batch = await create();
+      batchRepo.batches.get(batch.id).batchStudents = [{ studentId: 's1', leftAt: null }];
+
+      await expect(batchService.deleteBatch(batch.id)).rejects.toMatchObject({
+        code: 'BATCH_HAS_STUDENTS',
+        statusCode: 409,
+      });
+    });
+
+    it('reports a missing batch', async () => {
+      await expect(batchService.deleteBatch('nope')).rejects.toMatchObject({ statusCode: 404 });
+    });
   });
 });

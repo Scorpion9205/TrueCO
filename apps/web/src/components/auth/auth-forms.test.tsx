@@ -6,7 +6,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { __resetSessionForTests, getSession } from '@/lib/auth/session';
 import { renderWithIntl } from '@/test/render';
 import { LoginForm } from './login-form';
-import { normalisePhone, SignupForm, toCoachingCode } from './signup-form';
+import { normalisePhone } from '@/lib/phone';
+import { SignupForm, toCoachingCode } from './signup-form';
 
 const router = { replace: vi.fn(), refresh: vi.fn(), push: vi.fn() };
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
