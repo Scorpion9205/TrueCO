@@ -43,6 +43,12 @@ jobs:
       - name: Run Unit Tests
         run: pnpm run test:unit
 
+      - name: Typecheck web app and API client
+        run: pnpm -r --if-present run typecheck
+
+      - name: Run Web Tests
+        run: pnpm --filter @trueco/web run test
+
   security:
     name: Secret Scan & Dependency Audit
     runs-on: ubuntu-latest

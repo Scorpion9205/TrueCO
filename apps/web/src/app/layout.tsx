@@ -1,21 +1,36 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getTranslations } from 'next-intl/server';
+import { Plus_Jakarta_Sans } from 'next/font/google';
+import type { ReactNode } from 'react';
+import { Providers } from './providers';
 import './globals.css';
 
-export const metadata: Metadata = {
-  title: 'TrueCO - WhatsApp-First Coaching ERP & Smart Analytics',
-  description:
-    'Next-generation institute management platform powered by WhatsApp Cloud automation, multi-tenant Clean Architecture, and AI-driven Student Risk Scoring.',
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', display: 'swap' });
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Metadata');
+  return {
+    title: { default: t('title'), template: '%s · TrueCO' },
+    description: t('description'),
+  };
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+  ],
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const locale = await getLocale();
   return (
-    <html lang="en" className="dark">
-      <body className="antialiased bg-[#0b0f17] text-slate-100 selection:bg-emerald-500 selection:text-black">
-        {children}
+    <html lang={locale} className={jakarta.variable}>
+      <body className="min-h-dvh font-sans">
+        <NextIntlClientProvider>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );
