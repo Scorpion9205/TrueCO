@@ -261,4 +261,7 @@ async function runDiagnostic() {
   console.log('======================================================\n');
 }
 
-runDiagnostic();
+runDiagnostic().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

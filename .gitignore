@@ -14,3 +14,6 @@ coverage
 .keys/
 *.pem
 *.key
+
+# Generated local secrets for the docker-compose stack
+infra/docker/compose.env

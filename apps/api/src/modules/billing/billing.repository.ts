@@ -147,7 +147,7 @@ export class PrismaBillingRepository implements IBillingRepository {
       });
 
       let subscription: any;
-      let creditsAdded = 0;
+      let creditsAdded: number;
 
       if (payment.type === 'PLAN_UPGRADE') {
         const plan = await tx.plan.findUnique({ where: { code: payment.planCode } });

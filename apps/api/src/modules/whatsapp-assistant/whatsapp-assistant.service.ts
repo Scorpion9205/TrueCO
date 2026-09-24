@@ -204,7 +204,7 @@ export class WhatsAppAssistantService {
       ? `${academicData.student.firstName} ${academicData.student.lastName}`.trim()
       : 'Student';
 
-    let replyText = '';
+    let replyText: string;
 
     switch (intent) {
       case 'FEES': {

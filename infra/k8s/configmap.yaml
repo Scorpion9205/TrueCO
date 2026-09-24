@@ -1,0 +1,20 @@
+# Non-secret settings shared by the API, worker and migration job
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: trueco-config
+  labels:
+    # Applied (and, for the job, awaited) before the deployments; see docs/RUNBOOK.md
+    trueco/stage: pre
+data:
+  NODE_ENV: production
+  PORT: '4000'
+  # One ingress/load balancer in front of the API; set to the real number of proxy hops
+  TRUST_PROXY: '1'
+  RUN_WORKERS_IN_API: 'false'
+  REDIS_HOST: trueco-redis
+  REDIS_PORT: '6379'
+  FRONTEND_URL: https://app.trueco.in
+  API_BASE_URL: https://api.trueco.in
+  CORS_ORIGIN: https://app.trueco.in
+  LOG_LEVEL: info

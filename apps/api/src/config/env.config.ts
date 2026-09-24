@@ -1,9 +1,14 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
-
 const isTest = process.env.NODE_ENV === 'test' || !!process.env.VITEST;
+
+// Tests never read the developer's .env: real API keys there made test runs call Gemini, WhatsApp
+// and payment providers. Tests get their settings from defaults and explicitly exported variables,
+// exactly as in CI.
+if (!isTest) {
+  dotenv.config();
+}
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
@@ -35,6 +40,8 @@ const envSchema = z.object({
       return /^\d+$/.test(v) ? Number(v) : v;
     }),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  // Bearer token required to read /metrics (disabled in production when unset)
+  METRICS_TOKEN: z.string().optional(),
   // Run the queue workers inside the API process too. Default: only in development, so a
   // single `pnpm dev` works; staging/production run the separate worker process.
   RUN_WORKERS_IN_API: z.enum(['true', 'false']).optional(),

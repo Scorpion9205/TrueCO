@@ -18,6 +18,7 @@ import { MockPaymentGatewayAdapter } from './adapters/mock-payment-gateway.adapt
 import { RazorpayAdapter } from './adapters/razorpay.adapter.js';
 import { envConfig } from '../../config/env.config.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { paymentReconcileTotal } from '../../common/metrics/metrics.service.js';
 
 export interface CreateBillingOrderDto {
   readonly type: 'PLAN_UPGRADE' | 'AI_CREDITS';
@@ -151,6 +152,7 @@ export class BillingService {
         // payment.captured and order.paid both arrive for one payment, and gateways retry
         return { status: 'DUPLICATE' };
       case 'amount_mismatch':
+        paymentReconcileTotal.inc({ source: 'billing', reason: 'AMOUNT_MISMATCH' });
         logger.error('[BillingService] RECONCILE: paid amount differs from the order price; nothing applied', undefined, {
           orderId,
           expectedPaise: result.payment.amountPaise,

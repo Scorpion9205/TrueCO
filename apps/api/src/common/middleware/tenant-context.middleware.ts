@@ -1,10 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { RequestContextData, RoleType } from '@trueco/types';
 import { RequestContextService } from '../services/request-context.service.js';
 
 export function tenantContextMiddleware(req: Request, _res: Response, next: NextFunction): void {
-  const traceId = (req.headers['x-trace-id'] as string) || uuidv4();
+  // Accept a caller's trace id only if it is short and plain; it is written into every log line
+  const incomingTraceId = req.headers['x-trace-id'];
+  const traceId =
+    typeof incomingTraceId === 'string' && /^[A-Za-z0-9._-]{1,64}$/.test(incomingTraceId)
+      ? incomingTraceId
+      : randomUUID();
   const isTestEnv = process.env.NODE_ENV === 'test';
 
   // In test environments, allow header injection for integration test harnesses

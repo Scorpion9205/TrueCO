@@ -9,14 +9,24 @@ spec:
   selector:
     matchLabels:
       app: trueco-api
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
         app: trueco-api
     spec:
+      terminationGracePeriodSeconds: 40
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: api
-          image: trueco/api:latest
+          image: trueco-api
           ports:
             - containerPort: 4000
           envFrom:
@@ -24,18 +34,46 @@ spec:
                 name: trueco-config
             - secretRef:
                 name: trueco-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 384Mi
+            limits:
+              memory: 768Mi
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 4000
+            periodSeconds: 5
+            failureThreshold: 24
           readinessProbe:
             httpGet:
               path: /health/ready
               port: 4000
-            initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /health/live
               port: 4000
-            initialDelaySeconds: 10
             periodSeconds: 15
+            failureThreshold: 3
+          lifecycle:
+            # Let the load balancer stop routing here before the process starts shutting down
+            preStop:
+              exec:
+                command: ['sleep', '10']
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -48,3 +86,32 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 4000
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: trueco-api
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: trueco-api
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: trueco-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: trueco-api
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

@@ -29,7 +29,7 @@ export class PasswordService implements IPasswordService {
       return await argon2.hash(password, this.options);
     } catch (err) {
       logger.error('Failed to hash password with Argon2id:', err);
-      throw new Error('Password hashing failed');
+      throw new Error('Password hashing failed', { cause: err });
     }
   }
 

@@ -1,0 +1,15 @@
+# Secret scanning (gitleaks) with the default rule set.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known historical exposure, already rotated"
+# These commits added and then removed the RS256 JWT signing key that was committed before
+# Phase 0 (see docs/AUDIT_AND_REMEDIATION_PLAN.md, finding C3). That key is compromised and must
+# never be used; every environment was required to generate its own. Listed so the scan can gate
+# new leaks without failing on history that cannot be changed without a force-push.
+commits = [
+  "95c30cd4ea2b9547e54841515986365ca6521084",
+  "522d1300cb885ebce0ee8a11afdd7ccb0e0dbc27",
+  "d3a962fb5e499ae5b8fefd4de7c78d2f0d4dec98",
+]

@@ -181,7 +181,7 @@ export class RiskEngineService {
   }
 
   public async getStudentRisk(studentId: string, coachingId: string): Promise<RiskScoreResponseDto> {
-    let record = await this.riskRepository.findByStudentId(studentId);
+    const record = await this.riskRepository.findByStudentId(studentId);
     if (!record) {
       return this.computeStudentRisk(studentId, coachingId);
     }
