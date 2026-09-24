@@ -1,0 +1,15 @@
+# kubectl apply -k infra/k8s   (after creating the trueco-secrets Secret; see secret.example.yaml)
+# Deploy order (docs/RUNBOOK.md): apply the `trueco/stage=pre` objects, wait for the trueco-migrate
+# Job to complete, then apply everything.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - configmap.yaml
+  - migrate-job.yaml
+  - api-deployment.yaml
+  - worker-deployment.yaml
+# The single place the image version is pinned; CI should set newTag to the released git SHA
+images:
+  - name: trueco-api
+    newName: ghcr.io/scorpion9205/trueco-api
+    newTag: v1.0.0

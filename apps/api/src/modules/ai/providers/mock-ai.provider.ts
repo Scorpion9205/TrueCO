@@ -13,7 +13,7 @@ export class MockAiProvider implements IAiProvider {
     options: AiCompletionOptions,
   ): Promise<AiCompletionResult> {
     const promptLower = options.prompt.toLowerCase();
-    let content = '';
+    let content: string;
 
     if (
       promptLower.includes('academic progress') ||

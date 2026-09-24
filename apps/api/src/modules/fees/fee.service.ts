@@ -24,6 +24,7 @@ import { MockPaymentGatewayAdapter } from '../billing/adapters/mock-payment-gate
 import { RazorpayAdapter } from '../billing/adapters/razorpay.adapter.js';
 import { envConfig } from '../../config/env.config.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { paymentReconcileTotal } from '../../common/metrics/metrics.service.js';
 import { fromPaise, money, toRupees } from '../../common/money/money.js';
 
 export class FeeService {
@@ -300,7 +301,8 @@ export class FeeService {
       return { status: 'IGNORED' };
     }
     if (paymentEntity.currency && paymentEntity.currency !== 'INR') {
-      logger.error(`[FeeService] Unsupported currency ${paymentEntity.currency} for payment ${paymentEntity.id}`);
+      paymentReconcileTotal.inc({ source: 'fee', reason: 'UNSUPPORTED_CURRENCY' });
+      logger.error(`[FeeService] RECONCILE: unsupported currency ${paymentEntity.currency} for payment ${paymentEntity.id}`);
       return { status: 'REJECTED' };
     }
 
@@ -325,6 +327,7 @@ export class FeeService {
       if (err instanceof AppError && err.statusCode < 500) {
         // Money was taken but cannot be applied (e.g. installment already paid or waived).
         // Retrying will not help; this needs a person to reconcile or refund.
+        paymentReconcileTotal.inc({ source: 'fee', reason: err.code });
         logger.error('[FeeService] RECONCILE: online payment could not be applied to its installment', err, {
           paymentId: paymentEntity.id,
           installmentId,

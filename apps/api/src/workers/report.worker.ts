@@ -66,7 +66,7 @@ export class ReportWorker {
     workbook.creator = 'TrueCO Analytics Engine';
     workbook.created = new Date();
 
-    let rowCount = 0;
+    let rowCount: number;
 
     switch (payload.reportType) {
       case 'ATTENDANCE':

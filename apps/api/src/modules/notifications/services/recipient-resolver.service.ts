@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-import { getPrismaClient } from '../../../database/prisma/tenant-prisma.extension.js';
+import { ExtendedPrismaClient, getPrismaClient } from '../../../database/prisma/tenant-prisma.extension.js';
 import { logger } from '../../../common/logger/logger.service.js';
 
 export interface ResolvedRecipient {
@@ -13,7 +12,7 @@ export interface ResolvedRecipient {
 export class RecipientResolverService {
   private static instance: RecipientResolverService;
 
-  public constructor(private readonly prisma: PrismaClient = getPrismaClient() as any) {}
+  public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
 
   public static getInstance(): RecipientResolverService {
     if (!RecipientResolverService.instance) {

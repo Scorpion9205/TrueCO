@@ -25,7 +25,7 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
   const getRedis = options.redis ?? (() => queueRegistry.getRedisClient());
   const keyGenerator = options.keyGenerator ?? ((req: Request) => req.ip);
 
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const handle = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const subject = keyGenerator(req);
     if (!subject) return next();
 
@@ -62,6 +62,10 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
     }
 
     next();
+  };
+
+  return (req: Request, res: Response, next: NextFunction): void => {
+    handle(req, res, next).catch(next);
   };
 }
 

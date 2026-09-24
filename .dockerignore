@@ -1,0 +1,23 @@
+# Dependencies are installed inside the image; host copies (often built for another OS) must not leak in
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+
+# Secrets never enter the build context
+**/.env
+**/.env.*
+!**/.env.example
+**/.keys
+**/*.pem
+**/*.key
+
+# Not needed to build the API
+.git
+.github
+apps/web
+apps/mobile
+docs
+**/*.log

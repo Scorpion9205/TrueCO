@@ -7,10 +7,11 @@
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "test:unit": "pnpm --filter @trueco/api run test:unit",
-    "lint": "pnpm -r run lint",
+    "lint": "eslint \"apps/api/src/**/*.ts\" \"packages/*/src/**/*.ts\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
-    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:env": "node infra/docker/generate-compose-env.mjs",
+    "docker:up": "docker compose --env-file infra/docker/compose.env -f infra/docker/docker-compose.yml up -d --build",
+    "docker:down": "docker compose --env-file infra/docker/compose.env -f infra/docker/docker-compose.yml down",
     "prisma:generate": "pnpm --filter @trueco/api run prisma:generate",
     "prisma:migrate": "pnpm --filter @trueco/api run prisma:migrate",
     "prisma:migrate:deploy": "pnpm --filter @trueco/api run prisma:migrate:deploy",
@@ -18,8 +19,12 @@
     "prisma:studio": "pnpm --filter @trueco/api run prisma:studio"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
     "prettier": "^3.3.3",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.70.1"
   },
   "packageManager": "pnpm@11.21.0"
 }

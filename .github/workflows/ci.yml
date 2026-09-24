@@ -36,8 +36,72 @@ jobs:
       - name: Build packages
         run: pnpm run build
 
+      # After the build: type-aware rules need the generated Prisma client and built shared types
+      - name: Lint
+        run: pnpm run lint
+
       - name: Run Unit Tests
         run: pnpm run test:unit
+
+  security:
+    name: Secret Scan & Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks scans the full history
+
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Blocks on high/critical advisories in the API's production dependencies
+      - name: Audit API dependencies
+        run: |
+          pnpm audit --prod --json > audit.json || true
+          node infra/ci/audit-api.mjs < audit.json
+
+  delivery:
+    name: Docker Image & Deployment Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API/worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          push: false
+          load: true
+          tags: trueco-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image starts and runs compiled code
+        run: docker run --rm --entrypoint node trueco-api:ci -e "require('fs').accessSync('dist/main.js'); require('fs').accessSync('dist/workers/worker-runner.js'); require('fs').accessSync('dist/database/prisma/migrations')"
+
+      - name: Validate docker-compose file
+        run: |
+          node infra/docker/generate-compose-env.mjs
+          docker compose --env-file infra/docker/compose.env -f infra/docker/docker-compose.yml config --quiet
+
+      - name: Render Kubernetes manifests
+        run: kubectl kustomize infra/k8s > /dev/null
 
   integration:
     name: Integration Tests (PostgreSQL + Redis)

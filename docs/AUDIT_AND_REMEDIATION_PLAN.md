@@ -57,10 +57,10 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 
 | ID | Finding | Phase |
 |----|---------|-------|
-| I1 | `docker-compose.yml` sets `JWT_SECRET` (not a config key) with `NODE_ENV=production`, so env validation fails and the API and worker containers don't boot. | 6 |
-| I2 | k8s: `:latest` image, no probes or resource limits, no worker deployment, no migration job. | 6 |
-| I3 | CI: no ESLint config, no DB-backed tests, no Docker build, no dependency audit or secret scanning. | 6 |
-| I4 | No README or runbook. | 6 |
+| I1 | `docker-compose.yml` sets `JWT_SECRET` (not a config key) with `NODE_ENV=production`, so env validation fails and the API and worker containers don't boot. | 6 ✅ |
+| I2 | k8s: `:latest` image, no probes or resource limits, no worker deployment, no migration job. | 6 ✅ |
+| I3 | CI: no ESLint config, no DB-backed tests, no Docker build, no dependency audit or secret scanning. | 6 ✅ |
+| I4 | No README or runbook. | 6 ✅ |
 | I5 | Web is a single static dashboard with hard-coded data. Mobile is one `App.tsx`. | 7 |
 
 ---
@@ -185,8 +185,24 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - Account emails are sent inline from the request; moving them to the email queue would add retries
 - `.env.example` still documents S3 variables, but storage uses Cloudinary (`CLOUDINARY_*`)
 
-### Phase 6: Quality gates & delivery
-ESLint with layer-boundary rules; CI with Postgres and Redis services, integration and e2e tests, coverage floor, Docker build, `pnpm audit`, gitleaks; working docker-compose; k8s probes, limits, worker deployment and migration job; README and runbook.
+### Phase 6: Quality gates & delivery ✅
+- [x] ESLint (typescript-eslint) enforced in CI, including type-aware `no-floating-promises` / `no-misused-promises` (the class of bug behind the Phase 0 crash) and the architecture rule that services import neither Express nor Prisma. The 11 existing violations were fixed
+- [x] CI: lint; a security job (gitleaks over full history, with the three commits of the already-rotated Phase 0 key allowlisted; an audit that blocks on high/critical advisories in the API's production dependencies); a delivery job (Docker image build, image contents check, docker-compose validation, Kubernetes manifest rendering)
+- [x] Docker: one image runs the API, the worker and migrations. Fixed a build that could never succeed (it copied a non-existent `tsconfig.json`); added `.dockerignore` so host `node_modules` and `.env` secrets never enter the build context; pnpm store cached across builds
+- [x] docker-compose rebuilt and verified end to end in production mode: generated secrets (`pnpm docker:env`, git-ignored), app role created on first start, a one-shot `migrate` service (7 migrations + RBAC seed) before the API and worker, localhost-only configurable ports, fresh volume names so an existing local database is not reused. Checked: register, login, create/list student, events recorded and dispatched, worker with all 69 subscribers
+- [x] Kubernetes (Kustomize): migration Job staged before rollout, API Deployment (startup/readiness/liveness probes, resource requests/limits, non-root, read-only filesystem, zero-downtime rolling update, PodDisruptionBudget, HPA), a new worker Deployment, ConfigMap and secret template, image pinned in one place
+- [x] Alerting: `/metrics` now requires `METRICS_TOKEN` (was public; disabled in production without it) and labels requests by route pattern (raw paths made unbounded series); new `trueco_domain_events{status}`, `trueco_notifications_failed_24h` and `trueco_payment_reconcile_total`
+- [x] Tests never load the developer's `.env` (real keys there made test runs call Gemini); client-supplied trace ids are validated before being logged; the `uuid` dependency was replaced by `crypto.randomUUID`
+- [x] README and operations runbook (`docs/RUNBOOK.md`)
+
+**Exit:** met. Lint is clean; 234 unit and 51 integration tests pass; the image built and the compose stack ran end to end in production mode as the non-superuser role; manifests render. (The final image build, after adding the pnpm cache mount and removing `uuid`, timed out locally on the network and is verified by the CI delivery job.)
+
+**Known limitations and follow-ups:**
+- No test-coverage floor yet (needs `@vitest/coverage-v8`)
+- The web and mobile apps carry 38 dependency advisories (mostly Expo tooling); they are not in the API image but need their own upgrade pass
+- The Kubernetes manifests were rendered and reviewed, not applied to a live cluster; there is no Redis or PostgreSQL manifest (use managed services) and no Ingress/TLS
+- The per-statement RLS transaction has not been load-tested
+- Database backups and point-in-time recovery are outside this repository
 
 ### Phase 7: Frontend
 Typed API client on `@trueco/types`, real authentication flow, replace mocked dashboard data.

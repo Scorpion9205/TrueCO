@@ -90,7 +90,7 @@ export class RecursiveCharacterTextSplitter {
 
   private mergeSplitsWithOverlap(splits: string[]): string[] {
     const docs: string[] = [];
-    let currentDoc: string[] = [];
+    const currentDoc: string[] = [];
     let total = 0;
 
     for (const split of splits) {

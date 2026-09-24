@@ -55,4 +55,4 @@ async function bootstrapWorkers(): Promise<void> {
 }
 
 registerProcessErrorHandlers('WorkerRunner');
-bootstrapWorkers();
+void bootstrapWorkers();

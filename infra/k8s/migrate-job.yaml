@@ -1,0 +1,46 @@
+# Run before each rollout (for example as a CI deploy step or an Argo CD / Helm pre-sync hook):
+# applies migrations and seeds roles, permissions and plans as the schema owner. Idempotent.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trueco-migrate
+  labels:
+    # Applied (and, for the job, awaited) before the deployments; see docs/RUNBOOK.md
+    trueco/stage: pre
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: trueco-api
+          command:
+            - sh
+            - -c
+            - npx prisma migrate deploy --schema=dist/database/prisma/schema.prisma && node dist/database/prisma/init-rbac.js
+          envFrom:
+            - configMapRef:
+                name: trueco-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: trueco-secrets
+                  key: MIGRATION_DATABASE_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']
