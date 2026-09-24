@@ -140,5 +140,115 @@
     "title": "Page not found",
     "body": "The page you are looking for does not exist or has moved.",
     "home": "Back to home"
+  },
+  "Auth": {
+    "panel": {
+      "title": "Your institute, organised",
+      "body": "Attendance, fees and results in one place — and parents kept up to date on WhatsApp.",
+      "point1": "{days}-day free trial with every feature",
+      "point2": "No card needed to start",
+      "point3": "Your data stays private to your institute"
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "coachingCode": "Institute code",
+      "coachingCodeOptional": "Institute code (optional)",
+      "coachingCodeLoginHint": "Only needed if your email is used at more than one institute.",
+      "coachingCodeHint": "A short ID for your institute, like sharma-classes. Letters, numbers and dashes.",
+      "ownerName": "Your full name",
+      "ownerEmail": "Your email",
+      "ownerPhone": "Your mobile number",
+      "coachingName": "Institute name",
+      "city": "City (optional)",
+      "sameContact": "Use my email and mobile as the institute's contact details",
+      "phone": "Institute phone",
+      "instituteEmail": "Institute email",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "passwordHint": "At least 8 characters."
+    },
+    "validation": {
+      "required": "This field is required.",
+      "email": "Enter a valid email address.",
+      "passwordMin": "Use at least 8 characters.",
+      "passwordsMatch": "Passwords do not match.",
+      "phone": "Enter a 10-digit mobile number (with country code if outside India).",
+      "code": "Use 3–50 lowercase letters, numbers, dashes or underscores.",
+      "nameMin": "Enter at least 2 characters."
+    },
+    "errors": {
+      "INVALID_CREDENTIALS": "Wrong email or password. If your email is used at more than one institute, add the institute code.",
+      "ACCOUNT_LOCKED": "Too many failed attempts. Please wait 15 minutes and try again.",
+      "ACCOUNT_INACTIVE": "This account has been deactivated. Contact your institute's administrator.",
+      "RATE_LIMITED": "Too many attempts. Please wait a minute and try again.",
+      "CODE_CONFLICT": "This institute code is taken. Please choose another.",
+      "INVALID_OR_EXPIRED_TOKEN": "This link is invalid or has expired. Request a new one.",
+      "network": "Could not reach TrueCO. Check your internet connection and try again.",
+      "validation": "Please check the highlighted fields.",
+      "unexpected": "Something went wrong. Please try again."
+    },
+    "login": {
+      "metaTitle": "Sign in",
+      "title": "Welcome back",
+      "subtitle": "Sign in to your TrueCO account.",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "forgot": "Forgot password?",
+      "noAccount": "New to TrueCO?",
+      "signUp": "Start your free trial",
+      "expired": "Your session has ended. Please sign in again.",
+      "registered": "Your institute is ready. Sign in to continue.",
+      "reset": "Password changed. Sign in with your new password."
+    },
+    "signup": {
+      "metaTitle": "Start your free trial",
+      "title": "Start your {days}-day free trial",
+      "subtitle": "Set up your institute in a couple of minutes. No card needed.",
+      "aboutYou": "About you",
+      "aboutInstitute": "Your institute",
+      "submit": "Create my institute",
+      "submitting": "Creating your institute…",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "terms": "By continuing you agree to be contacted about your account."
+    },
+    "forgot": {
+      "metaTitle": "Reset your password",
+      "title": "Forgot your password?",
+      "subtitle": "Enter your email and we'll send you a link to set a new one.",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sent": "If an account exists for {email}, a reset link is on its way. It expires soon, so use it shortly.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "metaTitle": "Set a new password",
+      "title": "Set a new password",
+      "subtitle": "Choose a password you don't use anywhere else.",
+      "submit": "Save new password",
+      "submitting": "Saving…",
+      "missingToken": "This reset link is incomplete. Open the link from your email again, or request a new one.",
+      "requestNew": "Request a new link"
+    },
+    "verify": {
+      "metaTitle": "Verify your email",
+      "checking": "Verifying your email…",
+      "success": "Your email is verified.",
+      "failed": "This verification link is invalid or has expired.",
+      "missingToken": "This verification link is incomplete. Open the link from your email again.",
+      "continue": "Continue to TrueCO"
+    }
+  },
+  "App": {
+    "loading": "Loading your workspace…",
+    "welcome": "Welcome, {name}",
+    "placeholder": "Your dashboard is on its way. You're signed in and your session is secure.",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…",
+    "offline": "Could not reach TrueCO. Check your internet connection.",
+    "retry": "Try again"
   }
 }

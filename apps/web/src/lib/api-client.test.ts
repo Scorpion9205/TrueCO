@@ -85,6 +85,66 @@ describe('createApiClient', () => {
     expect(onUnauthorized).toHaveBeenCalledOnce();
   });
 
+  it('renews an expired token once and replays the request', async () => {
+    const seen: Array<string | null> = [];
+    server.use(
+      http.post(`${BASE}/fees`, async ({ request }) => {
+        const auth = request.headers.get('authorization');
+        seen.push(auth);
+        if (auth !== 'Bearer fresh') {
+          return HttpResponse.json({ error: { code: 'UNAUTHENTICATED' } }, { status: 401 });
+        }
+        return HttpResponse.json({ data: await request.json() });
+      }),
+    );
+    const refreshAccessToken = vi.fn(async () => 'fresh');
+    const onUnauthorized = vi.fn();
+    const api = createApiClient({
+      baseUrl: BASE,
+      getAccessToken: () => 'stale',
+      refreshAccessToken,
+      onUnauthorized,
+    });
+
+    await expect(api.post('/fees', { amount: '100' })).resolves.toEqual({ amount: '100' });
+    expect(seen).toEqual(['Bearer stale', 'Bearer fresh']);
+    expect(refreshAccessToken).toHaveBeenCalledOnce();
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it('gives up when the session cannot be renewed', async () => {
+    let calls = 0;
+    server.use(
+      http.get(`${BASE}/me`, () => {
+        calls += 1;
+        return HttpResponse.json({ error: { code: 'UNAUTHENTICATED' } }, { status: 401 });
+      }),
+    );
+    const onUnauthorized = vi.fn();
+    const api = createApiClient({
+      baseUrl: BASE,
+      refreshAccessToken: async () => null,
+      onUnauthorized,
+    });
+
+    await expect(api.get('/me')).rejects.toMatchObject({ status: 401 });
+    expect(calls).toBe(1);
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
+  it('does not refresh for errors other than 401', async () => {
+    server.use(
+      http.get(`${BASE}/fees`, () =>
+        HttpResponse.json({ error: { code: 'FORBIDDEN' } }, { status: 403 }),
+      ),
+    );
+    const refreshAccessToken = vi.fn(async () => 'fresh');
+    const api = createApiClient({ baseUrl: BASE, refreshAccessToken });
+
+    await expect(api.get('/fees')).rejects.toMatchObject({ status: 403 });
+    expect(refreshAccessToken).not.toHaveBeenCalled();
+  });
+
   it('handles error responses that are not JSON (e.g. a proxy error page)', async () => {
     server.use(
       http.get(`${BASE}/me`, () => new HttpResponse('<html>Bad gateway</html>', { status: 502 })),
