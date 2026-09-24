@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The parents module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class ParentCron {
   public static registerJobs(): void {
-    logger.debug('[ParentCron] No scheduled cron tasks for Parents module');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

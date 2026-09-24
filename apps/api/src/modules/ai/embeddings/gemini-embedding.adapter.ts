@@ -1,33 +1,35 @@
-import { IEmbeddingProvider } from './embedding-provider.interface.js';
+import { assertEmbeddingDimension, EMBEDDING_DIMENSION, IEmbeddingProvider } from './embedding-provider.interface.js';
 import { envConfig } from '../../../config/env.config.js';
 import { logger } from '../../../common/logger/logger.service.js';
-import { MockEmbeddingProvider } from './mock-embedding.provider.js';
 
 export class GeminiEmbeddingAdapter implements IEmbeddingProvider {
   public readonly providerName = 'GEMINI';
-  public readonly dimension = 1536;
-  private readonly defaultModel = 'text-embedding-004';
-  private readonly fallbackMock = new MockEmbeddingProvider();
+  public readonly dimension = EMBEDDING_DIMENSION;
+  public readonly modelId: string;
 
   public constructor(
     private readonly apiKey: string = (envConfig.get('GEMINI_API_KEY') as string | undefined) || '',
+    private readonly model: string = envConfig.get('GEMINI_EMBEDDING_MODEL'),
     private readonly baseUrl: string = 'https://generativelanguage.googleapis.com/v1beta',
-  ) {}
+  ) {
+    this.modelId = `gemini:${model}`;
+  }
 
   public async generateEmbedding(text: string): Promise<number[]> {
+    // No silent fallback to mock vectors: mixing them with real ones corrupts search
     if (!this.apiKey) {
-      logger.warn('[GeminiEmbeddingAdapter] GEMINI_API_KEY not configured. Falling back to MockEmbeddingProvider');
-      return this.fallbackMock.generateEmbedding(text);
+      throw new Error('GEMINI_API_KEY is not configured');
     }
 
     try {
-      const url = `${this.baseUrl}/models/${this.defaultModel}:embedContent?key=${this.apiKey}`;
-      const response = await fetch(url, {
+      const response = await fetch(`${this.baseUrl}/models/${this.model}:embedContent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Key in a header, not the URL, so it cannot leak through proxies or error logs
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
         body: JSON.stringify({
-          model: `models/${this.defaultModel}`,
+          model: `models/${this.model}`,
           content: { parts: [{ text }] },
+          // Requested natively at 1536 dimensions; never padded or truncated
           outputDimensionality: this.dimension,
         }),
       });
@@ -38,13 +40,7 @@ export class GeminiEmbeddingAdapter implements IEmbeddingProvider {
       }
 
       const data = (await response.json()) as any;
-      const values = data.embedding?.values || [];
-
-      // Ensure 1536 dimensions
-      if (values.length < this.dimension) {
-        return [...values, ...new Array(this.dimension - values.length).fill(0)];
-      }
-      return values.slice(0, this.dimension);
+      return assertEmbeddingDimension(data.embedding?.values || [], 'Gemini');
     } catch (err) {
       logger.error('[GeminiEmbeddingAdapter] Error calling Gemini Embedding API:', err);
       throw err;
@@ -52,20 +48,10 @@ export class GeminiEmbeddingAdapter implements IEmbeddingProvider {
   }
 
   public async generateEmbeddings(texts: string[]): Promise<number[][]> {
-    if (texts.length === 0) {
-      return [];
-    }
-
-    if (!this.apiKey) {
-      logger.warn('[GeminiEmbeddingAdapter] GEMINI_API_KEY not configured. Falling back to MockEmbeddingProvider');
-      return this.fallbackMock.generateEmbeddings(texts);
-    }
-
-    // Process sequentially or in small parallel chunks to avoid rate limits
+    // Sequential to stay within rate limits
     const results: number[][] = [];
     for (const text of texts) {
-      const vec = await this.generateEmbedding(text);
-      results.push(vec);
+      results.push(await this.generateEmbedding(text));
     }
     return results;
   }

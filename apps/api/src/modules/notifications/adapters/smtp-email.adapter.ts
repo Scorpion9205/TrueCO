@@ -1,41 +1,62 @@
+import nodemailer, { Transporter } from 'nodemailer';
 import { IEmailAdapter, SendEmailInput, EmailSendResult } from './email.adapter.interface.js';
 import { envConfig } from '../../../config/env.config.js';
 import { logger } from '../../../common/logger/logger.service.js';
 
 export class SmtpEmailAdapter implements IEmailAdapter {
   private readonly fromAddress: string;
+  private transporter: Transporter | null = null;
 
-  public constructor() {
+  public constructor(transporter?: Transporter) {
     this.fromAddress = envConfig.get('EMAIL_FROM');
+    this.transporter = transporter ?? null;
+  }
+
+  private getTransporter(): Transporter | null {
+    if (this.transporter) return this.transporter;
+    const host = envConfig.get('SMTP_HOST');
+    if (!host) return null;
+
+    const user = envConfig.get('SMTP_USER');
+    this.transporter = nodemailer.createTransport({
+      host,
+      port: envConfig.get('SMTP_PORT'),
+      secure: envConfig.get('SMTP_SECURE'),
+      auth: user ? { user, pass: envConfig.get('SMTP_PASS') } : undefined,
+    });
+    return this.transporter;
   }
 
   public async sendEmail(input: SendEmailInput): Promise<EmailSendResult> {
-    const smtpHost = envConfig.get('SMTP_HOST');
+    const transporter = this.getTransporter();
 
-    if (!smtpHost) {
-      logger.warn('[SmtpEmailAdapter] SMTP not configured. Simulating dispatch in fallback mode.');
-      return {
-        providerMessageId: `<simulated.${Date.now()}@trueco.in>`,
-        status: 'SENT',
-      };
+    if (!transporter) {
+      // Reporting "sent" for mail that never left would hide a misconfiguration from everyone
+      if (envConfig.get('NODE_ENV') === 'production') {
+        logger.error('[SmtpEmailAdapter] SMTP_HOST is not configured; email not sent', undefined, {
+          to: input.to,
+          subject: input.subject,
+        });
+        return { providerMessageId: '', status: 'FAILED', errorMessage: 'Email delivery is not configured' };
+      }
+      logger.warn(`[SmtpEmailAdapter] SMTP not configured; simulating email to ${input.to}: "${input.subject}"`);
+      return { providerMessageId: `<simulated.${Date.now()}@trueco.in>`, status: 'SENT' };
     }
 
     try {
-      // In production with configured SMTP transport
-      const messageId = `<smtp-${Date.now()}.${Math.random().toString(36).substring(2, 9)}@trueco.in>`;
-      logger.info(`[SmtpEmailAdapter] Dispatched email from ${this.fromAddress} to ${input.to}: "${input.subject}"`);
-      return {
-        providerMessageId: messageId,
-        status: 'SENT',
-      };
+      const info = await transporter.sendMail({
+        from: this.fromAddress,
+        to: input.to,
+        subject: input.subject,
+        html: input.htmlBody,
+        text: input.textBody,
+      });
+      logger.info(`[SmtpEmailAdapter] Sent email to ${input.to}: "${input.subject}"`, { messageId: info.messageId });
+      return { providerMessageId: info.messageId, status: 'SENT' };
     } catch (err) {
       const msg = (err as Error).message;
       logger.error(`[SmtpEmailAdapter] Error sending email to ${input.to}: ${msg}`);
-      return {
-        providerMessageId: '',
-        status: 'FAILED',
-        errorMessage: msg,
-      };
+      return { providerMessageId: '', status: 'FAILED', errorMessage: msg };
     }
   }
 }

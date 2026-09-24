@@ -5,6 +5,7 @@ import { assertDatabaseRoleEnforcesRls } from '../database/prisma/database-role.
 import { logger } from '../common/logger/logger.service.js';
 import { registerProcessErrorHandlers } from '../common/logger/process-error-handlers.js';
 import { initModules } from '../bootstrap/modules.js';
+import { reportIntegrationStatus } from '../common/integrations/integration-status.js';
 
 async function bootstrapWorkers(): Promise<void> {
   logger.info('=====================================================');
@@ -23,6 +24,7 @@ async function bootstrapWorkers(): Promise<void> {
     // 3. Initialise modules exactly as the API does: registers the same event subscribers
     //    (events published by jobs were previously dropped here) and the WhatsApp assistant
     initModules();
+    reportIntegrationStatus('WorkerRunner');
 
     // 4. Start all workers
     await workerRegistry.startAll();

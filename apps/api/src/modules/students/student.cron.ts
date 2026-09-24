@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The students module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class StudentCron {
   public static registerJobs(): void {
-    logger.debug('[StudentCron] No scheduled cron tasks for Students module');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

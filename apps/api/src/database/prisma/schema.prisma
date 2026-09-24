@@ -911,6 +911,9 @@ model CoachingKnowledgeChunk {
   tokenCount      Int                   @default(0) @map("token_count")
   metadata        Json?                 @default("{}")
   embedding       Unsupported("vector(1536)")?
+  // Which model produced `embedding` (e.g. "openai:text-embedding-3-small"). Vectors from
+  // different models are not comparable, so search only uses chunks of the current model.
+  embeddingModel  String?               @map("embedding_model") @db.VarChar(100)
   isActive        Boolean               @default(true) @map("is_active")
   createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz()
@@ -918,6 +921,7 @@ model CoachingKnowledgeChunk {
   knowledgeBase   CoachingKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
 
   @@index([coachingId, isActive])
+  @@index([coachingId, embeddingModel])
   @@index([knowledgeBaseId, chunkIndex])
   @@map("coaching_knowledge_chunks")
 }

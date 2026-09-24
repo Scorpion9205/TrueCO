@@ -73,6 +73,7 @@ export class PrismaKnowledgeBaseRepository implements IKnowledgeBaseRepository {
       tokenCount: number;
       metadata?: Record<string, unknown>;
       vector: number[];
+      embeddingModel: string;
     }>,
   ): Promise<void> {
     for (const chunk of chunks) {
@@ -81,7 +82,7 @@ export class PrismaKnowledgeBaseRepository implements IKnowledgeBaseRepository {
 
       await this.prisma.$executeRaw`
         INSERT INTO coaching_knowledge_chunks (
-          id, coaching_id, knowledge_base_id, chunk_index, content, token_count, metadata, embedding, is_active, created_at, updated_at
+          id, coaching_id, knowledge_base_id, chunk_index, content, token_count, metadata, embedding, embedding_model, is_active, created_at, updated_at
         ) VALUES (
           gen_random_uuid(),
           ${chunk.coachingId}::uuid,
@@ -91,6 +92,7 @@ export class PrismaKnowledgeBaseRepository implements IKnowledgeBaseRepository {
           ${chunk.tokenCount},
           ${metadataStr}::jsonb,
           ${vectorStr}::vector,
+          ${chunk.embeddingModel},
           true,
           NOW(),
           NOW()
@@ -118,6 +120,7 @@ export class PrismaKnowledgeBaseRepository implements IKnowledgeBaseRepository {
       FROM coaching_knowledge_chunks
       WHERE coaching_id = ${options.coachingId}::uuid
         AND is_active = true
+        AND embedding_model = ${options.embeddingModel}
         AND (embedding <=> ${vectorStr}::vector) <= ${maxDistance}
       ORDER BY embedding <=> ${vectorStr}::vector ASC
       LIMIT ${limit};

@@ -1,18 +1,19 @@
-import { IEmbeddingProvider } from './embedding-provider.interface.js';
+import { assertEmbeddingDimension, EMBEDDING_DIMENSION, IEmbeddingProvider } from './embedding-provider.interface.js';
 import { envConfig } from '../../../config/env.config.js';
 import { logger } from '../../../common/logger/logger.service.js';
-import { MockEmbeddingProvider } from './mock-embedding.provider.js';
 
 export class OpenAiEmbeddingAdapter implements IEmbeddingProvider {
   public readonly providerName = 'OPENAI';
-  public readonly dimension = 1536;
-  private readonly defaultModel = 'text-embedding-3-small';
-  private readonly fallbackMock = new MockEmbeddingProvider();
+  public readonly dimension = EMBEDDING_DIMENSION;
+  public readonly modelId: string;
 
   public constructor(
     private readonly apiKey: string = (envConfig.get('OPENAI_API_KEY') as string | undefined) || '',
+    private readonly model: string = envConfig.get('OPENAI_EMBEDDING_MODEL'),
     private readonly baseUrl: string = 'https://api.openai.com/v1',
-  ) {}
+  ) {
+    this.modelId = `openai:${model}`;
+  }
 
   public async generateEmbedding(text: string): Promise<number[]> {
     const [embedding] = await this.generateEmbeddings([text]);
@@ -23,10 +24,9 @@ export class OpenAiEmbeddingAdapter implements IEmbeddingProvider {
     if (texts.length === 0) {
       return [];
     }
-
+    // No silent fallback to mock vectors: mixing them with real ones corrupts search
     if (!this.apiKey) {
-      logger.warn('[OpenAiEmbeddingAdapter] OPENAI_API_KEY not configured. Falling back to MockEmbeddingProvider');
-      return this.fallbackMock.generateEmbeddings(texts);
+      throw new Error('OPENAI_API_KEY is not configured');
     }
 
     try {
@@ -37,7 +37,7 @@ export class OpenAiEmbeddingAdapter implements IEmbeddingProvider {
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.defaultModel,
+          model: this.model,
           input: texts,
           dimensions: this.dimension,
         }),
@@ -51,7 +51,7 @@ export class OpenAiEmbeddingAdapter implements IEmbeddingProvider {
       const data = (await response.json()) as any;
       const sortedData = (data.data || []).sort((a: any, b: any) => a.index - b.index);
 
-      return sortedData.map((item: any) => item.embedding as number[]);
+      return sortedData.map((item: any) => assertEmbeddingDimension(item.embedding as number[], 'OpenAI'));
     } catch (err) {
       logger.error('[OpenAiEmbeddingAdapter] Error calling OpenAI Embeddings API:', err);
       throw err;

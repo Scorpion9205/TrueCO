@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The attendance module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class AttendanceCron {
   public static registerJobs(): void {
-    logger.debug('[AttendanceCron] Daily attendance reminder cron registered via scheduler');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

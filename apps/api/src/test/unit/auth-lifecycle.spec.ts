@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { AuthService } from '../../modules/auth/auth.service.js';
 import { TokenService } from '../../common/security/token.service.js';
 import { PasswordService } from '../../common/security/password.service.js';
@@ -48,6 +48,10 @@ describe('Auth Lifecycle Unit Tests (Forgot/Reset Password, GetMe, Verification)
   const verifiedUsers: string[] = [];
   const actionTokens = new InMemoryAuthActionTokenRepository();
   const tokenService = TokenService.getInstance();
+  const mailer = {
+    sendPasswordReset: vi.fn().mockResolvedValue(undefined),
+    sendEmailVerification: vi.fn().mockResolvedValue(undefined),
+  };
 
   const mockRefreshRepo = {
     create: async () => ({} as any),
@@ -77,6 +81,7 @@ describe('Auth Lifecycle Unit Tests (Forgot/Reset Password, GetMe, Verification)
     mockEventBus as any,
     undefined,
     actionTokens,
+    mailer,
   );
 
   it('getMe should retrieve profile for valid user', async () => {
@@ -138,5 +143,26 @@ describe('Auth Lifecycle Unit Tests (Forgot/Reset Password, GetMe, Verification)
     await expect(authService.verifyEmail(raw)).resolves.toEqual({ message: 'Email verified successfully.' });
     expect(verifiedUsers).toContain('u1');
     await expect(authService.verifyEmail(raw)).rejects.toThrow('already used');
+  });
+  it('emails the reset link with the same token it stored, and hides delivery failures', async () => {
+    mailer.sendPasswordReset.mockClear();
+    await authService.forgotPassword('user@example.com');
+
+    expect(mailer.sendPasswordReset).toHaveBeenCalledTimes(1);
+    const [to, token] = mailer.sendPasswordReset.mock.calls[0];
+    expect(to).toBe('user@example.com');
+    const live = actionTokens.tokens.filter((t) => t.purpose === 'PASSWORD_RESET' && !t.usedAt);
+    expect(live[0].tokenHash).toBe(tokenService.hashToken(token));
+
+    mailer.sendPasswordReset.mockRejectedValueOnce(new Error('smtp down'));
+    await expect(authService.forgotPassword('user@example.com')).resolves.toMatchObject({
+      message: expect.stringContaining('If an account exists'),
+    });
+  });
+
+  it('never emails anyone for an unknown address', async () => {
+    mailer.sendPasswordReset.mockClear();
+    await authService.forgotPassword('nobody@example.com');
+    expect(mailer.sendPasswordReset).not.toHaveBeenCalled();
   });
 });

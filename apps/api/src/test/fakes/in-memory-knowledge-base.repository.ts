@@ -15,6 +15,7 @@ interface StoredChunk {
   tokenCount: number;
   metadata?: Record<string, unknown>;
   vector: number[];
+  embeddingModel: string;
   isActive: boolean;
 }
 
@@ -68,6 +69,7 @@ export class InMemoryKnowledgeBaseRepository implements IKnowledgeBaseRepository
       tokenCount: number;
       metadata?: Record<string, unknown>;
       vector: number[];
+      embeddingModel: string;
     }>,
   ): Promise<void> {
     for (const c of chunks) {
@@ -81,6 +83,7 @@ export class InMemoryKnowledgeBaseRepository implements IKnowledgeBaseRepository
         tokenCount: c.tokenCount,
         metadata: c.metadata,
         vector: c.vector,
+        embeddingModel: c.embeddingModel,
         isActive: true,
       });
     }
@@ -92,7 +95,7 @@ export class InMemoryKnowledgeBaseRepository implements IKnowledgeBaseRepository
     const matches: Array<KnowledgeChunkEntity & { similarity: number }> = [];
 
     for (const chunk of this.chunks.values()) {
-      if (chunk.coachingId !== options.coachingId || !chunk.isActive) {
+      if (chunk.coachingId !== options.coachingId || !chunk.isActive || chunk.embeddingModel !== options.embeddingModel) {
         continue;
       }
 
