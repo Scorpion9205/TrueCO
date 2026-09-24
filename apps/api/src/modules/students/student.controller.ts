@@ -1,7 +1,11 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { StudentService } from './student.service.js';
-import { createStudentSchema, updateStudentSchema } from './validators/student.validator.js';
+import {
+  createStudentSchema,
+  listStudentsQuerySchema,
+  updateStudentSchema,
+} from './validators/student.validator.js';
 import { CreateStudentDto, UpdateStudentDto } from './dto/student.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 
@@ -24,10 +28,22 @@ export class StudentController {
   };
 
   public list = async (req: Request, res: Response): Promise<void> => {
-    const isActive = req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined;
-    const search = req.query.search as string | undefined;
+    const query = listStudentsQuerySchema.parse(req.query);
+    const filters = {
+      search: query.search || undefined,
+      isActive: query.isActive === undefined ? undefined : query.isActive === 'true',
+    };
 
-    const students = await this.studentService.listStudents({ isActive, search });
+    // Paged when asked (the web app always asks); otherwise the full list, as before
+    if (query.page !== undefined || query.limit !== undefined) {
+      const page = query.page ?? 1;
+      const limit = query.limit ?? 25;
+      const result = await this.studentService.listStudentsPage(filters, page, limit);
+      res.status(StatusCodes.OK).json({ data: result.students, meta: { total: result.total, page, limit } });
+      return;
+    }
+
+    const students = await this.studentService.listStudents(filters);
     res.status(StatusCodes.OK).json({ data: students });
   };
 

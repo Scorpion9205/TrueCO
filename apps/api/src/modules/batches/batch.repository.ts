@@ -3,6 +3,9 @@ import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/ten
 export interface IBatchRepository {
   create(data: any, teacherIds?: string[]): Promise<any>;
   findById(id: string): Promise<any | null>;
+  update(id: string, data: any): Promise<any>;
+  /** Soft delete; history (attendance, tests) keeps pointing at the batch */
+  softDelete(id: string): Promise<void>;
   findMany(filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<any[]>;
   enrollStudent(data: { batchId: string; studentId: string; coachingId: string }): Promise<any>;
   withdrawStudent(batchId: string, studentId: string): Promise<any>;
@@ -61,6 +64,22 @@ export class PrismaBatchRepository implements IBatchRepository {
         },
       },
     });
+  }
+
+  public async update(id: string, data: any): Promise<any> {
+    return (this.prisma as any).batch.update({
+      where: { id },
+      data,
+      include: {
+        teacherBatches: { include: { teacher: true } },
+        batchStudents: { where: { leftAt: null } },
+      },
+    });
+  }
+
+  public async softDelete(id: string): Promise<void> {
+    // The tenant extension rewrites delete into setting deletedAt for soft-delete models
+    await (this.prisma as any).batch.delete({ where: { id } });
   }
 
   public async findMany(filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<any[]> {

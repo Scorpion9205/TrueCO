@@ -43,6 +43,15 @@ class InMemoryStudentRepository implements IStudentRepository {
     return list;
   }
 
+  public async findPage(
+    filters: { isActive?: boolean; search?: string },
+    page: number,
+    limit: number,
+  ): Promise<{ rows: any[]; total: number }> {
+    const all = await this.findMany(filters);
+    return { rows: all.slice((page - 1) * limit, page * limit), total: all.length };
+  }
+
   public async update(id: string, data: any): Promise<any> {
     const existing = this.students.get(id);
     if (!existing) throw new Error('Not found');
@@ -142,5 +151,62 @@ describe('StudentService (Phase 2 Domain Unit Tests)', () => {
         }),
       }),
     );
+  });
+
+  it('returns one page of students with the total count', async () => {
+    for (const name of ['Aarav', 'Diya', 'Kabir', 'Meera', 'Rohan']) {
+      await studentService.enrollStudent({ firstName: name, lastName: 'S' }, 'coaching-1');
+    }
+
+    const result = await studentService.listStudentsPage({}, 2, 2);
+
+    expect(result.total).toBe(5);
+    expect(result.students).toHaveLength(2);
+  });
+
+  it('includes current parents and batches when a student is looked up', async () => {
+    const created = await studentService.enrollStudent(
+      { firstName: 'Aarav', lastName: 'Sharma' },
+      'coaching-1',
+    );
+    const stored = studentRepo.students.get(created.id);
+    stored.studentParents = [
+      {
+        isPrimary: true,
+        parent: { id: 'p1', name: 'Rakesh', phone: '9876543210', email: null, relation: 'FATHER' },
+      },
+      {
+        isPrimary: false,
+        parent: { id: 'p2', name: 'Old', phone: '1', relation: 'MOTHER', deletedAt: new Date() },
+      },
+    ];
+    stored.batchStudents = [
+      { leftAt: null, batch: { id: 'b1', name: 'Class 10 Morning', subject: 'Physics' } },
+      { leftAt: new Date(), batch: { id: 'b0', name: 'Old batch', subject: null } },
+    ];
+
+    const student = await studentService.getStudentById(created.id);
+
+    expect(student.parents).toEqual([
+      { id: 'p1', name: 'Rakesh', phone: '9876543210', email: null, relation: 'FATHER', isPrimary: true },
+    ]);
+    expect(student.batches).toEqual([{ id: 'b1', name: 'Class 10 Morning', subject: 'Physics' }]);
+  });
+
+  it('clears optional details sent as null and accepts them in the request schema', async () => {
+    const { updateStudentSchema } = await import(
+      '../../modules/students/validators/student.validator.js'
+    );
+    const created = await studentService.enrollStudent(
+      { firstName: 'Aarav', lastName: 'Sharma', email: 'aarav@example.com', phone: '9876543210' },
+      'coaching-1',
+    );
+
+    const body = updateStudentSchema.parse({ email: null, phone: null });
+    const updated = await studentService.updateStudent(created.id, body, 'coaching-1');
+
+    expect(updated.email).toBeNull();
+    expect(updated.phone).toBeNull();
+    expect(updated.firstName).toBe('Aarav');
   });
 });

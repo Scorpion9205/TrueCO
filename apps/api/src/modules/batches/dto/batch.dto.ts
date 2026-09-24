@@ -8,6 +8,16 @@ export interface CreateBatchDto {
   readonly teacherIds?: string[];
 }
 
+export interface UpdateBatchDto {
+  readonly name?: string;
+  readonly subject?: string | null;
+  readonly academicYear?: string;
+  readonly startTime?: string | null;
+  readonly endTime?: string | null;
+  readonly daysOfWeek?: string[];
+  readonly isActive?: boolean;
+}
+
 export interface EnrollStudentInBatchDto {
   readonly studentId: string;
 }

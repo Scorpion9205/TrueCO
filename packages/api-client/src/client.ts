@@ -27,8 +27,22 @@ export interface ApiClientOptions {
   readonly defaultHeaders?: Record<string, string>;
 }
 
+/** Paging info the API returns next to a list: `{ data: [...], meta: { total, page, limit } }` */
+export interface PageMeta {
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface Page<T> {
+  items: T[];
+  meta: PageMeta;
+}
+
 export interface ApiClient {
   request<T>(method: string, path: string, options?: RequestOptions): Promise<T>;
+  /** GET a paged list, keeping the `meta` that `get` drops */
+  getPage<T>(path: string, options?: Omit<RequestOptions, 'body'>): Promise<Page<T>>;
   get<T>(path: string, options?: Omit<RequestOptions, 'body'>): Promise<T>;
   post<T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>): Promise<T>;
   put<T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>): Promise<T>;
@@ -73,6 +87,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     path: string,
     req: RequestOptions,
     token: string | null | undefined,
+    envelope = false,
   ): Promise<T> {
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -112,15 +127,21 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       );
     }
 
+    if (envelope) return payload as T;
     // Most endpoints wrap results in { data }; a few (health, webhooks) do not
     return (
       payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
     ) as T;
   }
 
-  async function request<T>(method: string, path: string, req: RequestOptions = {}): Promise<T> {
+  async function request<T>(
+    method: string,
+    path: string,
+    req: RequestOptions = {},
+    envelope = false,
+  ): Promise<T> {
     try {
-      return await send<T>(method, path, req, options.getAccessToken?.());
+      return await send<T>(method, path, req, options.getAccessToken?.(), envelope);
     } catch (error) {
       if (!(error instanceof ApiError) || !error.isUnauthorized) throw error;
 
@@ -130,7 +151,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
         : null;
       if (fresh) {
         try {
-          return await send<T>(method, path, req, fresh);
+          return await send<T>(method, path, req, fresh, envelope);
         } catch (retryError) {
           if (retryError instanceof ApiError && retryError.isUnauthorized)
             options.onUnauthorized?.(retryError);
@@ -142,8 +163,25 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     }
   }
 
+  async function getPage<T>(
+    path: string,
+    req: Omit<RequestOptions, 'body'> = {},
+  ): Promise<Page<T>> {
+    const payload = await request<{ data?: T[]; meta?: Partial<PageMeta> }>('GET', path, req, true);
+    const items = Array.isArray(payload?.data) ? payload.data : [];
+    return {
+      items,
+      meta: {
+        total: payload?.meta?.total ?? items.length,
+        page: payload?.meta?.page ?? 1,
+        limit: payload?.meta?.limit ?? items.length,
+      },
+    };
+  }
+
   return {
-    request,
+    request: (method, path, opts) => request(method, path, opts),
+    getPage,
     get: (path, opts) => request('GET', path, opts),
     post: (path, body, opts) => request('POST', path, { ...opts, body }),
     put: (path, body, opts) => request('PUT', path, { ...opts, body }),

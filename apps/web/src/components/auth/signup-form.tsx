@@ -16,6 +16,7 @@ import { APP_HOME } from '@/lib/auth/redirect';
 import { register as registerInstitute } from '@/lib/auth/session';
 import type { RegisterInput } from '@/lib/auth/types';
 import { useAuthError } from '@/lib/auth/use-auth-error';
+import { normalisePhone, PHONE_PATTERN } from '@/lib/phone';
 import { SubmitButton } from './submit-button';
 
 /** "Sharma Classes, Kota" -> "sharma-classes-kota" (the API allows a-z, 0-9, "-" and "_") */
@@ -28,13 +29,6 @@ export function toCoachingCode(name: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 50);
 }
-
-/** Drops spaces, dashes and brackets people type in phone numbers: "98765 43210" -> "9876543210" */
-export function normalisePhone(phone: string): string {
-  return phone.replace(/[\s\-()]/g, '');
-}
-
-const PHONE = /^\+?[1-9]\d{9,14}$/;
 
 const SERVER_FIELDS = [
   'ownerName',
@@ -62,7 +56,7 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
     const phone = z
       .string()
       .transform(normalisePhone)
-      .refine((v) => PHONE.test(v), t('validation.phone'));
+      .refine((v) => PHONE_PATTERN.test(v), t('validation.phone'));
     return z
       .object({
         ownerName: z.string().trim().min(2, t('validation.nameMin')),
@@ -82,7 +76,7 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
       })
       .superRefine((values, ctx) => {
         if (values.sameContact) return;
-        if (!PHONE.test(normalisePhone(values.phone))) {
+        if (!PHONE_PATTERN.test(normalisePhone(values.phone))) {
           ctx.addIssue({ code: 'custom', path: ['phone'], message: t('validation.phone') });
         }
         if (!email.safeParse(values.email).success) {

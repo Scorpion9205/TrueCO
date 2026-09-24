@@ -2,7 +2,14 @@ import { StatusCodes } from 'http-status-codes';
 import { IBatchRepository } from './batch.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { AssignTeacherToBatchDto, BatchResponseDto, CreateBatchDto, EnrollStudentInBatchDto, TransferStudentBatchDto } from './dto/batch.dto.js';
+import {
+  AssignTeacherToBatchDto,
+  BatchResponseDto,
+  CreateBatchDto,
+  EnrollStudentInBatchDto,
+  TransferStudentBatchDto,
+  UpdateBatchDto,
+} from './dto/batch.dto.js';
 import { BatchMapper } from './batch.mapper.js';
 import { createBatchCreatedEvent, createStudentEnrolledInBatchEvent, createStudentTransferredBatchEvent } from './batch.events.js';
 
@@ -45,6 +52,48 @@ export class BatchService {
     );
 
     return responseDto;
+  }
+
+  public async updateBatch(id: string, dto: UpdateBatchDto): Promise<BatchResponseDto> {
+    const existing = await this.batchRepository.findById(id);
+    if (!existing) {
+      throw new AppError('BATCH_NOT_FOUND', 'Batch record not found', StatusCodes.NOT_FOUND);
+    }
+
+    // Check the schedule the batch will have after the change, not just the fields sent
+    const startTime = dto.startTime !== undefined ? dto.startTime : existing.startTime;
+    const endTime = dto.endTime !== undefined ? dto.endTime : existing.endTime;
+    if (startTime && endTime && endTime <= startTime) {
+      throw new AppError(
+        'INVALID_SCHEDULE',
+        'Batch end time must be after its start time',
+        StatusCodes.BAD_REQUEST,
+      );
+    }
+
+    const updated = await this.batchRepository.update(id, { ...dto });
+    return BatchMapper.toResponseDto(updated);
+  }
+
+  /**
+   * Deletes an empty batch. A batch with students must have them withdrawn or moved first (or be
+   * marked inactive instead), so no student is left enrolled in a batch nobody can see.
+   */
+  public async deleteBatch(id: string): Promise<void> {
+    const existing = await this.batchRepository.findById(id);
+    if (!existing) {
+      throw new AppError('BATCH_NOT_FOUND', 'Batch record not found', StatusCodes.NOT_FOUND);
+    }
+    const activeStudents = (existing.batchStudents ?? []).filter((bs: any) => !bs.leftAt).length;
+    if (activeStudents > 0) {
+      throw new AppError(
+        'BATCH_HAS_STUDENTS',
+        `Batch still has ${activeStudents} student(s); withdraw or transfer them first`,
+        StatusCodes.CONFLICT,
+        { activeStudents },
+      );
+    }
+    await this.batchRepository.softDelete(id);
   }
 
   public async enrollStudent(

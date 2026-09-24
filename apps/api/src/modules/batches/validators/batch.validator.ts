@@ -12,6 +12,19 @@ export const createBatchSchema = z
   })
   .strict();
 
+/** Partial update; null clears subject or times. Teachers are managed through /:id/teachers. */
+export const updateBatchSchema = z
+  .object({
+    name: z.string().min(2).max(100).trim().optional(),
+    subject: z.string().max(100).trim().nullable().optional(),
+    academicYear: z.string().min(4).max(50).trim().optional(),
+    startTime: z.string().max(20).nullable().optional(),
+    endTime: z.string().max(20).nullable().optional(),
+    daysOfWeek: z.array(z.string()).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
+
 export const enrollStudentInBatchSchema = z
   .object({
     studentId: z.string().uuid(),
@@ -34,6 +47,7 @@ export const transferStudentBatchSchema = z
   .strict();
 
 export type CreateBatchInput = z.infer<typeof createBatchSchema>;
+export type UpdateBatchInput = z.infer<typeof updateBatchSchema>;
 export type EnrollStudentInBatchInput = z.infer<typeof enrollStudentInBatchSchema>;
 export type AssignTeacherToBatchInput = z.infer<typeof assignTeacherToBatchSchema>;
 export type TransferStudentBatchInput = z.infer<typeof transferStudentBatchSchema>;

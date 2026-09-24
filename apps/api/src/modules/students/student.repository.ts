@@ -1,9 +1,18 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import { StudentListFilters } from './dto/student.dto.js';
+
+// Name order, with id breaking ties so pages never repeat or skip a student
+const LIST_ORDER = [{ firstName: 'asc' }, { lastName: 'asc' }, { id: 'asc' }];
 
 export interface IStudentRepository {
   create(data: any): Promise<any>;
   findById(id: string): Promise<any | null>;
-  findMany(filters?: { isActive?: boolean; search?: string }): Promise<any[]>;
+  findMany(filters?: StudentListFilters): Promise<any[]>;
+  findPage(
+    filters: StudentListFilters,
+    page: number,
+    limit: number,
+  ): Promise<{ rows: any[]; total: number }>;
   update(id: string, data: any): Promise<any>;
   softDelete(id: string): Promise<void>;
 }
@@ -25,7 +34,32 @@ export class PrismaStudentRepository implements IStudentRepository {
     });
   }
 
-  public async findMany(filters?: { isActive?: boolean; search?: string }): Promise<any[]> {
+  public async findMany(filters?: StudentListFilters): Promise<any[]> {
+    return (this.prisma as any).student.findMany({
+      where: this.listWhere(filters),
+      orderBy: LIST_ORDER,
+    });
+  }
+
+  public async findPage(
+    filters: StudentListFilters,
+    page: number,
+    limit: number,
+  ): Promise<{ rows: any[]; total: number }> {
+    const where = this.listWhere(filters);
+    const [rows, total] = await Promise.all([
+      (this.prisma as any).student.findMany({
+        where,
+        orderBy: LIST_ORDER,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      (this.prisma as any).student.count({ where }),
+    ]);
+    return { rows, total };
+  }
+
+  private listWhere(filters?: StudentListFilters): any {
     const where: any = { deletedAt: null };
     if (filters?.isActive !== undefined) {
       where.isActive = filters.isActive;
@@ -38,11 +72,7 @@ export class PrismaStudentRepository implements IStudentRepository {
         { phone: { contains: filters.search } },
       ];
     }
-
-    return (this.prisma as any).student.findMany({
-      where,
-      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-    });
+    return where;
   }
 
   public async update(id: string, data: any): Promise<any> {

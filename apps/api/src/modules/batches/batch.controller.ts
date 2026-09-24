@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { BatchService } from './batch.service.js';
 import {
   createBatchSchema,
+  updateBatchSchema,
   enrollStudentInBatchSchema,
   assignTeacherToBatchSchema,
   transferStudentBatchSchema,
@@ -12,6 +13,7 @@ import {
   CreateBatchDto,
   EnrollStudentInBatchDto,
   TransferStudentBatchDto,
+  UpdateBatchDto,
 } from './dto/batch.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 
@@ -26,6 +28,17 @@ export class BatchController {
 
     const batch = await this.batchService.createBatch(validated, coachingId, userId, traceId);
     res.status(StatusCodes.CREATED).json({ data: batch });
+  };
+
+  public update = async (req: Request, res: Response): Promise<void> => {
+    const validated = updateBatchSchema.parse(req.body) as UpdateBatchDto;
+    const batch = await this.batchService.updateBatch(req.params.id, validated);
+    res.status(StatusCodes.OK).json({ data: batch });
+  };
+
+  public delete = async (req: Request, res: Response): Promise<void> => {
+    await this.batchService.deleteBatch(req.params.id);
+    res.status(StatusCodes.OK).json({ data: { message: 'Batch deleted' } });
   };
 
   public getById = async (req: Request, res: Response): Promise<void> => {

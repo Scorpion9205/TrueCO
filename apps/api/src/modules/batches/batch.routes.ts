@@ -19,6 +19,8 @@ export function createBatchRoutes(controller: BatchController): Router {
     requireBatchAccess({ resource: 'batch', source: 'params', key: 'id' }),
     controller.getById,
   );
+  router.put('/:id', requirePermission('batches:update'), controller.update);
+  router.delete('/:id', requirePermission('batches:delete'), controller.delete);
   router.get(
     '/:id/students',
     requirePermission('batches:read'),

@@ -16,6 +16,31 @@ export class StudentMapper {
       joiningDate: new Date(entity.joiningDate),
       isActive: entity.isActive,
       createdAt: entity.createdAt,
+      ...(entity.studentParents
+        ? {
+            parents: entity.studentParents
+              .filter((link: any) => link.parent && !link.parent.deletedAt)
+              .map((link: any) => ({
+                id: link.parent.id,
+                name: link.parent.name,
+                phone: link.parent.phone,
+                email: link.parent.email,
+                relation: link.parent.relation,
+                isPrimary: link.isPrimary,
+              })),
+          }
+        : {}),
+      ...(entity.batchStudents
+        ? {
+            batches: entity.batchStudents
+              .filter((enrolment: any) => !enrolment.leftAt && enrolment.batch)
+              .map((enrolment: any) => ({
+                id: enrolment.batch.id,
+                name: enrolment.batch.name,
+                subject: enrolment.batch.subject,
+              })),
+          }
+        : {}),
     };
   }
 }
