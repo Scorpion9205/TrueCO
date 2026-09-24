@@ -101,10 +101,11 @@ export class PrismaDashboardRepository implements IDashboardRepository {
     const presentCount = todayRecords.filter(
       (r: any) => r.status === 'PRESENT' || r.status === 'LATE',
     ).length;
+    // No records means attendance has not been marked yet today, not that everyone came
     const todayAttendanceRate =
       todayRecords.length > 0
         ? Number(((presentCount / todayRecords.length) * 100).toFixed(2))
-        : 100;
+        : null;
 
     return {
       metrics: {

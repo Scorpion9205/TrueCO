@@ -244,11 +244,127 @@
   },
   "App": {
     "loading": "Loading your workspace…",
-    "welcome": "Welcome, {name}",
-    "placeholder": "Your dashboard is on its way. You're signed in and your session is secure.",
-    "signOut": "Sign out",
-    "signingOut": "Signing out…",
     "offline": "Could not reach TrueCO. Check your internet connection.",
     "retry": "Try again"
+  },
+  "Shell": {
+    "navLabel": "App",
+    "menu": "Menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skip": "Skip to content",
+    "signOut": "Sign out",
+    "userMenu": "Account menu for {name}",
+    "roles": {
+      "OWNER": "Owner",
+      "TEACHER": "Teacher",
+      "SUPER_ADMIN": "Administrator"
+    },
+    "groups": {
+      "academics": "Academics",
+      "money": "Money",
+      "institute": "Institute",
+      "account": "Account"
+    },
+    "nav": {
+      "dashboard": "Dashboard",
+      "students": "Students",
+      "batches": "Batches",
+      "attendance": "Attendance",
+      "tests": "Tests",
+      "homework": "Homework",
+      "fees": "Fees",
+      "expenses": "Expenses",
+      "salary": "Salary",
+      "teachers": "Teachers",
+      "notices": "Notices",
+      "reports": "Reports",
+      "settings": "Settings",
+      "billing": "Billing"
+    },
+    "subscription": {
+      "trialEnding": "{days, plural, =0 {Your free trial ends today.} one {Your free trial ends tomorrow.} other {Your free trial ends in # days.}}",
+      "grace": "Your payment is overdue. Pay soon to keep using TrueCO without interruption.",
+      "expired": "Your subscription has ended. Most features are paused until you choose a plan.",
+      "choosePlan": "Choose a plan",
+      "askOwner": "Ask your institute owner to renew."
+    },
+    "comingSoon": {
+      "title": "Coming soon",
+      "body": "{section} is being built and will appear here shortly.",
+      "back": "Back to dashboard"
+    },
+    "noAccess": {
+      "title": "You don't have access",
+      "body": "Your role doesn't include this section. Ask your institute owner if you need it."
+    }
+  },
+  "Dashboard": {
+    "greeting": {
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}"
+    },
+    "subtitle": {
+      "owner": "Here's how your institute is doing today.",
+      "teacher": "Here's your day at a glance.",
+      "none": "Use the menu to open a section."
+    },
+    "kpiLabel": "Key figures",
+    "kpi": {
+      "students": "Students",
+      "attendance": "Attendance today",
+      "attendanceHint": "Of attendance marked so far today",
+      "collected": "Collected this month",
+      "pending": "Fees pending",
+      "pendingHint": "Due this month, not yet paid",
+      "teachers": "Teachers",
+      "batches": "Batches",
+      "expenses": "Expenses this month",
+      "atRisk": "Students at risk",
+      "atRiskHint": "Flagged by attendance and results",
+      "attendanceNone": "Not marked yet today"
+    },
+    "dues": {
+      "title": "Upcoming fee dues",
+      "empty": "No fee dues coming up.",
+      "due": "Due {date}"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "Activity such as attendance, payments and results will show up here."
+    },
+    "start": {
+      "title": "Let's set up your institute",
+      "subtitle": "Three steps and you're ready for your first class.",
+      "batches": "Create your batches",
+      "students": "Add your students",
+      "attendance": "Mark today's attendance"
+    },
+    "teacher": {
+      "batches": "My batches",
+      "sessions": "Classes today",
+      "homework": "Active homework",
+      "todayTitle": "Today's attendance",
+      "todayEmpty": "No attendance marked today yet.",
+      "present": "{present}/{total} present",
+      "batchesTitle": "My batches · {students, plural, one {# student} other {# students}}",
+      "batchesEmpty": "You haven't been assigned to a batch yet.",
+      "students": "{count, plural, one {# student} other {# students}}"
+    }
+  },
+  "Common": {
+    "retry": "Try again",
+    "error": {
+      "title": "Couldn't load this",
+      "body": "Something went wrong on our side. Please try again.",
+      "offline": "You seem to be offline. Check your connection and try again."
+    },
+    "paymentRequired": {
+      "title": "Subscription needed",
+      "owner": "Your trial or plan has ended, so this data is paused. Choose a plan to pick up where you left off — nothing has been deleted.",
+      "staff": "Your institute's subscription has ended. Ask your institute owner to renew it.",
+      "action": "Choose a plan"
+    }
   }
 }

@@ -3,7 +3,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { isApiError } from '@trueco/api-client';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { getSession, subscribe } from '@/lib/auth/session';
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -22,6 +23,17 @@ function makeQueryClient(): QueryClient {
 export function Providers({ children }: { children: ReactNode }) {
   // One client per browser session (and per request on the server), never shared between users
   const [queryClient] = useState(makeQueryClient);
+
+  // Drop every cached response when the session ends, so the next person on this device starts
+  // clean (queries are also keyed by user id)
+  useEffect(
+    () =>
+      subscribe(() => {
+        if (!getSession()) queryClient.clear();
+      }),
+    [queryClient],
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <NuqsAdapter>{children}</NuqsAdapter>
