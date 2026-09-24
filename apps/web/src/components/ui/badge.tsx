@@ -19,7 +19,8 @@ export const badgeVariants = cva(
   },
 );
 
-export interface BadgeProps extends React.ComponentProps<'span'>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps
+  extends React.ComponentProps<'span'>, VariantProps<typeof badgeVariants> {}
 
 export function Badge({ className, tone, ...props }: BadgeProps) {
   return <span data-slot="badge" className={cn(badgeVariants({ tone }), className)} {...props} />;
