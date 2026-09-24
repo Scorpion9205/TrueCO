@@ -14,7 +14,12 @@ export interface ApiClientOptions {
   readonly baseUrl: string;
   /** Supplies the current access token; omitted for public endpoints. */
   readonly getAccessToken?: () => string | null | undefined;
-  /** Called once when the API rejects the session (401), e.g. to refresh it or sign out. */
+  /**
+   * Gets a fresh access token after a 401 (e.g. from the refresh cookie). The request is retried
+   * once with the new token; return null when the session cannot be renewed.
+   */
+  readonly refreshAccessToken?: () => Promise<string | null>;
+  /** Called when the API rejects the session (401) and it could not be refreshed, e.g. to sign out. */
   readonly onUnauthorized?: (error: ApiError) => void;
   /** Injectable for tests and server-side use. */
   readonly fetch?: typeof fetch;
@@ -63,10 +68,18 @@ async function readJson(response: Response): Promise<any> {
 export function createApiClient(options: ApiClientOptions): ApiClient {
   const doFetch = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
-  async function request<T>(method: string, path: string, req: RequestOptions = {}): Promise<T> {
-    const headers: Record<string, string> = { Accept: 'application/json', ...options.defaultHeaders, ...req.headers };
+  async function send<T>(
+    method: string,
+    path: string,
+    req: RequestOptions,
+    token: string | null | undefined,
+  ): Promise<T> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...options.defaultHeaders,
+      ...req.headers,
+    };
     if (req.body !== undefined) headers['Content-Type'] = 'application/json';
-    const token = options.getAccessToken?.();
     if (token) headers.Authorization = `Bearer ${token}`;
 
     let response: Response;
@@ -80,25 +93,53 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       });
     } catch (err) {
       if ((err as Error)?.name === 'AbortError') throw err;
-      throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the server. Check your connection and try again.');
+      throw new ApiError(
+        0,
+        'NETWORK_ERROR',
+        'Could not reach the server. Check your connection and try again.',
+      );
     }
 
     const payload = await readJson(response);
     if (!response.ok) {
       const body: Partial<ApiErrorBody> = payload?.error ?? {};
-      const error = new ApiError(
+      throw new ApiError(
         response.status,
         body.code ?? `HTTP_${response.status}`,
         body.message ?? response.statusText ?? 'Request failed',
         body.details,
         body.upgradeUrl,
       );
-      if (error.isUnauthorized) options.onUnauthorized?.(error);
-      throw error;
     }
 
     // Most endpoints wrap results in { data }; a few (health, webhooks) do not
-    return (payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload) as T;
+    return (
+      payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload
+    ) as T;
+  }
+
+  async function request<T>(method: string, path: string, req: RequestOptions = {}): Promise<T> {
+    try {
+      return await send<T>(method, path, req, options.getAccessToken?.());
+    } catch (error) {
+      if (!(error instanceof ApiError) || !error.isUnauthorized) throw error;
+
+      // Access tokens are short-lived: renew once and replay the request before giving up
+      const fresh = options.refreshAccessToken
+        ? await options.refreshAccessToken().catch(() => null)
+        : null;
+      if (fresh) {
+        try {
+          return await send<T>(method, path, req, fresh);
+        } catch (retryError) {
+          if (retryError instanceof ApiError && retryError.isUnauthorized)
+            options.onUnauthorized?.(retryError);
+          throw retryError;
+        }
+      }
+      options.onUnauthorized?.(error);
+      throw error;
+    }
   }
 
   return {
