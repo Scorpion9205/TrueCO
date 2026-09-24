@@ -56,6 +56,12 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+  // Model names are configuration, not code: providers retire models on their own schedule.
+  AI_MODEL_CLAUDE: z.string().default('claude-sonnet-5'),
+  AI_MODEL_OPENAI: z.string().default('gpt-4o-mini'),
+  AI_MODEL_GEMINI: z.string().default('gemini-2.5-flash'),
+  OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
+  GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
   // Object Storage (Cloudinary / Local Mock)
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),

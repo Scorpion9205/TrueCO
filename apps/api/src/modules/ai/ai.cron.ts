@@ -1,11 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The ai module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class AiCron {
   public register(): void {
-    logger.info('[AiCron] Scheduled AI reconciliation cron jobs initialized');
-  }
-
-  public async runAuditReconciliation(): Promise<void> {
-    logger.info('[AiCron] Executing AI credit audit reconciliation check');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

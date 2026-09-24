@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The dashboard module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class DashboardCron {
   public static async precomputeDailyKpis(): Promise<void> {
-    logger.debug('[DashboardCron] Scheduled precomputation for dashboard KPIs completed');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

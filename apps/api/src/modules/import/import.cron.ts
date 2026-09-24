@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The import module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class ImportCron {
   public static async cleanupStagingFiles(): Promise<void> {
-    logger.debug('[ImportCron] Staging import files cleanup executed');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

@@ -10,7 +10,7 @@ import { MockAiProvider } from './mock-ai.provider.js';
 
 export class ClaudeAiAdapter implements IAiProvider {
   public readonly providerType: AiProviderType = AiProviderType.CLAUDE;
-  private readonly defaultModel = 'claude-3-5-sonnet-20241022';
+  private readonly defaultModel = envConfig.get('AI_MODEL_CLAUDE');
   private readonly fallbackMock = new MockAiProvider();
 
   public constructor(
@@ -22,6 +22,10 @@ export class ClaudeAiAdapter implements IAiProvider {
     options: AiCompletionOptions,
   ): Promise<AiCompletionResult> {
     if (!this.apiKey) {
+      // A mock answer in production would be shown to parents and charged as credits
+      if (envConfig.get('NODE_ENV') === 'production') {
+        throw new Error('ANTHROPIC_API_KEY is not configured');
+      }
       logger.warn('[ClaudeAiAdapter] ANTHROPIC_API_KEY not configured. Falling back to MockAiProvider');
       return this.fallbackMock.generateCompletion(options);
     }
@@ -51,7 +55,11 @@ export class ClaudeAiAdapter implements IAiProvider {
       }
 
       const data = (await response.json()) as any;
-      const content = data.content?.[0]?.text || '';
+      // A reply can hold several content blocks; join the text ones
+      const content = (data.content ?? [])
+        .filter((block: any) => block?.type === 'text')
+        .map((block: any) => block.text)
+        .join('');
       const usage = data.usage || {};
 
       return {

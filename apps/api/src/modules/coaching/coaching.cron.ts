@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The coaching module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class CoachingCron {
   public static registerJobs(): void {
-    logger.debug('[CoachingCron] No cron jobs required for Coaching module');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

@@ -14,9 +14,14 @@ export class MetaCloudWhatsAppAdapter implements IWhatsAppAdapter {
   }
 
   public async sendMessage(input: SendWhatsAppInput): Promise<WhatsAppSendResult> {
-    // If credentials are not configured, log and gracefully simulate success in dev/test
     if (!this.phoneNumberId || !this.apiToken) {
-      logger.warn('[MetaCloudWhatsAppAdapter] WhatsApp API credentials not configured. Simulating dispatch in fallback mode.');
+      // Reporting "sent" for messages that never left would hide a misconfiguration from
+      // everyone; outside production the dispatch is simulated for local development.
+      if (envConfig.get('NODE_ENV') === 'production') {
+        logger.error('[MetaCloudWhatsAppAdapter] WhatsApp credentials are not configured; message not sent');
+        return { providerMessageId: '', status: 'FAILED', errorMessage: 'WhatsApp delivery is not configured' };
+      }
+      logger.warn('[MetaCloudWhatsAppAdapter] WhatsApp API credentials not configured. Simulating dispatch.');
       return {
         providerMessageId: `wamid.simulated.${Date.now()}`,
         status: 'SENT',

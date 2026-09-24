@@ -10,7 +10,7 @@ import { MockAiProvider } from './mock-ai.provider.js';
 
 export class GeminiAiAdapter implements IAiProvider {
   public readonly providerType: AiProviderType = AiProviderType.GEMINI;
-  private readonly defaultModel = 'gemini-1.5-flash';
+  private readonly defaultModel = envConfig.get('AI_MODEL_GEMINI');
   private readonly fallbackMock = new MockAiProvider();
 
   public constructor(
@@ -22,6 +22,10 @@ export class GeminiAiAdapter implements IAiProvider {
     options: AiCompletionOptions,
   ): Promise<AiCompletionResult> {
     if (!this.apiKey) {
+      // A mock answer in production would be shown to parents and charged as credits
+      if (envConfig.get('NODE_ENV') === 'production') {
+        throw new Error('GEMINI_API_KEY is not configured');
+      }
       logger.warn('[GeminiAiAdapter] GEMINI_API_KEY not configured. Falling back to MockAiProvider');
       return this.fallbackMock.generateCompletion(options);
     }
@@ -29,7 +33,7 @@ export class GeminiAiAdapter implements IAiProvider {
     const model = options.model || this.defaultModel;
 
     try {
-      const url = `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`;
+      const url = `${this.baseUrl}/models/${model}:generateContent`;
       const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
       if (options.systemPrompt) {
@@ -45,8 +49,10 @@ export class GeminiAiAdapter implements IAiProvider {
 
       const response = await fetch(url, {
         method: 'POST',
+        // Key in a header, not the URL, so it cannot leak through proxies or error logs
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': this.apiKey,
         },
         body: JSON.stringify({
           contents,

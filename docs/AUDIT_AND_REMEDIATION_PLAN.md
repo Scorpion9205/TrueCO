@@ -38,7 +38,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | H6 | The in-process event bus is not durable. The standalone worker process registers **zero** subscribers, so events it publishes (e.g. fee reminders) are dropped. | 4 | ✅ |
 | H7 | Fee reminders re-send daily to every overdue installment with no limit, use UTC instead of the coaching's timezone, and load all tenants' installments into memory in one query. | 4 | ✅ |
 | H8 | WhatsApp assistant: conversation state lives in an in-process `Map`. Parents are resolved by `phone contains last-10-digits` across all tenants. No WABA `phone_number_id` → coaching mapping exists. Dedupe via `jobId` is defeated by `removeOnComplete: true`. | 4 | ✅ |
-| H9 | `SmtpEmailAdapter` never sends mail: it returns `SENT` with a fabricated ID even when SMTP is configured. | 5 | ⬜ |
+| H9 | `SmtpEmailAdapter` never sends mail: it returns `SENT` with a fabricated ID even when SMTP is configured. | 5 | ✅ |
 
 ### 🟡 Medium
 
@@ -48,10 +48,10 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 | M2 | Schema gaps: `Salary` has no teacher FK and no unique `(teacher, month, year)`. `FeePlan`, `Salary` and `Expense` lack a `Coaching` FK. No billing invoice/payment table. `AiUsageLog` has no `coachingId`. Nothing enforces a single active subscription. | 3 🚧 (FKs, salary, billing tables done; usage-log coachingId and single active subscription open) |
 | M3 | Insecure defaults are accepted in production. Without `JWT_*_KEY`, each pod generates its own key, so multi-replica deploys return random 401s. | 0 |
 | M4 | Workers start inside the API process as well as in the worker container. | 4 ✅ |
-| M5 | Gemini 768-d embeddings are zero-padded to 1536. Switching provider silently corrupts retrieval. | 5 |
-| M6 | Hard-coded default AI model IDs are outdated. | 5 |
+| M5 | Gemini 768-d embeddings are zero-padded to 1536. Switching provider silently corrupts retrieval. | 5 ✅ |
+| M6 | Hard-coded default AI model IDs are outdated. | 5 ✅ |
 | M7 | 10 MB global JSON limit, base64 uploads, no file-type or size validation. | 2 ✅ |
-| M8 | 15 `*.cron.ts` files are stubs that only log. | 5 |
+| M8 | 15 `*.cron.ts` files are stubs that only log. | 5 ✅ |
 
 ### ⚙️ Infra, CI & frontend
 
@@ -165,8 +165,25 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - The reminder hour (10:00 local) is fixed, not configurable per coaching
 - Notification sending is at-least-once: a worker that crashes after sending but before recording it can cause one resend after 10 minutes
 
-### Phase 5: Real integrations
-Nodemailer SMTP; fail instead of simulating when credentials are missing in production; config-driven AI model IDs; embedding model and dimension stored per index; implement or delete stub crons.
+### Phase 5: Real integrations ✅
+- [x] Email is really sent: `SmtpEmailAdapter` uses nodemailer (host, port, TLS and auth from `SMTP_*`) and reports the transport's message id or the actual error. Previously it returned `SENT` with an invented id even when SMTP was configured
+- [x] Password reset and email verification links are emailed (`FRONTEND_URL/reset-password?token=…`, `/verify-email?token=…`); a failed send is logged but never changes the reply, so it cannot reveal whether an account exists
+- [x] Missing credentials fail instead of pretending: in production, unconfigured WhatsApp and SMTP return `FAILED` (outside production they still simulate); AI chat providers without a key throw in production instead of returning mock text that would be shown to parents and charged as credits (the Phase 3 reservation refunds them)
+- [x] AI model names are configuration (`AI_MODEL_CLAUDE` default `claude-sonnet-5`, `AI_MODEL_OPENAI`, `AI_MODEL_GEMINI`), replacing retired hard-coded defaults; Claude replies join all text blocks
+- [x] Embeddings: each chunk records the model that produced it (`embedding_model`) and search compares only vectors from the current model, so switching provider can no longer mix incomparable vectors; Gemini uses `gemini-embedding-001` at 1536 dimensions natively (no zero-padding) and wrong-sized vectors are rejected; embedding adapters no longer fall back silently to mock vectors
+- [x] Gemini API keys are sent in the `x-goog-api-key` header instead of the URL, where they could leak into proxy or error logs
+- [x] Startup reports which integrations are configured (warnings in production), in both the API and the worker
+- [x] The 23 stub `*.cron.ts` files no longer claim to register jobs that do not exist; they are documented as intentionally empty (the module layout allows this)
+
+**Exit:** met. Tests prove: SMTP sends through a real nodemailer transport and reports failures; production refuses to fake WhatsApp, email and AI; reset links are emailed with the same token that was stored; Gemini keys never appear in URLs; wrong-sized embeddings are rejected; search ignores chunks from another embedding model, both in memory and against real pgvector. API startup was smoke-tested with the integration report.
+
+**Upgrading:** `pnpm install` (adds nodemailer), `pnpm prisma:migrate:deploy`, then re-sync each coaching's knowledge base: chunks created before this release have no recorded model and are skipped by search. Set `SMTP_*` and `FRONTEND_URL` in production.
+
+**Known limitations and follow-ups:**
+- Verify the OpenAI and Gemini default model names against the providers' current catalogues before deploying; they are configurable, so no code change is needed
+- Scheduled features the old stub crons implied do not exist yet: attendance, homework and test reminders, and audit log archival
+- Account emails are sent inline from the request; moving them to the email queue would add retries
+- `.env.example` still documents S3 variables, but storage uses Cloudinary (`CLOUDINARY_*`)
 
 ### Phase 6: Quality gates & delivery
 ESLint with layer-boundary rules; CI with Postgres and Redis services, integration and e2e tests, coverage floor, Docker build, `pnpm audit`, gitleaks; working docker-compose; k8s probes, limits, worker deployment and migration job; README and runbook.

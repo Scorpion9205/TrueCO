@@ -72,6 +72,7 @@ export class KnowledgeBaseService {
         characterCount: c.characterCount,
       },
       vector: vectors[i],
+      embeddingModel: this.embeddingProvider.modelId,
     }));
 
     await this.repository.insertChunks(recordsToInsert);
@@ -118,6 +119,7 @@ export class KnowledgeBaseService {
     // 2. Query repository via HNSW cosine distance
     return this.repository.searchSimilarChunks({
       queryVector,
+      embeddingModel: this.embeddingProvider.modelId,
       coachingId,
       limit,
       threshold,

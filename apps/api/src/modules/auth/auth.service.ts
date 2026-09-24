@@ -17,6 +17,7 @@ import { AuthMapper } from './auth.mapper.js';
 import { AuthResponseDto, AuthUserDto, LoginDto } from './dto/auth.dto.js';
 import { createUserLoggedInEvent, createUserLoggedOutEvent } from './auth.events.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { EmailAuthMailer, IAuthMailer } from './auth.mailer.js';
 import { IOtpService, otpService as defaultOtpService } from '../../common/security/otp.service.js';
 
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
@@ -32,6 +33,7 @@ export class AuthService {
     private readonly eventBus: IEventBus,
     private readonly otpService: IOtpService = defaultOtpService,
     private readonly actionTokenRepository: IAuthActionTokenRepository = new PrismaAuthActionTokenRepository(),
+    private readonly mailer: IAuthMailer = new EmailAuthMailer(),
   ) {}
 
   public async login(
@@ -287,9 +289,10 @@ export class AuthService {
       'PASSWORD_RESET',
       PASSWORD_RESET_TTL_MS,
     );
+    await this.deliver('password reset', () => this.mailer.sendPasswordReset(user.email, resetToken));
 
-    // Reset tokens grant account takeover; until email delivery exists (Phase 5) they may only
-    // surface on a local development terminal.
+    // Reset tokens grant account takeover; besides the email they may only surface on a local
+    // development terminal.
     if (envConfig.get('NODE_ENV') === 'development') {
       logger.debug(`[AuthService] Password reset token generated for ${user.email}: ${resetToken}`);
     }
@@ -303,10 +306,23 @@ export class AuthService {
       'EMAIL_VERIFICATION',
       EMAIL_VERIFICATION_TTL_MS,
     );
+    await this.deliver('email verification', () => this.mailer.sendEmailVerification(email, token));
     if (envConfig.get('NODE_ENV') === 'development') {
       logger.debug(`[AuthService] Email verification token generated for ${email}: ${token}`);
     }
     return token;
+  }
+
+  /**
+   * Email failures are logged, not thrown: the caller's reply must not reveal whether an
+   * account exists, and the user can simply request another link.
+   */
+  private async deliver(kind: string, send: () => Promise<void>): Promise<void> {
+    try {
+      await send();
+    } catch (err) {
+      logger.error(`[AuthService] Could not deliver ${kind} email`, err);
+    }
   }
 
   private async issueActionToken(

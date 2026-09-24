@@ -12,6 +12,7 @@ import { getPrismaClient } from './database/prisma/tenant-prisma.extension.js';
 import { assertDatabaseRoleEnforcesRls } from './database/prisma/database-role.check.js';
 import { workerRegistry } from './workers/worker.registry.js';
 import { initModules } from './bootstrap/modules.js';
+import { reportIntegrationStatus } from './common/integrations/integration-status.js';
 import { registerProcessErrorHandlers } from './common/logger/process-error-handlers.js';
 
 export function createApp(): Express {
@@ -132,6 +133,7 @@ export function createApp(): Express {
 
 async function startServer(): Promise<void> {
   await assertDatabaseRoleEnforcesRls(getPrismaClient());
+  reportIntegrationStatus('Api');
 
   const app = createApp();
   const port = envConfig.get('PORT');

@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The auth module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class AuthCron {
   public static registerJobs(): void {
-    logger.debug('[AuthCron] No periodic cron jobs required for Auth module');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

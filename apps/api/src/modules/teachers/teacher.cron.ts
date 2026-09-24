@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The teachers module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class TeacherCron {
   public static registerJobs(): void {
-    logger.debug('[TeacherCron] No cron jobs for Teachers module');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

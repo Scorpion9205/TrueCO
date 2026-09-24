@@ -35,6 +35,8 @@ export interface CreateKnowledgeBaseDto {
 
 export interface SearchKnowledgeQuery {
   readonly queryVector: number[];
+  /** Only chunks embedded by this model are compared with the query vector. */
+  readonly embeddingModel: string;
   readonly coachingId: string;
   readonly limit?: number;
   readonly threshold?: number; // Minimum cosine similarity (e.g., 0.60 to 1.0)
@@ -54,6 +56,7 @@ export interface IKnowledgeBaseRepository {
       tokenCount: number;
       metadata?: Record<string, unknown>;
       vector: number[];
+      embeddingModel: string;
     }>,
   ): Promise<void>;
   searchSimilarChunks(options: SearchKnowledgeQuery): Promise<KnowledgeChunkEntity[]>;

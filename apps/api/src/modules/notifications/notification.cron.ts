@@ -1,7 +1,9 @@
-import { logger } from '../../common/logger/logger.service.js';
-
+/**
+ * The notifications module has no scheduled jobs. The file is kept to follow the module layout
+ * (.agents/rules/module-structure.md); register BullMQ repeatable jobs here when one is needed.
+ */
 export class NotificationCron {
   public static registerJobs(): void {
-    logger.debug('[NotificationCron] Stale notification retry cron registered');
+    // Intentionally empty: this module has no scheduled jobs yet
   }
 }

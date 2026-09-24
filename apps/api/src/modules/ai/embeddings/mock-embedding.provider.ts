@@ -10,6 +10,7 @@ import { IEmbeddingProvider } from './embedding-provider.interface.js';
 export class MockEmbeddingProvider implements IEmbeddingProvider {
   public readonly providerName = 'MOCK';
   public readonly dimension = 1536;
+  public readonly modelId = 'mock:hash-v1';
 
   public async generateEmbedding(text: string): Promise<number[]> {
     return this.createDeterministicVector(text);

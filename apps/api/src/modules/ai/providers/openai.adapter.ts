@@ -10,7 +10,7 @@ import { MockAiProvider } from './mock-ai.provider.js';
 
 export class OpenAiAdapter implements IAiProvider {
   public readonly providerType: AiProviderType = AiProviderType.OPENAI;
-  private readonly defaultModel = 'gpt-4o-mini';
+  private readonly defaultModel = envConfig.get('AI_MODEL_OPENAI');
   private readonly fallbackMock = new MockAiProvider();
 
   public constructor(
@@ -22,6 +22,10 @@ export class OpenAiAdapter implements IAiProvider {
     options: AiCompletionOptions,
   ): Promise<AiCompletionResult> {
     if (!this.apiKey) {
+      // A mock answer in production would be shown to parents and charged as credits
+      if (envConfig.get('NODE_ENV') === 'production') {
+        throw new Error('OPENAI_API_KEY is not configured');
+      }
       logger.warn('[OpenAiAdapter] OPENAI_API_KEY not configured. Falling back to MockAiProvider');
       return this.fallbackMock.generateCompletion(options);
     }
