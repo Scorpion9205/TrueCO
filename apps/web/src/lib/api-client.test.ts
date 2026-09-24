@@ -35,7 +35,9 @@ describe('createApiClient', () => {
     );
     const api = createApiClient({ baseUrl: `${BASE}/` });
 
-    await api.get('students', { query: { page: 2, batchId: undefined, q: '', status: ['ACTIVE', 'LEFT'] } });
+    await api.get('students', {
+      query: { page: 2, batchId: undefined, q: '', status: ['ACTIVE', 'LEFT'] },
+    });
     expect(search).toBe('?page=2&status=ACTIVE&status=LEFT');
   });
 
@@ -43,7 +45,13 @@ describe('createApiClient', () => {
     server.use(
       http.post(`${BASE}/fees`, () =>
         HttpResponse.json(
-          { error: { code: 'TRIAL_EXPIRED', message: 'Trial ended', upgradeUrl: '/billing/upgrade' } },
+          {
+            error: {
+              code: 'TRIAL_EXPIRED',
+              message: 'Trial ended',
+              upgradeUrl: '/billing/upgrade',
+            },
+          },
           { status: 402 },
         ),
       ),
@@ -52,7 +60,11 @@ describe('createApiClient', () => {
 
     const error = await api.post('/fees', { amount: '100' }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({ status: 402, code: 'TRIAL_EXPIRED', upgradeUrl: '/billing/upgrade' });
+    expect(error).toMatchObject({
+      status: 402,
+      code: 'TRIAL_EXPIRED',
+      upgradeUrl: '/billing/upgrade',
+    });
     expect((error as ApiError).isPaymentRequired).toBe(true);
     expect((error as ApiError).isRetryable).toBe(false);
   });
@@ -60,7 +72,10 @@ describe('createApiClient', () => {
   it('reports a rejected session to onUnauthorized', async () => {
     server.use(
       http.get(`${BASE}/me`, () =>
-        HttpResponse.json({ error: { code: 'UNAUTHENTICATED', message: 'Sign in' } }, { status: 401 }),
+        HttpResponse.json(
+          { error: { code: 'UNAUTHENTICATED', message: 'Sign in' } },
+          { status: 401 },
+        ),
       ),
     );
     const onUnauthorized = vi.fn();
@@ -71,16 +86,26 @@ describe('createApiClient', () => {
   });
 
   it('handles error responses that are not JSON (e.g. a proxy error page)', async () => {
-    server.use(http.get(`${BASE}/me`, () => new HttpResponse('<html>Bad gateway</html>', { status: 502 })));
+    server.use(
+      http.get(`${BASE}/me`, () => new HttpResponse('<html>Bad gateway</html>', { status: 502 })),
+    );
     const api = createApiClient({ baseUrl: BASE });
 
-    await expect(api.get('/me')).rejects.toMatchObject({ status: 502, code: 'HTTP_502', isRetryable: true });
+    await expect(api.get('/me')).rejects.toMatchObject({
+      status: 502,
+      code: 'HTTP_502',
+      isRetryable: true,
+    });
   });
 
   it('turns network failures into a retryable NETWORK_ERROR', async () => {
     server.use(http.get(`${BASE}/me`, () => HttpResponse.error()));
     const api = createApiClient({ baseUrl: BASE });
 
-    await expect(api.get('/me')).rejects.toMatchObject({ status: 0, code: 'NETWORK_ERROR', isRetryable: true });
+    await expect(api.get('/me')).rejects.toMatchObject({
+      status: 0,
+      code: 'NETWORK_ERROR',
+      isRetryable: true,
+    });
   });
 });

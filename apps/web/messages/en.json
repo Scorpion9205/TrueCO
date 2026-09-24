@@ -3,11 +3,142 @@
     "title": "TrueCO — Coaching management on WhatsApp",
     "description": "Run your coaching institute in one place: students, batches, attendance, fees and parent updates on WhatsApp."
   },
-  "Home": {
-    "badge": "Coming soon",
-    "headline": "Run your coaching institute from one place",
-    "subhead": "Students, batches, attendance, fees and parent updates on WhatsApp.",
+  "Nav": {
+    "features": "Features",
+    "howItWorks": "How it works",
+    "pricing": "Pricing",
     "signIn": "Sign in",
-    "contact": "Talk to us"
+    "startTrial": "Start free trial",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "menu": "Menu",
+    "main": "Main",
+    "skip": "Skip to content"
+  },
+  "Hero": {
+    "badge": "Built for coaching institutes in India",
+    "headline": "Run your coaching institute from one place",
+    "subhead": "Students, batches, attendance, fees and tests in one dashboard — and parents get every update on WhatsApp.",
+    "primary": "Start {days}-day free trial",
+    "secondary": "See how it works",
+    "note": "No card needed. Set up in minutes."
+  },
+  "Preview": {
+    "label": "Product preview",
+    "attendance": "Today's attendance",
+    "attendanceValue": "Class 10 · Morning batch",
+    "present": "Present",
+    "absent": "Absent",
+    "fees": "Fees collected this month",
+    "due": "due",
+    "message": "Aarav was marked present at 8:02 AM. Physics test on Friday.",
+    "delivered": "Delivered on WhatsApp"
+  },
+  "Features": {
+    "eyebrow": "Features",
+    "title": "Everything your institute runs on",
+    "subtitle": "One place for the office, the teachers and the parents — so nothing lives in registers and spreadsheets.",
+    "whatsapp": {
+      "title": "Parents updated on WhatsApp",
+      "body": "Attendance, fee reminders, test results and notices reach parents on the app they already use. Parents can ask questions and get answers straight away."
+    },
+    "attendance": {
+      "title": "Attendance in seconds",
+      "body": "Mark a whole batch in a few taps and let absent students' parents know automatically."
+    },
+    "fees": {
+      "title": "Fees and receipts",
+      "body": "Instalments, discounts, receipts and reminders, with a clear list of who owes what."
+    },
+    "academics": {
+      "title": "Tests and homework",
+      "body": "Enter marks, share results and track homework for every batch."
+    },
+    "insights": {
+      "title": "AI insights",
+      "body": "Spot students at risk of dropping out early, and send parents a written progress report."
+    },
+    "office": {
+      "title": "Staff and expenses",
+      "body": "Teacher salaries, expenses and reports, so you always know where the money goes."
+    }
+  },
+  "Steps": {
+    "eyebrow": "How it works",
+    "title": "Up and running in an afternoon",
+    "one": {
+      "title": "Register your institute",
+      "body": "Create your account and your free trial starts straight away."
+    },
+    "two": {
+      "title": "Add batches and students",
+      "body": "Type them in or import your existing spreadsheet."
+    },
+    "three": {
+      "title": "Parents stay in the loop",
+      "body": "Mark attendance, collect fees and share results — parents are updated on WhatsApp."
+    }
+  },
+  "Highlights": {
+    "label": "Why TrueCO",
+    "trial": "free trial",
+    "trialValue": "{days} days",
+    "startingPrice": "a month to start",
+    "whatsapp": "parent updates",
+    "whatsappValue": "WhatsApp",
+    "privacy": "per institute, never shared",
+    "privacyValue": "Private data"
+  },
+  "Pricing": {
+    "eyebrow": "Pricing",
+    "title": "Simple plans that grow with you",
+    "subtitle": "Every plan starts with a {days}-day free trial.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "billingPeriod": "Billing period",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "save": "Save {amount}",
+    "custom": "Custom",
+    "customNote": "Priced for your institute",
+    "popular": "Most popular",
+    "everythingIn": "Everything in {plan}, plus:",
+    "credits": "{count, number} AI credits",
+    "start": "Start free trial",
+    "contact": "Talk to us",
+    "feature": {
+      "core": "Students, batches and parents",
+      "attendance": "Attendance",
+      "fees": "Fees, receipts and reminders",
+      "homework": "Homework",
+      "tests": "Tests and results",
+      "reports": "Reports",
+      "salary": "Staff salaries",
+      "expenses": "Expenses",
+      "ai_summary": "AI summaries",
+      "ai_parent_report": "AI parent reports",
+      "ai_insights": "AI insights",
+      "ai_risk_engine": "At-risk student alerts",
+      "whatsapp_assistant": "WhatsApp assistant for parents"
+    }
+  },
+  "Cta": {
+    "title": "Give your institute a calmer day",
+    "subtitle": "Start your {days}-day free trial. No card needed.",
+    "emailLabel": "Work email",
+    "emailPlaceholder": "you@institute.com",
+    "submit": "Get started"
+  },
+  "Footer": {
+    "tagline": "Coaching management with parent updates on WhatsApp.",
+    "product": "Product",
+    "account": "Account",
+    "contact": "Contact",
+    "rights": "© {year} TrueCO. All rights reserved."
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "body": "The page you are looking for does not exist or has moved.",
+    "home": "Back to home"
   }
 }

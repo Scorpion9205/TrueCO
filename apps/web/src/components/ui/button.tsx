@@ -26,7 +26,8 @@ export const buttonVariants = cva(
   },
 );
 
-export interface ButtonProps extends React.ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
+export interface ButtonProps
+  extends React.ComponentProps<'button'>, VariantProps<typeof buttonVariants> {
   /** Render the child element (e.g. a Link) with button styling instead of a <button>. */
   asChild?: boolean;
 }

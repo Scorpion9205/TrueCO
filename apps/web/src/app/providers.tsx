@@ -12,7 +12,8 @@ function makeQueryClient(): QueryClient {
         staleTime: 30_000,
         refetchOnWindowFocus: false,
         // Retrying a 4xx (not found, forbidden, invalid) cannot succeed; only retry server/network failures
-        retry: (failureCount, error) => failureCount < 2 && (!isApiError(error) || error.isRetryable),
+        retry: (failureCount, error) =>
+          failureCount < 2 && (!isApiError(error) || error.isRetryable),
       },
     },
   });
