@@ -100,6 +100,11 @@ export const api = createApiClient({
   refreshAccessToken: async () => (await refreshSession())?.accessToken ?? null,
 });
 
+/** Test hook: signs a user in without the server */
+export function __setSessionForTests(session: Session | null) {
+  setSession(session);
+}
+
 /** Test hook: resets the in-memory session between tests */
 export function __resetSessionForTests() {
   current = null;

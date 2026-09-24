@@ -5,7 +5,8 @@ export interface OwnerKpiMetrics {
   readonly monthlyRevenue: number;
   readonly monthlyPendingFees: number;
   readonly monthlyExpenses: number;
-  readonly todayAttendanceRate: number;
+  /** Percentage present of today's marked attendance; null until any is marked */
+  readonly todayAttendanceRate: number | null;
   readonly highRiskCount: number;
 }
 

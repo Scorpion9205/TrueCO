@@ -1,6 +1,12 @@
-import { AppHome } from '@/components/auth/app-home';
+import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
+import { DashboardHome } from '@/components/dashboard/dashboard-home';
 
-// Placeholder until the app shell and dashboards (Phase 7.4)
-export default function AppPage() {
-  return <AppHome />;
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Shell.nav');
+  return { title: t('dashboard') };
+}
+
+export default function AppHomePage() {
+  return <DashboardHome />;
 }
