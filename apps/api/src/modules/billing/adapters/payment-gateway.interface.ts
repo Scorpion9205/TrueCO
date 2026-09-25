@@ -11,6 +11,8 @@ export interface PaymentOrderResult {
   readonly currency: string;
   readonly keyId?: string;
   readonly receipt: string;
+  /** No real gateway behind the order (no Razorpay keys): checkout cannot be opened */
+  readonly mock?: boolean;
 }
 
 export interface CreatePaymentLinkInput {

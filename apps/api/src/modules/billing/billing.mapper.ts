@@ -1,4 +1,8 @@
-import { PlanResponseDto, SubscriptionResponseDto } from './dto/billing.dto.js';
+import {
+  BillingPaymentResponseDto,
+  PlanResponseDto,
+  SubscriptionResponseDto,
+} from './dto/billing.dto.js';
 import { PlanCode, SubscriptionStatus } from '@trueco/types';
 
 export class BillingMapper {
@@ -14,7 +18,27 @@ export class BillingMapper {
     };
   }
 
-  public static toSubscriptionDto(sub: any, wallet?: any): SubscriptionResponseDto {
+  public static toPaymentDto(entity: any): BillingPaymentResponseDto {
+    return {
+      id: entity.id,
+      orderId: entity.gatewayOrderId,
+      type: entity.type,
+      status: entity.status,
+      planCode: entity.planCode,
+      billingCycle: entity.billingCycle,
+      credits: entity.credits,
+      amount: entity.amountPaise / 100,
+      invoiceNumber: entity.invoiceNumber,
+      paidAt: entity.paidAt ? new Date(entity.paidAt) : null,
+      createdAt: new Date(entity.createdAt),
+    };
+  }
+
+  public static toSubscriptionDto(
+    sub: any,
+    wallet?: any,
+    aiCreditPricePaise = 0,
+  ): SubscriptionResponseDto {
     const now = new Date();
     const trialEndsAt = new Date(sub.trialEndsAt);
     const diffMs = trialEndsAt.getTime() - now.getTime();
@@ -37,6 +61,7 @@ export class BillingMapper {
       isGracePeriod,
       features,
       aiCreditBalance,
+      aiCreditPricePaise,
     };
   }
 }

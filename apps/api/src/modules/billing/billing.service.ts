@@ -5,7 +5,11 @@ import { StatusCodes } from 'http-status-codes';
 import { BillingCycle, IBillingRepository } from './billing.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { PlanResponseDto, SubscriptionResponseDto } from './dto/billing.dto.js';
+import {
+  BillingPaymentResponseDto,
+  PlanResponseDto,
+  SubscriptionResponseDto,
+} from './dto/billing.dto.js';
 import { BillingMapper } from './billing.mapper.js';
 import {
   createAiCreditsPurchasedEvent,
@@ -19,6 +23,7 @@ import { RazorpayAdapter } from './adapters/razorpay.adapter.js';
 import { envConfig } from '../../config/env.config.js';
 import { logger } from '../../common/logger/logger.service.js';
 import { paymentReconcileTotal } from '../../common/metrics/metrics.service.js';
+import { isUnsignedWebhookAllowed } from '../../common/security/webhook-signature.js';
 
 export interface CreateBillingOrderDto {
   readonly type: 'PLAN_UPGRADE' | 'AI_CREDITS';
@@ -47,7 +52,37 @@ export class BillingService {
     }
 
     const wallet = await this.billingRepository.getCreditWallet(coachingId);
-    return BillingMapper.toSubscriptionDto(sub, wallet);
+    return BillingMapper.toSubscriptionDto(sub, wallet, envConfig.get('AI_CREDIT_PRICE_PAISE'));
+  }
+
+  public async listPayments(coachingId: string): Promise<BillingPaymentResponseDto[]> {
+    const payments = await this.billingRepository.listPayments(coachingId, 50);
+    return payments.map(BillingMapper.toPaymentDto);
+  }
+
+  /** Real payments need a gateway: the mock one is for development and tests */
+  public get isMockGateway(): boolean {
+    return this.paymentAdapter instanceof MockPaymentGatewayAdapter || !envConfig.get('RAZORPAY_KEY_ID');
+  }
+
+  /**
+   * Development only: settles one of this coaching's own orders as if the gateway had reported
+   * it paid, so the purchase flow can be tried without Razorpay keys. Refused whenever a real
+   * gateway is configured or in production.
+   */
+  public async simulatePayment(orderId: string, coachingId: string): Promise<{ status: string }> {
+    if (!this.isMockGateway || !isUnsignedWebhookAllowed()) {
+      throw new AppError('NOT_AVAILABLE', 'Simulated payments are not available', StatusCodes.NOT_FOUND);
+    }
+    const payment = await this.billingRepository.findPaymentByOrderId(orderId);
+    if (!payment || payment.coachingId !== coachingId) {
+      throw new AppError('ORDER_NOT_FOUND', 'Order not found', StatusCodes.NOT_FOUND);
+    }
+    return this.settleOrder(coachingId, orderId, {
+      id: `pay_mock_${crypto.randomUUID().replaceAll('-', '').slice(0, 14)}`,
+      amount: payment.amountPaise,
+      created_at: Math.floor(Date.now() / 1000),
+    });
   }
 
   public async getPlans(): Promise<PlanResponseDto[]> {

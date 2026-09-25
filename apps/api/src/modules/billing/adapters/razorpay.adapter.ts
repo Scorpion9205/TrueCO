@@ -36,6 +36,7 @@ export class RazorpayAdapter implements IPaymentGatewayAdapter {
         currency: input.currency || 'INR',
         keyId: this.keyId || 'mock_key',
         receipt: input.receipt,
+        mock: true,
       };
     }
 

@@ -25,6 +25,7 @@ export const CLIENT_NAMESPACES = [
   'Notices',
   'Reports',
   'Settings',
+  'Billing',
 ] as const;
 
 export function pickClientMessages(messages: AbstractIntlMessages): AbstractIntlMessages {

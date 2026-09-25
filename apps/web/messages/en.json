@@ -412,7 +412,11 @@
       "TEACHER_NOT_ASSIGNED": "This teacher is no longer assigned to that batch.",
       "NOTICE_NOT_FOUND": "This notice no longer exists. Refresh the page.",
       "WRONG_PASSWORD": "The current password is not correct.",
-      "SAME_PASSWORD": "Choose a password different from the current one."
+      "SAME_PASSWORD": "Choose a password different from the current one.",
+      "PLAN_NOT_FOUND": "This plan isn't available any more. Refresh the page.",
+      "PLAN_NOT_PURCHASABLE": "This plan can't be bought online. Please contact us.",
+      "ORDER_NOT_FOUND": "This order wasn't found. Please start again.",
+      "NOT_AVAILABLE": "That isn't available here."
     },
     "days": {
       "MON": "Mon",
@@ -1274,6 +1278,63 @@
       "everywhereAction": "Sign out everywhere",
       "everywhereTitle": "Sign out on every device?",
       "everywhereBody": "You'll be signed out here too, and need your password to sign in again."
+    }
+  },
+  "Billing": {
+    "title": "Billing",
+    "subtitle": "Your TrueCO plan, AI credits and payments.",
+    "plansTitle": "Plans",
+    "plansBody": "Pay monthly or yearly. A new plan starts right away; paying for your current plan adds to the time you have left.",
+    "ownerOnly": "Only the institute owner can change the plan or buy credits.",
+    "choose": "Choose plan",
+    "renew": "Renew",
+    "planItem": "{plan} · {cycle}",
+    "cycle": {
+      "MONTHLY": "1 month",
+      "YEARLY": "1 year"
+    },
+    "current": {
+      "label": "Current plan",
+      "credits": "AI credits",
+      "trial": "{days, plural, =0 {Free trial ends today} one {# day left in your free trial} other {# days left in your free trial}} (ends {date})",
+      "active": "Paid until {date}",
+      "grace": "Payment is overdue. Pay by {date} to keep using TrueCO.",
+      "ended": "Your plan has ended. Choose a plan below to continue.",
+      "status": {
+        "TRIALING": "Free trial",
+        "ACTIVE": "Active",
+        "PAST_DUE": "Payment overdue",
+        "GRACE": "Payment overdue",
+        "EXPIRED": "Ended",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "credits": {
+      "title": "AI credits",
+      "body": "Used by AI summaries, parent reports and the WhatsApp assistant. Credits don't expire.",
+      "pack": "How many credits",
+      "item": "{count, number} AI credits",
+      "buy": "Buy {count, number} credits for {price}"
+    },
+    "history": {
+      "title": "Payments",
+      "empty": "No payments yet. Your invoices will be listed here.",
+      "status": {
+        "PAID": "Paid",
+        "FAILED": "Failed"
+      }
+    },
+    "purchase": {
+      "done": "{item} — payment received. Thank you!",
+      "failed": "The payment didn't go through. Nothing was charged; please try again.",
+      "slow": "Payment received. Your plan will update in a minute — refresh this page if it doesn't.",
+      "confirmingTitle": "Confirming your payment",
+      "confirmingBody": "This takes a few seconds. Please keep this page open.",
+      "close": "Close",
+      "mockTitle": "Online payments aren't connected yet",
+      "mockDev": "Razorpay keys aren't set on this server, so no real payment can be taken. In development you can mark this order as paid to try the flow.",
+      "mockLive": "Online payment isn't available right now. Please contact TrueCO support to upgrade.",
+      "simulate": "Mark as paid (development)"
     }
   }
 }

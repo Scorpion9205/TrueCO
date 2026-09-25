@@ -71,6 +71,17 @@ export class InMemoryBillingRepository implements IBillingRepository {
     return record;
   }
 
+  public async listPayments(coachingId: string, limit: number): Promise<any[]> {
+    return [...this.payments.values()]
+      .filter((p) => p.coachingId === coachingId && p.status !== 'CREATED')
+      .reverse()
+      .slice(0, limit);
+  }
+
+  public async findPaymentByOrderId(gatewayOrderId: string): Promise<any | null> {
+    return this.payments.get(gatewayOrderId) ?? null;
+  }
+
   public async settlePayment(input: SettlePaymentInput): Promise<SettlePaymentResult> {
     const payment = this.payments.get(input.gatewayOrderId);
     if (!payment) return { kind: 'not_found' };
