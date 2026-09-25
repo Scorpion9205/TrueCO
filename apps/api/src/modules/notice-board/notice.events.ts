@@ -5,6 +5,8 @@ export interface NoticeCreatedPayload {
   readonly coachingId: string;
   readonly batchId?: string | null;
   readonly title: string;
+  /** Absent on events recorded before it was added */
+  readonly content?: string;
   readonly targetAudience: string;
 }
 

@@ -3,11 +3,7 @@ import { NotificationService } from './notification.service.js';
 import { ATTENDANCE_EVENTS, AttendanceMarkedPayload } from '../attendance/attendance.events.js';
 import { TEST_EVENTS, TestResultReadyPayload } from '../tests/test.events.js';
 import { HOMEWORK_EVENTS, HomeworkCreatedPayload } from '../homework/homework.events.js';
-import {
-  FEE_EVENTS,
-  FeePaidPayload,
-  FeeReminderTriggeredPayload,
-} from '../fees/fee.events.js';
+import { FEE_EVENTS, FeePaidPayload, FeeReminderTriggeredPayload } from '../fees/fee.events.js';
 import { NOTICE_EVENTS, NoticeCreatedPayload } from '../notice-board/notice.events.js';
 import { RISK_EVENTS, RiskDetectedPayload } from '../risk-engine/risk-engine.events.js';
 import { NotificationChannel, DomainEvent, AttendanceStatus } from '@trueco/types';
@@ -53,7 +49,8 @@ export class NotificationSubscribers {
     eventBus.subscribe(
       TEST_EVENTS.TEST_RESULT_READY,
       async (event: DomainEvent<TestResultReadyPayload>) => {
-        const { coachingId, testId, studentId, marksObtained, totalMarks, percentage, isAbsent } = event.payload;
+        const { coachingId, testId, studentId, marksObtained, totalMarks, percentage, isAbsent } =
+          event.payload;
         const idempotencyKey = `test.result.${testId}.${studentId}`;
 
         const textContent = isAbsent
@@ -117,47 +114,48 @@ export class NotificationSubscribers {
     );
 
     // 4. Fee Payment Recorded -> Queue WhatsApp Payment Confirmation
-    eventBus.subscribe(
-      FEE_EVENTS.FEE_PAID,
-      async (event: DomainEvent<FeePaidPayload>) => {
-        const { coachingId, studentId, amount, receiptNumber, remainingBalance } = event.payload;
-        const idempotencyKey = `fee.paid.${receiptNumber}`;
-        const content = `Payment Received: ₹${amount} received for student receipt #${receiptNumber}. Remaining balance: ₹${remainingBalance}. Thank you!`;
+    eventBus.subscribe(FEE_EVENTS.FEE_PAID, async (event: DomainEvent<FeePaidPayload>) => {
+      const { coachingId, studentId, amount, receiptNumber, remainingBalance } = event.payload;
+      const idempotencyKey = `fee.paid.${receiptNumber}`;
+      const content = `Payment Received: ₹${amount} received for student receipt #${receiptNumber}. Remaining balance: ₹${remainingBalance}. Thank you!`;
 
-        try {
-          await notificationService.enqueueNotification(
-            {
-              channel: NotificationChannel.WHATSAPP,
-              recipient: `student:${studentId}:parent`,
-              recipientType: 'PARENT',
-              content,
-              templateName: 'fee_payment_confirmation',
-              templateLanguage: 'en',
-              templateVariables: {
-                amount: `₹${amount}`,
-                receipt: receiptNumber,
-                balance: `₹${remainingBalance}`,
-              },
-              idempotencyKey,
+      try {
+        await notificationService.enqueueNotification(
+          {
+            channel: NotificationChannel.WHATSAPP,
+            recipient: `student:${studentId}:parent`,
+            recipientType: 'PARENT',
+            content,
+            templateName: 'fee_payment_confirmation',
+            templateLanguage: 'en',
+            templateVariables: {
+              amount: `₹${amount}`,
+              receipt: receiptNumber,
+              balance: `₹${remainingBalance}`,
             },
-            coachingId,
-            event.metadata?.correlationId,
-          );
-        } catch (err) {
-          logger.error(`[NotificationSubscribers] Failed enqueuing fee payment confirmation:`, err);
-        }
-      },
-    );
+            idempotencyKey,
+          },
+          coachingId,
+          event.metadata?.correlationId,
+        );
+      } catch (err) {
+        logger.error(`[NotificationSubscribers] Failed enqueuing fee payment confirmation:`, err);
+      }
+    });
 
     // 5. Fee Reminder Triggered -> Queue Reminder Alert
     eventBus.subscribe(
       FEE_EVENTS.FEE_REMINDER_TRIGGERED,
       async (event: DomainEvent<FeeReminderTriggeredPayload>) => {
-        const { coachingId, studentId, installmentId, amount, dueDate, daysUntilDue } = event.payload;
+        const { coachingId, studentId, installmentId, amount, dueDate, daysUntilDue } =
+          event.payload;
         // Keyed by stage, not by date: each stage (D-7, D-3, D0, D+3, ...) reaches a parent once
         const idempotencyKey = `fee.reminder.${installmentId}.${event.payload.stage}`;
         const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN');
-        const dueText = daysUntilDue < 0 ? `is OVERDUE by ${Math.abs(daysUntilDue)} days` : `is due on ${dueDateStr}`;
+        const dueText =
+          daysUntilDue < 0
+            ? `is OVERDUE by ${Math.abs(daysUntilDue)} days`
+            : `is due on ${dueDateStr}`;
         const content = `Fee Reminder: A payment of ₹${amount} ${dueText}. Please pay promptly.`;
 
         try {
@@ -184,28 +182,34 @@ export class NotificationSubscribers {
       },
     );
 
-    // 6. Notice Created -> Queue Announcement Broadcast
+    // 6. Notice Created -> WhatsApp the notice to its audience (in its batch, or institute-wide)
     eventBus.subscribe(
       NOTICE_EVENTS.NOTICE_CREATED,
       async (event: DomainEvent<NoticeCreatedPayload>) => {
-        const { coachingId, noticeId, title, batchId } = event.payload;
-        const idempotencyKey = `notice.created.${noticeId}`;
-        const recipient = batchId ? `batch:${batchId}:students` : `batch:all:students`;
+        const { coachingId, noticeId, title, content, batchId, targetAudience } = event.payload;
+        const text = `📢 *${title}*${
+          content
+            ? `
 
-        try {
-          await notificationService.enqueueNotification(
-            {
-              channel: NotificationChannel.WHATSAPP,
-              recipient,
-              recipientType: 'STUDENT',
-              content: `📢 Announcement: *${title}*`,
-              idempotencyKey,
-            },
-            coachingId,
-            event.metadata?.correlationId,
-          );
-        } catch (err) {
-          logger.error(`[NotificationSubscribers] Failed enqueuing notice broadcast:`, err);
+${content}`
+            : ''
+        }`;
+        for (const group of noticeRecipients(targetAudience, batchId)) {
+          try {
+            await notificationService.enqueueNotification(
+              {
+                channel: NotificationChannel.WHATSAPP,
+                recipient: group.token,
+                recipientType: group.type,
+                content: text,
+                idempotencyKey: `notice.created.${noticeId}.${group.type.toLowerCase()}`,
+              },
+              coachingId,
+              event.metadata?.correlationId,
+            );
+          } catch (err) {
+            logger.error(`[NotificationSubscribers] Failed enqueuing notice broadcast:`, err);
+          }
         }
       },
     );
@@ -234,5 +238,26 @@ export class NotificationSubscribers {
         }
       },
     );
+  }
+}
+
+/** Who a notice goes to: its audience, within its batch or across the whole institute */
+export function noticeRecipients(
+  audience: string,
+  batchId?: string | null,
+): Array<{ token: string; type: 'STUDENT' | 'PARENT' | 'TEACHER' }> {
+  const scope = batchId ?? 'all';
+  const students = { token: `batch:${scope}:students`, type: 'STUDENT' as const };
+  const parents = { token: `batch:${scope}:parents`, type: 'PARENT' as const };
+  const teachers = { token: `teachers:${scope}`, type: 'TEACHER' as const };
+  switch (audience) {
+    case 'STUDENTS':
+      return [students];
+    case 'PARENTS':
+      return [parents];
+    case 'TEACHERS':
+      return [teachers];
+    default:
+      return [students, parents, teachers];
   }
 }

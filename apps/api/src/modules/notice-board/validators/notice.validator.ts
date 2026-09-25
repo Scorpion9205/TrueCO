@@ -1,25 +1,31 @@
 import { z } from 'zod';
 
-export const createNoticeSchema = z.object({
-  title: z.string().min(3).max(255),
-  content: z.string().min(5),
-  batchId: z.string().uuid().optional().nullable(),
-  targetAudience: z.enum(['ALL', 'STUDENTS', 'PARENTS', 'TEACHERS']).default('ALL'),
-  isPinned: z.boolean().default(false),
-  expiresAt: z.string().datetime().optional().nullable(),
-});
+const AUDIENCES = ['ALL', 'STUDENTS', 'PARENTS', 'TEACHERS'] as const;
 
-export const updateNoticeSchema = z.object({
-  title: z.string().min(3).max(255).optional(),
-  content: z.string().min(5).optional(),
-  batchId: z.string().uuid().optional().nullable(),
-  targetAudience: z.enum(['ALL', 'STUDENTS', 'PARENTS', 'TEACHERS']).optional(),
-  isPinned: z.boolean().optional(),
-  expiresAt: z.string().datetime().optional().nullable(),
-});
+export const createNoticeSchema = z
+  .object({
+    title: z.string().trim().min(3).max(255),
+    content: z.string().trim().min(5).max(5000),
+    batchId: z.string().uuid().optional().nullable(),
+    targetAudience: z.enum(AUDIENCES).default('ALL'),
+    isPinned: z.boolean().default(false),
+    expiresAt: z.string().datetime({ offset: true }).optional().nullable(),
+  })
+  .strict();
+
+export const updateNoticeSchema = z
+  .object({
+    title: z.string().trim().min(3).max(255).optional(),
+    content: z.string().trim().min(5).max(5000).optional(),
+    batchId: z.string().uuid().optional().nullable(),
+    targetAudience: z.enum(AUDIENCES).optional(),
+    isPinned: z.boolean().optional(),
+    expiresAt: z.string().datetime({ offset: true }).optional().nullable(),
+  })
+  .strict();
 
 export const noticeFilterSchema = z.object({
   batchId: z.string().uuid().optional(),
-  targetAudience: z.string().optional(),
+  targetAudience: z.enum(AUDIENCES).optional(),
   includeExpired: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
 });
