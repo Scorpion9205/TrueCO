@@ -8,7 +8,13 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t('metaTitle') };
 }
 
-const NOTICES: ReadonlyArray<LoginNotice> = ['expired', 'registered', 'reset'];
+const NOTICES: ReadonlyArray<LoginNotice> = [
+  'expired',
+  'registered',
+  'reset',
+  'passwordChanged',
+  'signedOutEverywhere',
+];
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

@@ -8,9 +8,34 @@ import { NOTICE_EVENTS, NoticeCreatedPayload } from '../notice-board/notice.even
 import { RISK_EVENTS, RiskDetectedPayload } from '../risk-engine/risk-engine.events.js';
 import { NotificationChannel, DomainEvent, AttendanceStatus } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
+import {
+  CoachingPreferences,
+  readCoachingPreferences,
+} from '../settings/settings.preferences.js';
 
 export class NotificationSubscribers {
-  public static register(eventBus: IEventBus, notificationService: NotificationService): void {
+  public static register(
+    eventBus: IEventBus,
+    notificationService: NotificationService,
+    preferences: (coachingId: string) => Promise<CoachingPreferences> = readCoachingPreferences,
+  ): void {
+    // Every message below is automatic, so each honours the institute's WhatsApp switch
+    const service = {
+      enqueueNotification: async (
+        ...args: Parameters<NotificationService['enqueueNotification']>
+      ): Promise<void> => {
+        const [dto, coachingId] = args;
+        if (dto.channel === NotificationChannel.WHATSAPP) {
+          const { whatsappEnabled } = await preferences(coachingId);
+          if (!whatsappEnabled) {
+            logger.info(`[NotificationSubscribers] WhatsApp is off for ${coachingId}; skipped ${dto.idempotencyKey}`);
+            return;
+          }
+        }
+        await notificationService.enqueueNotification(...args);
+      },
+    };
+
     // 1. Attendance Marked -> Queue WhatsApp for Absent students
     eventBus.subscribe(
       ATTENDANCE_EVENTS.ATTENDANCE_MARKED,
@@ -21,7 +46,7 @@ export class NotificationSubscribers {
           if (record.status === AttendanceStatus.ABSENT) {
             const idempotencyKey = `attendance.absent.${sessionId}.${record.studentId}`;
             try {
-              await notificationService.enqueueNotification(
+              await service.enqueueNotification(
                 {
                   channel: NotificationChannel.WHATSAPP,
                   recipient: `student:${record.studentId}:parent`,
@@ -58,7 +83,7 @@ export class NotificationSubscribers {
           : `Dear Parent, your child scored ${marksObtained}/${totalMarks} (${percentage}%) in the recent test.`;
 
         try {
-          await notificationService.enqueueNotification(
+          await service.enqueueNotification(
             {
               channel: NotificationChannel.WHATSAPP,
               recipient: `student:${studentId}:parent`,
@@ -90,7 +115,7 @@ export class NotificationSubscribers {
         const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN');
 
         try {
-          await notificationService.enqueueNotification(
+          await service.enqueueNotification(
             {
               channel: NotificationChannel.WHATSAPP,
               recipient: `batch:${batchId}:students`,
@@ -120,7 +145,7 @@ export class NotificationSubscribers {
       const content = `Payment Received: ₹${amount} received for student receipt #${receiptNumber}. Remaining balance: ₹${remainingBalance}. Thank you!`;
 
       try {
-        await notificationService.enqueueNotification(
+        await service.enqueueNotification(
           {
             channel: NotificationChannel.WHATSAPP,
             recipient: `student:${studentId}:parent`,
@@ -159,7 +184,7 @@ export class NotificationSubscribers {
         const content = `Fee Reminder: A payment of ₹${amount} ${dueText}. Please pay promptly.`;
 
         try {
-          await notificationService.enqueueNotification(
+          await service.enqueueNotification(
             {
               channel: NotificationChannel.WHATSAPP,
               recipient: `student:${studentId}:parent`,
@@ -196,7 +221,7 @@ ${content}`
         }`;
         for (const group of noticeRecipients(targetAudience, batchId)) {
           try {
-            await notificationService.enqueueNotification(
+            await service.enqueueNotification(
               {
                 channel: NotificationChannel.WHATSAPP,
                 recipient: group.token,
@@ -222,7 +247,7 @@ ${content}`
         const idempotencyKey = `risk.alert.${studentId}.${new Date().toISOString().slice(0, 10)}`;
 
         try {
-          await notificationService.enqueueNotification(
+          await service.enqueueNotification(
             {
               channel: NotificationChannel.WHATSAPP,
               recipient: `coaching:${coachingId}:owner`,

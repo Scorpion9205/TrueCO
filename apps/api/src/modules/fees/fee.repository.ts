@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
+import { readPreferences } from '../settings/settings.preferences.js';
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
@@ -249,7 +250,8 @@ export class PrismaFeeRepository implements IFeeRepository {
       }
 
       // 4. Gap-free receipt number, issued in this transaction
-      const receiptNumber = await nextDocumentNumber(tx, input.coachingId, 'RCT');
+      const { receiptPrefix } = await readPreferences(tx, input.coachingId);
+      const receiptNumber = await nextDocumentNumber(tx, input.coachingId, receiptPrefix);
 
       const transaction = await tx.feeTransaction.create({
         data: {

@@ -22,6 +22,8 @@ export function createAuthRoutes(controller: AuthController): Router {
   router.post('/refresh', refreshLimit, controller.refresh);
   router.post('/logout', refreshLimit, controller.logout);
   router.post('/logout-all', authenticateMiddleware, controller.logoutAllDevices);
+  // Limited like sign-in: it checks a password, so it must not be usable for guessing one
+  router.post('/change-password', authenticateMiddleware, loginLimit, controller.changePassword);
   router.get('/me', authenticateMiddleware, controller.getMe);
   router.post('/forgot-password', resetIpLimit, resetTargetLimit, controller.forgotPassword);
   router.post('/reset-password', tokenLimit, controller.resetPassword);

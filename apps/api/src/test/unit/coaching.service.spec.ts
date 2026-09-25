@@ -19,6 +19,12 @@ class InMemoryCoachingRepository implements ICoachingRepository {
     return this.coachings.get(id) || null;
   }
 
+  public async update(id: string, data: Record<string, unknown>): Promise<any> {
+    const coaching = { ...this.coachings.get(id), ...data };
+    this.coachings.set(id, coaching);
+    return coaching;
+  }
+
   public async createWithProvisioning(input: CreateCoachingTransactionInput): Promise<{ coaching: any; ownerUser: any }> {
     const coachingId = `coaching-${Date.now()}`;
     const ownerId = `user-${Date.now()}`;

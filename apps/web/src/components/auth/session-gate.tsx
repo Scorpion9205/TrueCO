@@ -45,10 +45,13 @@ export function SessionGate({ children }: { children: ReactNode }) {
     } else if (hadSession.current && state === 'ready') {
       // The session ended while the app was open: a sign-out goes to a plain login page, an
       // expired or revoked session explains itself and returns here afterwards
+      const end = getSessionEnd();
       router.replace(
-        getSessionEnd() === 'signedOut'
+        end === 'signedOut'
           ? '/login'
-          : `/login?notice=expired&next=${encodeURIComponent(pathname)}`,
+          : end === 'passwordChanged' || end === 'signedOutEverywhere'
+            ? `/login?notice=${end}`
+            : `/login?notice=expired&next=${encodeURIComponent(pathname)}`,
       );
     }
   }, [session, state, router, pathname]);

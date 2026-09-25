@@ -3,12 +3,13 @@ import { IEventBus } from '../../events/event-bus.interface.js';
 import { CoachingConfig, SettingsResponseDto, UpdateSettingsDto } from './dto/settings.dto.js';
 import { SettingsMapper } from './settings.mapper.js';
 import { createSettingsUpdatedEvent } from './settings.events.js';
+import { DEFAULT_RECEIPT_PREFIX } from './settings.preferences.js';
 
 export const DEFAULT_COACHING_CONFIG: CoachingConfig = {
   timezone: 'Asia/Kolkata',
   currency: 'INR',
   academicYear: '2026-2027',
-  receiptPrefix: 'RCP',
+  receiptPrefix: DEFAULT_RECEIPT_PREFIX,
   attendanceThreshold: 75,
   branding: {
     primaryColor: '#4F46E5',
@@ -64,7 +65,6 @@ export class SettingsService {
           ...dto.notifications,
         },
       }),
-      ...(dto.extraConfig || {}),
     };
 
     const updated = await this.settingsRepository.upsert(coachingId, mergedConfig as Record<string, unknown>);

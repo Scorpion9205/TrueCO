@@ -34,7 +34,11 @@ describe('Phase 3 Cross-Cutting Subscribers Integration', () => {
     };
 
     // Register all cross-cutting subscribers
-    NotificationSubscribers.register(eventBus, mockNotificationService as unknown as NotificationService);
+    NotificationSubscribers.register(
+      eventBus,
+      mockNotificationService as unknown as NotificationService,
+      async () => ({ receiptPrefix: 'RCT', whatsappEnabled: true }),
+    );
     TimelineSubscribers.register(eventBus, mockTimelineService as unknown as TimelineService);
     AuditSubscribers.register(eventBus, mockAuditService as unknown as AuditService);
   });

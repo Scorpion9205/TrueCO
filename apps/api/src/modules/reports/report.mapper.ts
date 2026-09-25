@@ -11,7 +11,11 @@ export class ReportMapper {
           const val = row[h.key];
           if (val === null || val === undefined) return '""';
           if (val instanceof Date) return `"${val.toISOString().slice(0, 10)}"`;
-          const str = String(val).replace(/"/g, '""');
+          // A cell starting with = + - @ (or a tab/CR) runs as a formula in Excel and Sheets;
+          // names typed by users must not be able to do that
+          const text = String(val);
+          const safe = typeof val === 'string' && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+          const str = safe.replace(/"/g, '""');
           return `"${str}"`;
         })
         .join(','),

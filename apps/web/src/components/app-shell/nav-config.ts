@@ -85,7 +85,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: 'account',
     items: [
-      { key: 'settings', href: '/app/settings', icon: Settings, permission: 'settings:read' },
+      // Everyone has an account to manage (password, sessions); institute settings are gated inside
+      { key: 'settings', href: '/app/settings', icon: Settings },
       { key: 'billing', href: '/app/billing', icon: CreditCard, permission: 'billing:read' },
     ],
   },

@@ -26,6 +26,7 @@ export interface CreateCoachingTransactionInput {
 export interface ICoachingRepository {
   findByCode(code: string): Promise<any | null>;
   findById(id: string): Promise<any | null>;
+  update(id: string, data: Record<string, unknown>): Promise<any>;
   createWithProvisioning(
     input: CreateCoachingTransactionInput,
   ): Promise<{ coaching: any; ownerUser: any }>;
@@ -50,6 +51,20 @@ export class PrismaCoachingRepository implements ICoachingRepository {
   public async findById(id: string): Promise<any | null> {
     return (this.prisma as any).coaching.findUnique({
       where: { id },
+      include: {
+        subscriptions: {
+          where: { isActive: true },
+          include: { plan: true },
+          take: 1,
+        },
+      },
+    });
+  }
+
+  public async update(id: string, data: Record<string, unknown>): Promise<any> {
+    return (this.prisma as any).coaching.update({
+      where: { id },
+      data,
       include: {
         subscriptions: {
           where: { isActive: true },

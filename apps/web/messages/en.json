@@ -201,7 +201,9 @@
       "signUp": "Start your free trial",
       "expired": "Your session has ended. Please sign in again.",
       "registered": "Your institute is ready. Sign in to continue.",
-      "reset": "Password changed. Sign in with your new password."
+      "reset": "Password changed. Sign in with your new password.",
+      "passwordChanged": "Your password was changed. Sign in with the new one.",
+      "signedOutEverywhere": "You've been signed out on every device. Sign in again to continue."
     },
     "signup": {
       "metaTitle": "Start your free trial",
@@ -408,7 +410,9 @@
       "EMAIL_TAKEN": "Someone in your institute already signs in with this email.",
       "TEACHER_NOT_FOUND": "This teacher no longer exists. Refresh the page.",
       "TEACHER_NOT_ASSIGNED": "This teacher is no longer assigned to that batch.",
-      "NOTICE_NOT_FOUND": "This notice no longer exists. Refresh the page."
+      "NOTICE_NOT_FOUND": "This notice no longer exists. Refresh the page.",
+      "WRONG_PASSWORD": "The current password is not correct.",
+      "SAME_PASSWORD": "Choose a password different from the current one."
     },
     "days": {
       "MON": "Mon",
@@ -1124,6 +1128,152 @@
       "posting": "Posting…",
       "posted": "Notice posted",
       "updated": "Notice updated"
+    }
+  },
+  "Reports": {
+    "title": "Reports",
+    "subtitle": "How fees, attendance and money are doing.",
+    "tabs": {
+      "label": "Report",
+      "fees": "Fees",
+      "attendance": "Attendance",
+      "pnl": "Profit & loss"
+    },
+    "period": {
+      "label": "Period",
+      "thisMonth": "This month",
+      "lastMonth": "Last month",
+      "thisYear": "This financial year",
+      "lastYear": "Last financial year",
+      "custom": "Custom dates",
+      "from": "From",
+      "to": "To"
+    },
+    "fees": {
+      "scope": "All fee plans for current students, as of today.",
+      "kpi": {
+        "expected": "Total fees",
+        "collected": "Collected",
+        "rate": "{rate}% of fees due",
+        "pending": "Still to collect",
+        "overdue": "{amount} overdue",
+        "waived": "Waived"
+      },
+      "progress": "Collection progress",
+      "download": "Download CSV",
+      "defaulters": {
+        "title": "{count, plural, =0 {Overdue fees} one {# student with overdue fees} other {# students with overdue fees}}",
+        "noneTitle": "No overdue fees",
+        "noneBody": "Every instalment that's due has been paid or waived.",
+        "since": "Due since {date} · {days, plural, one {# day} other {# days}}"
+      },
+      "csv": {
+        "student": "Student",
+        "phone": "Student phone",
+        "parent": "Parent",
+        "parentPhone": "Parent phone",
+        "overdue": "Overdue (₹)",
+        "since": "Oldest due date",
+        "days": "Days overdue"
+      }
+    },
+    "attendance": {
+      "batch": "Batch",
+      "allBatches": "All batches",
+      "threshold": "Flag students",
+      "below": "Below {threshold}%",
+      "onlyBelow": "Only students below {threshold}%",
+      "noneBelow": "No student is below {threshold}% in this period.",
+      "classes": "{attended} of {total} classes",
+      "download": "Download CSV",
+      "kpi": {
+        "sessions": "Classes held",
+        "average": "Average attendance",
+        "belowThreshold": "Below {threshold}%"
+      },
+      "empty": {
+        "title": "No attendance in this period",
+        "body": "Attendance marked for these dates will show up here. Try another period or batch."
+      },
+      "csv": {
+        "student": "Student",
+        "attended": "Classes attended",
+        "total": "Classes held",
+        "percentage": "Attendance (%)"
+      }
+    },
+    "pnl": {
+      "revenue": "Fees collected",
+      "revenueHint": "Payments received in this period",
+      "salaries": "Salaries paid",
+      "expenses": "Other expenses",
+      "totalCosts": "Total costs",
+      "profit": "Profit",
+      "loss": "Loss",
+      "margin": "Margin (%)",
+      "marginHint": "{margin}% of fees collected",
+      "noRevenue": "No fees collected in this period",
+      "breakdown": "Where the fees went",
+      "breakdownLabel": "Salaries took {salaries}% and other expenses {expenses}% of fees collected",
+      "download": "Download CSV",
+      "csv": {
+        "item": "Item",
+        "amount": "Amount (₹)"
+      }
+    }
+  },
+  "Settings": {
+    "title": "Settings",
+    "institute": {
+      "title": "Institute",
+      "description": "Your institute's details, shown on receipts and to parents.",
+      "code": "Institute code",
+      "codeHint": "Teachers and staff enter this when they sign in. It can't be changed.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Couldn't copy. Select the code and copy it yourself.",
+      "name": "Institute name",
+      "phone": "Phone",
+      "email": "Email",
+      "address": "Address",
+      "city": "City",
+      "state": "State",
+      "saved": "Institute details saved",
+      "readOnly": "Only the institute owner can change these details.",
+      "save": "Save details"
+    },
+    "preferences": {
+      "title": "Receipts and messages",
+      "description": "How receipts are numbered and whether TrueCO messages parents for you.",
+      "prefix": "Receipt prefix",
+      "prefixExample": "Receipts look like {example}",
+      "prefixInvalid": "Use 2 to 10 letters or digits.",
+      "prefixNote": "Changing it starts a new numbering from 00001; receipts already issued keep their numbers.",
+      "prefixSaved": "Receipt prefix saved",
+      "whatsapp": "Automatic WhatsApp messages",
+      "whatsappHint": "Absence alerts, fee reminders, test results and new notices sent to parents, students and teachers.",
+      "whatsappOn": "Automatic WhatsApp messages turned on",
+      "whatsappOff": "Automatic WhatsApp messages turned off",
+      "savePrefix": "Save prefix"
+    },
+    "account": {
+      "title": "Your account",
+      "description": "Your sign-in details.",
+      "name": "Name",
+      "email": "Email",
+      "password": "Change password",
+      "passwordHint": "You'll be signed out everywhere, including here, and sign in again with the new password.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "samePassword": "Choose a password different from the current one.",
+      "changePassword": "Change password",
+      "changingPassword": "Changing…",
+      "everywhere": "Sign out everywhere",
+      "everywhereHint": "Ends your sessions on every phone and computer, for example after using a shared one.",
+      "everywhereAction": "Sign out everywhere",
+      "everywhereTitle": "Sign out on every device?",
+      "everywhereBody": "You'll be signed out here too, and need your password to sign in again."
     }
   }
 }

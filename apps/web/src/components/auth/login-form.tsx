@@ -16,7 +16,8 @@ import { signIn } from '@/lib/auth/session';
 import { useAuthError } from '@/lib/auth/use-auth-error';
 import { SubmitButton } from './submit-button';
 
-export type LoginNotice = 'expired' | 'registered' | 'reset';
+export type LoginNotice =
+  'expired' | 'registered' | 'reset' | 'passwordChanged' | 'signedOutEverywhere';
 
 interface LoginFormProps {
   next?: string;

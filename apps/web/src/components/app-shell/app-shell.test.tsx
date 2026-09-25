@@ -59,10 +59,11 @@ describe('navigation', () => {
     renderWithIntl(<AppShell>page</AppShell>);
 
     const nav = sidebar();
-    for (const name of ['Dashboard', 'Students', 'Attendance', 'Homework', 'Notices']) {
+    // Settings holds everyone's own account (password, sessions)
+    for (const name of ['Dashboard', 'Students', 'Attendance', 'Homework', 'Notices', 'Settings']) {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }
-    for (const name of ['Fees', 'Salary', 'Expenses', 'Teachers', 'Settings', 'Billing']) {
+    for (const name of ['Fees', 'Salary', 'Expenses', 'Teachers', 'Billing']) {
       expect(within(nav).queryByRole('link', { name })).toBeNull();
     }
     // A group with nothing visible is dropped entirely

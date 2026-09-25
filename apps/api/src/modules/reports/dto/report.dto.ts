@@ -4,16 +4,26 @@ export interface DefaulterItem {
   readonly studentPhone: string;
   readonly parentName?: string;
   readonly parentPhone?: string;
+  /** Overdue balance: unpaid instalments whose due date has passed */
   readonly pendingAmount: number;
+  /** Days since the oldest overdue instalment was due */
   readonly overdueDays: number;
-  readonly installmentDueDate: Date;
+  /** The oldest overdue due date (YYYY-MM-DD) */
+  readonly installmentDueDate: string;
 }
 
 export interface FeeReportResponseDto {
+  /** Final amounts of all fee plans */
   readonly totalExpected: number;
   readonly totalCollected: number;
+  /** Written off; neither collected nor still owed */
+  readonly totalWaived: number;
+  /** Still owed, whether due yet or not */
   readonly totalPending: number;
-  readonly collectionPercentage: number;
+  /** The part of totalPending that is past its due date */
+  readonly totalOverdue: number;
+  /** Collected as a share of what is collectable (expected minus waived); null when nothing is */
+  readonly collectionPercentage: number | null;
   readonly defaulterCount: number;
   readonly defaulters: DefaulterItem[];
 }
@@ -29,7 +39,10 @@ export interface StudentAttendanceItem {
 
 export interface AttendanceReportResponseDto {
   readonly totalSessions: number;
-  readonly averageAttendancePercentage: number;
+  /** Students below this percentage are listed as defaulters */
+  readonly threshold: number;
+  /** null when no attendance was marked in the range */
+  readonly averageAttendancePercentage: number | null;
   readonly defaultersCount: number;
   readonly students: StudentAttendanceItem[];
   readonly defaulters: StudentAttendanceItem[];
@@ -41,7 +54,8 @@ export interface ProfitLossResponseDto {
   readonly generalExpenses: number;
   readonly totalExpenses: number;
   readonly netProfit: number;
-  readonly profitMarginPercentage: number;
+  /** null when there was no revenue to measure against */
+  readonly profitMarginPercentage: number | null;
 }
 
 export interface ReportFilterDto {

@@ -7,8 +7,11 @@ import type { LoginInput, RegisterInput, RegisterResult, Session } from './types
 
 type Listener = () => void;
 
-/** Why the last session ended: the user signed out, or the server stopped accepting it */
-export type SessionEnd = 'signedOut' | 'expired';
+/**
+ * Why the last session ended: the user signed out (possibly after changing their password or
+ * signing out everywhere), or the server stopped accepting it
+ */
+export type SessionEnd = 'signedOut' | 'passwordChanged' | 'signedOutEverywhere' | 'expired';
 
 let current: Session | null = null;
 let endedBy: SessionEnd | null = null;
@@ -48,11 +51,11 @@ export async function register(input: RegisterInput): Promise<RegisterResult> {
   return result;
 }
 
-export async function signOut(): Promise<void> {
+export async function signOut(reason: Exclude<SessionEnd, 'expired'> = 'signedOut'): Promise<void> {
   try {
     await authApi.post('/logout');
   } finally {
-    setSession(null, 'signedOut');
+    setSession(null, reason);
   }
 }
 
