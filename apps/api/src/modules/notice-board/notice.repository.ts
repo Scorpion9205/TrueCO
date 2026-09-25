@@ -1,4 +1,7 @@
-import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import {
+  getPrismaClient,
+  ExtendedPrismaClient,
+} from '../../database/prisma/tenant-prisma.extension.js';
 
 export interface CreateNoticeInput {
   coachingId: string;
@@ -90,22 +93,20 @@ export class PrismaNoticeRepository implements INoticeRepository {
     const rawPrisma = this.prisma as any;
     const now = new Date();
 
+    // Each filter is its own OR group; spreading them into one object let the last OR replace
+    // the others (the expiry filter silently dropped the batch and audience filters)
+    const and: any[] = [];
+    if (filter?.batchId) and.push({ OR: [{ batchId: filter.batchId }, { batchId: null }] });
+    if (filter?.targetAudience) {
+      and.push({ OR: [{ targetAudience: filter.targetAudience }, { targetAudience: 'ALL' }] });
+    }
+    if (!filter?.includeExpired)
+      and.push({ OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] });
+
     return rawPrisma.notice.findMany({
-      where: {
-        coachingId,
-        deletedAt: null,
-        ...(filter?.batchId && {
-          OR: [{ batchId: filter.batchId }, { batchId: null }],
-        }),
-        ...(filter?.targetAudience && {
-          OR: [{ targetAudience: filter.targetAudience }, { targetAudience: 'ALL' }],
-        }),
-        ...(!filter?.includeExpired && {
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        }),
-      },
+      where: { coachingId, deletedAt: null, ...(and.length ? { AND: and } : {}) },
       include: { batch: true },
-      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
     });
   }
 }

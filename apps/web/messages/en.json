@@ -407,7 +407,8 @@
       "SALARY_NOT_FOUND": "This salary record no longer exists.",
       "EMAIL_TAKEN": "Someone in your institute already signs in with this email.",
       "TEACHER_NOT_FOUND": "This teacher no longer exists. Refresh the page.",
-      "TEACHER_NOT_ASSIGNED": "This teacher is no longer assigned to that batch."
+      "TEACHER_NOT_ASSIGNED": "This teacher is no longer assigned to that batch.",
+      "NOTICE_NOT_FOUND": "This notice no longer exists. Refresh the page."
     },
     "days": {
       "MON": "Mon",
@@ -1063,6 +1064,66 @@
       "added": "{name} now teaches {batch}",
       "removed": "{name} removed from {batch}",
       "remove": "Remove from {batch}"
+    }
+  },
+  "Notices": {
+    "title": "Notices",
+    "subtitle": "Announcements for your students, parents and teachers.",
+    "add": "New notice",
+    "audienceFilter": "Show notices for",
+    "filter": {
+      "any": "Everyone",
+      "STUDENTS": "Students",
+      "PARENTS": "Parents",
+      "TEACHERS": "Teachers"
+    },
+    "showExpired": "Show ended notices",
+    "audience": {
+      "ALL": "Everyone",
+      "STUDENTS": "Students",
+      "PARENTS": "Parents",
+      "TEACHERS": "Teachers"
+    },
+    "wholeInstitute": "Whole institute",
+    "pinnedBadge": "Pinned",
+    "expiredBadge": "Ended",
+    "postedOn": "Posted {date}",
+    "showingUntil": "Showing until {date}",
+    "endedOn": "Ended {date}",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinned": "Notice pinned to the top",
+    "unpinned": "Notice unpinned",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{title}”?",
+    "deleteBody": "It disappears from the notice board. Messages already sent on WhatsApp can't be taken back.",
+    "deleted": "Notice deleted",
+    "empty": {
+      "title": "No notices yet",
+      "body": "Post holidays, test schedules, fee reminders or anything your students and parents should know.",
+      "staffBody": "Notices from your institute will show up here."
+    },
+    "form": {
+      "createTitle": "New notice",
+      "editTitle": "Edit notice",
+      "title": "Title",
+      "titleMin": "Enter at least 3 characters.",
+      "content": "Message",
+      "contentMin": "Enter at least 5 characters.",
+      "contentMax": "Keep the message under {max} characters.",
+      "contentCount": "{count} / {max}",
+      "audience": "Who is it for?",
+      "batch": "Batch",
+      "until": "Show until",
+      "untilHint": "It's hidden from the board after this day.",
+      "untilPast": "Choose today or a later day.",
+      "pin": "Pin to the top",
+      "pinHint": "Pinned notices stay above newer ones.",
+      "whatsappHint": "Posting also sends this notice on WhatsApp to the people you chose, if WhatsApp is connected for your institute. Edits aren't re-sent.",
+      "post": "Post notice",
+      "posting": "Posting…",
+      "posted": "Notice posted",
+      "updated": "Notice updated"
     }
   }
 }

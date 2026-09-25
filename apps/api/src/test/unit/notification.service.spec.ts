@@ -232,4 +232,42 @@ describe('NotificationService (Phase 3 Domain Unit Tests)', () => {
       AppError,
     );
   });
+
+  describe('group recipients', () => {
+    const withResolver = (targets: any[]) =>
+      new NotificationService(
+        notificationRepo,
+        mockQueueRegistry as unknown as QueueRegistry,
+        mockEventBus,
+        { resolveRecipients: vi.fn().mockResolvedValue(targets) } as any,
+      );
+    const send = (service: NotificationService) =>
+      service.enqueueNotification(
+        {
+          channel: NotificationChannel.WHATSAPP,
+          recipient: 'batch:b1:parents',
+          recipientType: 'PARENT',
+          content: 'Holiday tomorrow',
+          idempotencyKey: 'notice.1.parent',
+        },
+        'coaching-1',
+      );
+
+    it('sends only to people with a number, never to the group token itself', async () => {
+      await send(
+        withResolver([
+          { recipientId: 'p0', name: 'No phone', recipientType: 'PARENT' },
+          { recipientId: 'p1', phone: '+919800000001', name: 'A', recipientType: 'PARENT' },
+          { recipientId: 'p2', phone: '+919800000002', name: 'B', recipientType: 'PARENT' },
+        ]),
+      );
+      const sentTo = mockQueue.add.mock.calls.map((call: any[]) => call[1].recipient);
+      expect(sentTo).toEqual(['+919800000001', '+919800000002']);
+    });
+
+    it('fails clearly when nobody can be reached', async () => {
+      await expect(send(withResolver([]))).rejects.toMatchObject({ code: 'NO_RECIPIENTS' });
+      expect(mockQueue.add).not.toHaveBeenCalled();
+    });
+  });
 });

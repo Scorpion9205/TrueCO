@@ -13,7 +13,10 @@ import { NotificationMapper } from './notification.mapper.js';
 import { NotificationChannel, NotificationStatus } from '@trueco/types';
 import { logger } from '../../common/logger/logger.service.js';
 
-import { RecipientResolverService, recipientResolverService } from './services/recipient-resolver.service.js';
+import {
+  RecipientResolverService,
+  recipientResolverService,
+} from './services/recipient-resolver.service.js';
 
 export class NotificationService {
   public constructor(
@@ -30,26 +33,34 @@ export class NotificationService {
   ): Promise<NotificationResponseDto> {
     // 1. Resolve concrete destination contact details
     const resolvedTargets = await this.resolver.resolveRecipients(dto.recipient, coachingId);
-    const target = resolvedTargets[0];
-    const destination = dto.channel === NotificationChannel.WHATSAPP
-      ? (target?.phone || dto.recipient)
-      : (target?.email || dto.recipient);
+    const destinationOf = (recipient: { phone?: string; email?: string }) =>
+      dto.channel === NotificationChannel.WHATSAPP ? recipient.phone : recipient.email;
+    // Only people reachable on this channel; a group token must never be "sent" to as an address
+    const targets = resolvedTargets.filter((recipient) => destinationOf(recipient));
+    if (targets.length === 0) {
+      throw new AppError(
+        'NO_RECIPIENTS',
+        `No one with a contact for ${dto.channel} was found for ${dto.recipient}`,
+        StatusCodes.UNPROCESSABLE_ENTITY,
+      );
+    }
+    const target = targets[0]!;
+    const destination = destinationOf(target)!;
 
     // 2. Record in database with idempotencyKey
     const record = await this.notificationRepository.createHistory({
       coachingId,
       channel: dto.channel,
       recipient: destination,
-      recipientType: target?.recipientType || dto.recipientType,
+      recipientType: target.recipientType || dto.recipientType,
       templateName: dto.templateName,
       content: dto.content,
       idempotencyKey: dto.idempotencyKey,
     });
 
     // 3. Dispatch to designated BullMQ queue with deterministic jobId for idempotency
-    const queueName = dto.channel === NotificationChannel.WHATSAPP
-      ? QUEUE_NAMES.WHATSAPP
-      : QUEUE_NAMES.EMAIL;
+    const queueName =
+      dto.channel === NotificationChannel.WHATSAPP ? QUEUE_NAMES.WHATSAPP : QUEUE_NAMES.EMAIL;
 
     const queue = this.queueRegistry.getQueue(queueName);
 
@@ -60,7 +71,7 @@ export class NotificationService {
         coachingId,
         channel: dto.channel,
         recipient: destination,
-        recipientType: target?.recipientType || dto.recipientType,
+        recipientType: target.recipientType || dto.recipientType,
         templateName: dto.templateName,
         templateLanguage: dto.templateLanguage,
         templateVariables: dto.templateVariables,
@@ -75,13 +86,10 @@ export class NotificationService {
     );
 
     // If batch/group resolution had multiple recipients, enqueue the rest
-    if (resolvedTargets.length > 1) {
-      for (let i = 1; i < resolvedTargets.length; i++) {
-        const extraTarget = resolvedTargets[i];
-        const extraDest = dto.channel === NotificationChannel.WHATSAPP
-          ? extraTarget.phone
-          : extraTarget.email;
-        if (!extraDest) continue;
+    if (targets.length > 1) {
+      for (let i = 1; i < targets.length; i++) {
+        const extraTarget = targets[i]!;
+        const extraDest = destinationOf(extraTarget)!;
 
         const extraKey = `${dto.idempotencyKey}.${extraTarget.recipientId}`;
         try {
@@ -116,7 +124,10 @@ export class NotificationService {
             },
           );
         } catch (err) {
-          logger.error(`[NotificationService] Error fanning out to extra target ${extraDest}:`, err);
+          logger.error(
+            `[NotificationService] Error fanning out to extra target ${extraDest}:`,
+            err,
+          );
         }
       }
     }
@@ -143,9 +154,13 @@ export class NotificationService {
     );
 
     if (updated) {
-      logger.info(`[NotificationService] Webhook status updated: ${providerMessageId} -> ${status}`);
+      logger.info(
+        `[NotificationService] Webhook status updated: ${providerMessageId} -> ${status}`,
+      );
     } else {
-      logger.debug(`[NotificationService] Webhook status received for unknown messageId: ${providerMessageId}`);
+      logger.debug(
+        `[NotificationService] Webhook status received for unknown messageId: ${providerMessageId}`,
+      );
     }
   }
 
@@ -164,18 +179,25 @@ export class NotificationService {
   public async retryNotification(id: string, coachingId: string): Promise<NotificationResponseDto> {
     const record = await this.notificationRepository.findById(id);
     if (!record || record.coachingId !== coachingId) {
-      throw new AppError('NOTIFICATION_NOT_FOUND', 'Notification record not found', StatusCodes.NOT_FOUND);
+      throw new AppError(
+        'NOTIFICATION_NOT_FOUND',
+        'Notification record not found',
+        StatusCodes.NOT_FOUND,
+      );
     }
 
     // Reset status to QUEUED and re-dispatch
     const newIdempotencyKey = `${record.idempotencyKey}.retry-${Date.now()}`;
-    await this.notificationRepository.updateStatus(record.idempotencyKey, NotificationStatus.QUEUED, {
-      errorMessage: undefined,
-    });
+    await this.notificationRepository.updateStatus(
+      record.idempotencyKey,
+      NotificationStatus.QUEUED,
+      {
+        errorMessage: undefined,
+      },
+    );
 
-    const queueName = record.channel === NotificationChannel.WHATSAPP
-      ? QUEUE_NAMES.WHATSAPP
-      : QUEUE_NAMES.EMAIL;
+    const queueName =
+      record.channel === NotificationChannel.WHATSAPP ? QUEUE_NAMES.WHATSAPP : QUEUE_NAMES.EMAIL;
 
     const queue = this.queueRegistry.getQueue(queueName);
     await queue.add(

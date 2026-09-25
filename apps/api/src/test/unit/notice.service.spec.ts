@@ -9,6 +9,12 @@ import {
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
 import { NOTICE_EVENTS } from '../../modules/notice-board/notice.events.js';
+import { PrismaNoticeRepository } from '../../modules/notice-board/notice.repository.js';
+import {
+  createNoticeSchema,
+  noticeFilterSchema,
+} from '../../modules/notice-board/validators/notice.validator.js';
+import { noticeRecipients } from '../../modules/notifications/notification.subscribers.js';
 
 class InMemoryNoticeRepository implements INoticeRepository {
   public notices: Map<string, any> = new Map();
@@ -199,3 +205,54 @@ describe('NoticeService (Phase 5 Notice Board Unit Tests)', () => {
     });
   });
 });
+
+describe('PrismaNoticeRepository.findMany', () => {
+  it('applies the batch, audience and expiry filters together', async () => {
+    let where: any;
+    const prisma = { notice: { findMany: async (args: any) => ((where = args.where), []) } };
+    await new PrismaNoticeRepository(prisma as any).findMany('c1', {
+      batchId: 'b1',
+      targetAudience: 'PARENTS',
+    });
+    expect(where.coachingId).toBe('c1');
+    expect(where.AND).toHaveLength(3);
+    expect(where.AND[0]).toEqual({ OR: [{ batchId: 'b1' }, { batchId: null }] });
+    expect(where.AND[1]).toEqual({ OR: [{ targetAudience: 'PARENTS' }, { targetAudience: 'ALL' }] });
+    expect(where.AND[2].OR[0]).toEqual({ expiresAt: null });
+  });
+});
+
+describe('notice validation', () => {
+  const notice = { title: 'Holiday', content: 'Closed on Monday for Diwali.' };
+
+  it('accepts an expiry with an Indian time offset', () => {
+    expect(
+      createNoticeSchema.safeParse({ ...notice, expiresAt: '2026-10-20T23:59:59+05:30' }).success,
+    ).toBe(true);
+  });
+
+  it('rejects unknown audiences and fields, and blank text', () => {
+    expect(createNoticeSchema.safeParse({ ...notice, targetAudience: 'EVERYONE' }).success).toBe(false);
+    expect(createNoticeSchema.safeParse({ ...notice, sendSms: true }).success).toBe(false);
+    expect(createNoticeSchema.safeParse({ ...notice, title: '     ' }).success).toBe(false);
+    expect(noticeFilterSchema.safeParse({ targetAudience: 'X' }).success).toBe(false);
+  });
+});
+
+describe('who a notice is sent to', () => {
+  it('sends to the chosen audience only', () => {
+    expect(noticeRecipients('TEACHERS', 'b1')).toEqual([{ token: 'teachers:b1', type: 'TEACHER' }]);
+    expect(noticeRecipients('PARENTS', null)).toEqual([
+      { token: 'batch:all:parents', type: 'PARENT' },
+    ]);
+  });
+
+  it('sends an everyone notice to students, parents and teachers', () => {
+    expect(noticeRecipients('ALL', 'b1').map((group) => group.token)).toEqual([
+      'batch:b1:students',
+      'batch:b1:parents',
+      'teachers:b1',
+    ]);
+  });
+});
+

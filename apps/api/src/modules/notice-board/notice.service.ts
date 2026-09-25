@@ -49,6 +49,7 @@ export class NoticeService {
           coachingId,
           batchId: responseDto.batchId,
           title: responseDto.title,
+          content: responseDto.content,
           targetAudience: responseDto.targetAudience,
         },
         correlationId,

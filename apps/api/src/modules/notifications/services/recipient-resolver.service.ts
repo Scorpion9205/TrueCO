@@ -1,4 +1,7 @@
-import { ExtendedPrismaClient, getPrismaClient } from '../../../database/prisma/tenant-prisma.extension.js';
+import {
+  ExtendedPrismaClient,
+  getPrismaClient,
+} from '../../../database/prisma/tenant-prisma.extension.js';
 import { logger } from '../../../common/logger/logger.service.js';
 
 export interface ResolvedRecipient {
@@ -73,14 +76,18 @@ export class RecipientResolverService {
       }
 
       // Find primary parent or first linked parent
-      const sp = student.studentParents?.find((p: any) => p.isPrimary) || student.studentParents?.[0];
+      const sp =
+        student.studentParents?.find((p: any) => p.isPrimary) || student.studentParents?.[0];
       if (sp?.parent) {
         return [
           {
             recipientId: sp.parent.id,
             phone: sp.parent.phone,
             email: sp.parent.email || undefined,
-            name: sp.parent.name || [sp.parent.firstName, sp.parent.lastName].filter(Boolean).join(' ') || 'Parent',
+            name:
+              sp.parent.name ||
+              [sp.parent.firstName, sp.parent.lastName].filter(Boolean).join(' ') ||
+              'Parent',
             recipientType: 'PARENT',
           },
         ];
@@ -126,37 +133,94 @@ export class RecipientResolverService {
       ];
     }
 
-    // 3. batch:<batchId>:students
-    if (parts[0] === 'batch') {
-      const batchId = parts[1];
-      const enrollments = await (this.prisma as any).batchStudent.findMany({
-        // batch_students has no deletedAt; exclude deleted students via the relation
-        where: { batchId, coachingId, leftAt: null, student: { deletedAt: null } },
-        include: {
-          student: true,
-        },
-      });
-
-      return enrollments
-        .filter((e: any) => e.student && !e.student.deletedAt)
-        .map((e: any) => ({
-          recipientId: e.student.id,
-          phone: e.student.phone || undefined,
-          email: e.student.email || undefined,
-          name: `${e.student.firstName} ${e.student.lastName}`,
+    // 3. batch:<batchId|all>:students and batch:<batchId|all>:parents ("all" = the whole coaching)
+    if (parts[0] === 'batch' && parts[1]) {
+      const students = await this.findStudents(parts[1] === 'all' ? null : parts[1], coachingId);
+      if (parts[2] === 'parents') return this.parentsOf(students);
+      if (!parts[2] || parts[2] === 'students') {
+        return students.map((student: any) => ({
+          recipientId: student.id,
+          phone: student.phone || undefined,
+          email: student.email || undefined,
+          name: `${student.firstName} ${student.lastName}`,
           recipientType: 'STUDENT' as const,
         }));
+      }
     }
 
-    // Fallback: unrecognized format, return as raw string
-    return [
-      {
-        recipientId: recipientToken,
-        phone: recipientToken,
-        name: 'Direct',
+    // 4. teachers:<batchId|all> (active teachers; for a batch, those assigned to it)
+    if (parts[0] === 'teachers' && parts[1]) {
+      const teachers = await (this.prisma as any).teacher.findMany({
+        where: {
+          coachingId,
+          deletedAt: null,
+          isActive: true,
+          ...(parts[1] === 'all' ? {} : { teacherBatches: { some: { batchId: parts[1] } } }),
+        },
+      });
+      return teachers.map((teacher: any) => ({
+        recipientId: teacher.id,
+        phone: teacher.phone || undefined,
+        email: teacher.email || undefined,
+        name: teacher.name,
+        recipientType: 'TEACHER' as const,
+      }));
+    }
+
+    // 5. coaching:<coachingId>:owner
+    if (parts[0] === 'coaching' && parts[2] === 'owner') {
+      const owners = await (this.prisma as any).user.findMany({
+        where: {
+          coachingId,
+          deletedAt: null,
+          isActive: true,
+          userRoles: { some: { role: { code: 'OWNER' } } },
+        },
+      });
+      return owners.map((owner: any) => ({
+        recipientId: owner.id,
+        phone: owner.phone || undefined,
+        email: owner.email || undefined,
+        name: owner.name,
+        recipientType: 'TEACHER' as const,
+      }));
+    }
+
+    // Unknown formats resolve to nobody; sending to the token itself as a "phone number" would
+    // only fail at the provider (or worse, reach a real number)
+    logger.warn(`[RecipientResolver] Unrecognised recipient token: ${recipientToken}`);
+    return [];
+  }
+
+  /** Active students currently in the batch, or in the whole coaching when batchId is null */
+  private async findStudents(batchId: string | null, coachingId: string): Promise<any[]> {
+    const where: any = { coachingId, deletedAt: null, isActive: true };
+    if (batchId) where.batchStudents = { some: { batchId, leftAt: null } };
+    return (this.prisma as any).student.findMany({
+      where,
+      include: { studentParents: { include: { parent: true } } },
+    });
+  }
+
+  /** Each student's primary parent (or first linked), once per parent even with siblings */
+  private parentsOf(students: any[]): ResolvedRecipient[] {
+    const seen = new Set<string>();
+    const parents: ResolvedRecipient[] = [];
+    for (const student of students) {
+      const link =
+        student.studentParents?.find((p: any) => p.isPrimary) ?? student.studentParents?.[0];
+      const parent = link?.parent;
+      if (!parent || parent.deletedAt || seen.has(parent.id)) continue;
+      seen.add(parent.id);
+      parents.push({
+        recipientId: parent.id,
+        phone: parent.phone,
+        email: parent.email || undefined,
+        name: parent.name || 'Parent',
         recipientType: 'PARENT',
-      },
-    ];
+      });
+    }
+    return parents;
   }
 }
 
