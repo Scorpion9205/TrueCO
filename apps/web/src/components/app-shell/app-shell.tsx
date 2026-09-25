@@ -8,6 +8,7 @@ import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCoachingProfile } from '@/lib/queries';
+import { SectionGuard } from './section-guard';
 import { SidebarNav } from './sidebar-nav';
 import { SubscriptionBanner } from './subscription-banner';
 import { UserMenu } from './user-menu';
@@ -98,7 +99,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         <main id="content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 print:p-0">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
+          <div className="mx-auto w-full max-w-7xl">
+            <SectionGuard>{children}</SectionGuard>
+          </div>
         </main>
       </div>
     </div>

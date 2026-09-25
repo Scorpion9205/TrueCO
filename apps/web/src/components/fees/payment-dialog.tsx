@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/select';
 import { toast } from '@/components/ui/toaster';
 import {
   type FeeInstallment,
+  parseRupees,
   PAYMENT_METHODS,
   type PaymentMethod,
   toPaise,
@@ -20,7 +21,6 @@ import {
 } from '@/lib/fees';
 import { formatCurrency } from '@/lib/format';
 import { useApiError } from '@/lib/use-api-error';
-import { parseRupees } from './fee-plan-dialog';
 
 interface PaymentDialogProps {
   open: boolean;

@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Receipt } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -24,8 +25,10 @@ import {
 } from '@/lib/fees';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { useApiError } from '@/lib/use-api-error';
-import { FeePlanDialog } from './fee-plan-dialog';
-import { PaymentDialog } from './payment-dialog';
+
+// Forms are left out of the page's first download and load just after it
+const FeePlanDialog = dynamic(() => import('./fee-plan-dialog').then((m) => m.FeePlanDialog));
+const PaymentDialog = dynamic(() => import('./payment-dialog').then((m) => m.PaymentDialog));
 
 const STATUS_TONES = {
   PENDING: 'neutral',

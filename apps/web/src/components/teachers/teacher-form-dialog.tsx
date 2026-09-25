@@ -7,7 +7,6 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { SubmitButton } from '@/components/auth/submit-button';
-import { parseRupees } from '@/components/fees/fee-plan-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -17,6 +16,7 @@ import { PasswordInput } from '@/components/ui/password-input';
 import { toast } from '@/components/ui/toaster';
 import { changedFields, type Teacher } from '@/lib/academics';
 import { todayInIndia } from '@/lib/dates';
+import { parseRupees } from '@/lib/fees';
 import { isValidPhone, normalisePhone } from '@/lib/phone';
 import { useCoachingProfile } from '@/lib/queries';
 import {

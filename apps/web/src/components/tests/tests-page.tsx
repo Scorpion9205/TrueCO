@@ -1,6 +1,7 @@
 'use client';
 
 import { ClipboardCheck, Plus } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -16,7 +17,9 @@ import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
 import { formatDate } from '@/lib/format';
 import type { TeachingBatch } from '@/lib/teaching-batches';
-import { TestFormDialog } from './test-form-dialog';
+
+// The form is left out of the page's first download and loads just after it
+const TestFormDialog = dynamic(() => import('./test-form-dialog').then((m) => m.TestFormDialog));
 
 /** Marks to at most two decimals, without trailing zeros: 37.5, 40 */
 export function formatMarks(value: number): string {

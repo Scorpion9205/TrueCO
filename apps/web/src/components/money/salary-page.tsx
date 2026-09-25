@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { KpiCard } from '@/components/dashboard/kpi-card';
 import { QueryError } from '@/components/dashboard/query-error';
-import { parseRupees } from '@/components/fees/fee-plan-dialog';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ import { toast } from '@/components/ui/toaster';
 import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
 import { todayInIndia } from '@/lib/dates';
-import { PAYMENT_METHODS, type PaymentMethod, sumRupees } from '@/lib/fees';
+import { parseRupees, PAYMENT_METHODS, type PaymentMethod, sumRupees } from '@/lib/fees';
 import { formatCurrency, formatDate } from '@/lib/format';
 import {
   monthParts,

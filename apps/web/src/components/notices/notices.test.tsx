@@ -107,7 +107,7 @@ describe('NoticesPage', () => {
     renderWithIntl(<NoticesPage />);
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'New notice' }))[0]!);
-    const dialog = screen.getByRole('dialog', { name: 'New notice' });
+    const dialog = await screen.findByRole('dialog', { name: 'New notice' });
     await userEvent.type(within(dialog).getByLabelText('Title'), '  PTM on Saturday ');
     await userEvent.type(within(dialog).getByLabelText('Message'), 'Please come at 10 AM.');
     await userEvent.click(within(dialog).getByLabelText('Parents'));
@@ -135,7 +135,7 @@ describe('NoticesPage', () => {
     renderWithIntl(<NoticesPage />);
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'New notice' }))[0]!);
-    const dialog = screen.getByRole('dialog', { name: 'New notice' });
+    const dialog = await screen.findByRole('dialog', { name: 'New notice' });
     await userEvent.type(within(dialog).getByLabelText('Title'), 'Hi');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Post notice' }));
 
@@ -156,7 +156,7 @@ describe('NoticesPage', () => {
     renderWithIntl(<NoticesPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit: Diwali holiday' }));
-    const dialog = screen.getByRole('dialog', { name: 'Edit notice' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit notice' });
     await userEvent.clear(within(dialog).getByLabelText(/Show until/));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 

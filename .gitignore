@@ -17,3 +17,8 @@ coverage
 
 # Generated local secrets for the docker-compose stack
 infra/docker/compose.env
+
+# Playwright: saved sessions and failure reports
+apps/web/e2e/.auth/
+apps/web/test-results/
+apps/web/playwright-report/

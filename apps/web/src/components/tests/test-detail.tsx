@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowLeft, Loader2, MessageCircle, Pencil, Trash2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -27,8 +28,10 @@ import { useSession } from '@/lib/auth/use-session';
 import { formatDate } from '@/lib/format';
 import { useApiError } from '@/lib/use-api-error';
 import { cn } from '@/lib/utils';
-import { TestFormDialog } from './test-form-dialog';
 import { formatMarks } from './tests-page';
+
+// The form is left out of the page's first download and loads just after it
+const TestFormDialog = dynamic(() => import('./test-form-dialog').then((m) => m.TestFormDialog));
 
 export function TestDetail({ id }: { id: string }) {
   const t = useTranslations('Tests.detail');

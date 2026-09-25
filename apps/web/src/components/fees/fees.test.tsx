@@ -19,7 +19,8 @@ import {
 import { numberInWords, rupeesInWords } from '@/lib/money-words';
 import { renderWithIntl } from '@/test/render';
 import { OWNER, signInAs, TEACHER } from '@/test/session';
-import { FeePlanDialog, parseRupees } from './fee-plan-dialog';
+import { parseRupees } from '@/lib/fees';
+import { FeePlanDialog } from './fee-plan-dialog';
 import { daysBetween, FeesPage, groupOverdue } from './fees-page';
 import { PaymentDialog } from './payment-dialog';
 import { ReceiptView } from './receipt-view';

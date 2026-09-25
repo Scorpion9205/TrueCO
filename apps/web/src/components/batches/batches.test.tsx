@@ -174,7 +174,7 @@ describe('BatchDetail', () => {
     renderWithIntl(<BatchDetail id="b1" />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Add students' }));
-    const dialog = screen.getByRole('dialog', { name: 'Add students' });
+    const dialog = await screen.findByRole('dialog', { name: 'Add students' });
     await within(dialog).findByText('Kabir Sharma');
     expect(within(dialog).getByText('Already in batch')).toBeInTheDocument();
 
@@ -203,7 +203,7 @@ describe('BatchDetail', () => {
     renderWithIntl(<BatchDetail id="b1" />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    const dialog = screen.getByRole('dialog', { name: 'Edit batch' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit batch' });
     expect(within(dialog).getByLabelText('Batch name')).toHaveValue('Class 10 Morning');
     expect(within(dialog).queryByText('Teachers')).toBeNull();
     await userEvent.clear(within(dialog).getByLabelText('Subject'));

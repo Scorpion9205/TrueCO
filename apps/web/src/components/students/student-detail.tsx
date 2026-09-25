@@ -12,6 +12,7 @@ import {
   UserRoundX,
   X,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -41,10 +42,14 @@ import { useSession } from '@/lib/auth/use-session';
 import { formatDate } from '@/lib/format';
 import { whatsappLink } from '@/lib/phone';
 import { useApiError } from '@/lib/use-api-error';
-import { ParentDialog } from './parent-dialog';
-import { StudentFormDialog } from './student-form-dialog';
 import { StudentResults } from './student-results';
 import { StudentFees } from '@/components/fees/student-fees';
+
+// Forms are left out of the page's first download and load just after it
+const ParentDialog = dynamic(() => import('./parent-dialog').then((m) => m.ParentDialog));
+const StudentFormDialog = dynamic(() =>
+  import('./student-form-dialog').then((m) => m.StudentFormDialog),
+);
 
 export function StudentDetail({ id }: { id: string }) {
   const t = useTranslations('Students.detail');

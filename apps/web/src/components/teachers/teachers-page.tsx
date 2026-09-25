@@ -1,6 +1,7 @@
 'use client';
 
 import { GraduationCap, Layers, Mail, Pencil, Phone, Plus, SearchX } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
@@ -21,8 +22,14 @@ import { useSession } from '@/lib/auth/use-session';
 import { formatCurrency } from '@/lib/format';
 import { useUpdateTeacher } from '@/lib/teachers';
 import { useApiError } from '@/lib/use-api-error';
-import { TeacherBatchesDialog } from './teacher-batches-dialog';
-import { TeacherFormDialog } from './teacher-form-dialog';
+
+// Forms are left out of the page's first download and load just after it
+const TeacherBatchesDialog = dynamic(() =>
+  import('./teacher-batches-dialog').then((m) => m.TeacherBatchesDialog),
+);
+const TeacherFormDialog = dynamic(() =>
+  import('./teacher-form-dialog').then((m) => m.TeacherFormDialog),
+);
 
 const STATUSES = ['active', 'inactive', 'all'] as const;
 type Status = (typeof STATUSES)[number];

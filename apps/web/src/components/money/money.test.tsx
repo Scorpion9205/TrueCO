@@ -120,7 +120,7 @@ describe('ExpensesPage', () => {
     renderWithIntl(<ExpensesPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Add expense' }));
-    const dialog = screen.getByRole('dialog', { name: 'Add expense' });
+    const dialog = await screen.findByRole('dialog', { name: 'Add expense' });
     await userEvent.type(within(dialog).getByLabelText('What was it for?'), 'Water cans for Sept');
     await userEvent.selectOptions(within(dialog).getByLabelText('Category'), '__custom__');
     await userEvent.type(within(dialog).getByLabelText('Category name'), 'Water');
@@ -152,7 +152,7 @@ describe('ExpensesPage', () => {
     renderWithIntl(<ExpensesPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit: September rent' }));
-    const dialog = screen.getByRole('dialog', { name: 'Edit expense' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit expense' });
     await userEvent.clear(within(dialog).getByLabelText(/Link to bill/));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -262,7 +262,7 @@ describe('SalaryPage', () => {
     renderWithIntl(<SalaryPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Mark paid' }));
-    const dialog = screen.getByRole('dialog', { name: 'Mark salary paid' });
+    const dialog = await screen.findByRole('dialog', { name: 'Mark salary paid' });
     await userEvent.selectOptions(within(dialog).getByLabelText('Paid by'), 'UPI');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Mark paid' }));
 

@@ -21,6 +21,7 @@ import {
   toPaise,
   useCreateFeePlan,
 } from '@/lib/fees';
+import { parseRupees } from '@/lib/fees';
 import { formatCurrency } from '@/lib/format';
 import { currentAcademicYear } from '@/lib/schedule';
 import { useApiError } from '@/lib/use-api-error';
@@ -45,14 +46,6 @@ export function FeePlanDialog({ open, onOpenChange, studentId }: FeePlanDialogPr
       {open ? <FeePlanForm studentId={studentId} onDone={() => onOpenChange(false)} /> : null}
     </Dialog>
   );
-}
-
-/** A rupee amount as typed: "25000", "2,500.50" (commas allowed), at most two decimals */
-export function parseRupees(value: string): number | null {
-  const cleaned = value.replace(/,/g, '').trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
-  const n = Number(cleaned);
-  return n > 0 ? n : null;
 }
 
 interface Row {

@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, SearchX, Users } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -20,7 +21,11 @@ import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { StudentFormDialog } from './student-form-dialog';
+
+// Forms are left out of the page's first download and load just after it
+const StudentFormDialog = dynamic(() =>
+  import('./student-form-dialog').then((m) => m.StudentFormDialog),
+);
 
 const STATUSES = ['active', 'inactive', 'all'] as const;
 

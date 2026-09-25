@@ -9,7 +9,6 @@ import { __resetSessionForTests, getSession, getSessionEnd } from '@/lib/auth/se
 import { renderWithIntl } from '@/test/render';
 import { OWNER, signInAs, TEACHER } from '@/test/session';
 import { AppShell } from './app-shell';
-import { ComingSoon } from './coming-soon';
 import { isActive, NAV_ITEMS, visibleNav } from './nav-config';
 import { initials } from './user-menu';
 
@@ -168,18 +167,22 @@ describe('app shell', () => {
   });
 });
 
-describe('ComingSoon', () => {
-  it('announces an unbuilt section', () => {
-    signInAs(OWNER);
-    renderWithIntl(<ComingSoon navKey="fees" />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Fees' })).toBeInTheDocument();
-    expect(screen.getByText('Coming soon')).toBeInTheDocument();
+describe('section access', () => {
+  it("explains a section outside the user's role instead of loading it", async () => {
+    signInAs(TEACHER);
+    coaching();
+    pathname = '/app/salary';
+    renderWithIntl(<AppShell>salary page</AppShell>);
+    expect(await screen.findByText("You don't have access")).toBeInTheDocument();
+    expect(screen.queryByText('salary page')).toBeNull();
   });
 
-  it('refuses a section outside the user’s permissions', () => {
+  it('shows pages the role includes, sub-pages too', async () => {
     signInAs(TEACHER);
-    renderWithIntl(<ComingSoon navKey="salary" />);
-    expect(screen.getByText("You don't have access")).toBeInTheDocument();
+    coaching();
+    pathname = '/app/students/42';
+    renderWithIntl(<AppShell>student page</AppShell>);
+    expect(await screen.findByText('student page')).toBeInTheDocument();
   });
 });
 
