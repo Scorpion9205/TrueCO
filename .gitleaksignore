@@ -1,0 +1,2 @@
+# False positive: a list of password characters (not a secret), since rewritten so it no longer matches
+2d3f1333a2177c328e288fdea968d415d9abd430:apps/web/src/lib/teachers.ts:generic-api-key:34

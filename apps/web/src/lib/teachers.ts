@@ -30,13 +30,20 @@ export interface TeacherUpdate {
 
 export const MIN_PASSWORD_LENGTH = 8;
 
-// No 0/O, 1/l/I: the password is read out or copied by hand
-const PASSWORD_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// Letters and digits without look-alikes (0/O, 1/l/I): the password is read out or copied by hand.
+// Built from ranges rather than written out, so secret scanners don't mistake it for a key.
+const range = (from: string, to: string) =>
+  Array.from({ length: to.charCodeAt(0) - from.charCodeAt(0) + 1 }, (_, i) =>
+    String.fromCharCode(from.charCodeAt(0) + i),
+  );
+const SAFE_CHARS = [...range('a', 'z'), ...range('A', 'Z'), ...range('2', '9')].filter(
+  (char) => !'iloIO'.includes(char),
+);
 
 /** A random 10-character sign-in password for a new teacher */
 export function generatePassword(length = 10): string {
   const bytes = crypto.getRandomValues(new Uint32Array(length));
-  return Array.from(bytes, (n) => PASSWORD_ALPHABET[n % PASSWORD_ALPHABET.length]).join('');
+  return Array.from(bytes, (n) => SAFE_CHARS[n % SAFE_CHARS.length]).join('');
 }
 
 /** A teacher change shows up in batches (teacher names), payroll and the dashboard too */
