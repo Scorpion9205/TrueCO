@@ -62,7 +62,9 @@ export class BatchController {
     const traceId = RequestContextService.getTraceId();
 
     await this.batchService.enrollStudent(req.params.id, validated, coachingId, userId, traceId);
-    res.status(StatusCodes.OK).json({ data: { message: 'Student successfully enrolled in batch' } });
+    res
+      .status(StatusCodes.OK)
+      .json({ data: { message: 'Student successfully enrolled in batch' } });
   };
 
   public withdrawStudent = async (req: Request, res: Response): Promise<void> => {
@@ -75,7 +77,14 @@ export class BatchController {
     const coachingId = RequestContextService.getRequiredCoachingId();
 
     await this.batchService.assignTeacher(req.params.id, validated, coachingId);
-    res.status(StatusCodes.OK).json({ data: { message: 'Teacher assigned to batch successfully' } });
+    res
+      .status(StatusCodes.OK)
+      .json({ data: { message: 'Teacher assigned to batch successfully' } });
+  };
+
+  public removeTeacher = async (req: Request, res: Response): Promise<void> => {
+    await this.batchService.removeTeacher(req.params.id, req.params.teacherId);
+    res.status(StatusCodes.OK).json({ data: { message: 'Teacher removed from batch' } });
   };
 
   public getStudents = async (req: Request, res: Response): Promise<void> => {
@@ -91,6 +100,8 @@ export class BatchController {
     const traceId = RequestContextService.getTraceId();
 
     await this.batchService.transferStudent(fromBatchId, validated, coachingId, userId, traceId);
-    res.status(StatusCodes.OK).json({ data: { message: 'Student transferred to target batch successfully' } });
+    res
+      .status(StatusCodes.OK)
+      .json({ data: { message: 'Student transferred to target batch successfully' } });
   };
 }

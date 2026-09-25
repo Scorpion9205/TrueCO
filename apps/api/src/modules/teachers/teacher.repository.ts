@@ -1,4 +1,7 @@
-import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import {
+  getPrismaClient,
+  ExtendedPrismaClient,
+} from '../../database/prisma/tenant-prisma.extension.js';
 import { RoleType } from '@trueco/types';
 
 export interface CreateTeacherTransactionInput {
@@ -18,8 +21,15 @@ export interface ITeacherRepository {
   findByUserId(userId: string): Promise<any | null>;
   findByPhone(phone: string): Promise<any | null>;
   findMany(filters?: { isActive?: boolean; search?: string }): Promise<any[]>;
+  /** Whether any account in this coaching (deleted ones too) already signs in with this email */
+  emailInUse(email: string): Promise<boolean>;
+  /** Updates the profile and keeps the teacher's login account's name and phone in step */
   update(id: string, data: any): Promise<any>;
 }
+
+const WITH_BATCHES = {
+  teacherBatches: { where: { batch: { deletedAt: null } }, include: { batch: true } },
+} as const;
 
 export class PrismaTeacherRepository implements ITeacherRepository {
   public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
@@ -76,9 +86,7 @@ export class PrismaTeacherRepository implements ITeacherRepository {
           monthlySalary: input.monthlySalary,
           joiningDate: input.joiningDate,
         },
-        include: {
-          teacherBatches: { include: { batch: true } },
-        },
+        include: WITH_BATCHES,
       });
 
       return teacher;
@@ -88,27 +96,21 @@ export class PrismaTeacherRepository implements ITeacherRepository {
   public async findById(id: string): Promise<any | null> {
     return (this.prisma as any).teacher.findFirst({
       where: { id, deletedAt: null },
-      include: {
-        teacherBatches: { include: { batch: true } },
-      },
+      include: WITH_BATCHES,
     });
   }
 
   public async findByUserId(userId: string): Promise<any | null> {
     return (this.prisma as any).teacher.findFirst({
       where: { userId, deletedAt: null },
-      include: {
-        teacherBatches: { include: { batch: true } },
-      },
+      include: WITH_BATCHES,
     });
   }
 
   public async findByPhone(phone: string): Promise<any | null> {
     return (this.prisma as any).teacher.findFirst({
       where: { phone: phone.trim(), deletedAt: null },
-      include: {
-        teacherBatches: { include: { batch: true } },
-      },
+      include: WITH_BATCHES,
     });
   }
 
@@ -127,20 +129,33 @@ export class PrismaTeacherRepository implements ITeacherRepository {
 
     return (this.prisma as any).teacher.findMany({
       where,
-      include: {
-        teacherBatches: { include: { batch: true } },
-      },
+      include: WITH_BATCHES,
       orderBy: { name: 'asc' },
     });
   }
 
+  public async emailInUse(email: string): Promise<boolean> {
+    // The unique index covers deleted accounts too, so they count as taken
+    const user = await (this.prisma as any).user.findFirst({
+      where: { email: email.toLowerCase().trim() },
+      select: { id: true },
+    });
+    return Boolean(user);
+  }
+
   public async update(id: string, data: any): Promise<any> {
-    return (this.prisma as any).teacher.update({
-      where: { id },
-      data,
-      include: {
-        teacherBatches: { include: { batch: true } },
-      },
+    return (this.prisma as any).$transaction(async (tx: any) => {
+      const teacher = await tx.teacher.update({ where: { id }, data, include: WITH_BATCHES });
+      if (data.name !== undefined || data.phone !== undefined) {
+        await tx.user.update({
+          where: { id: teacher.userId },
+          data: {
+            ...(data.name !== undefined ? { name: data.name } : {}),
+            ...(data.phone !== undefined ? { phone: data.phone } : {}),
+          },
+        });
+      }
+      return teacher;
     });
   }
 }

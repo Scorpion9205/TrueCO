@@ -12,6 +12,7 @@ import {
   Trash2,
   UserMinus,
   Users,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -44,6 +45,7 @@ import {
 } from '@/lib/academics';
 import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
+import { useRemoveTeacherFromBatch } from '@/lib/teachers';
 import { useApiError } from '@/lib/use-api-error';
 import { BatchFormDialog } from './batch-form-dialog';
 import { ScheduleText } from './batches-page';
@@ -92,6 +94,7 @@ function BatchView({ batch, back }: { batch: Batch; back: ReactNode }) {
   const canDelete = can(user, 'batches:delete');
   const students = useBatchStudents(batch.id);
   const withdraw = useWithdrawStudent();
+  const removeTeacher = useRemoveTeacherFromBatch();
   const update = useUpdateBatch(batch.id);
   const remove = useDeleteBatch();
   const [editing, setEditing] = useState(false);
@@ -111,6 +114,15 @@ function BatchView({ batch, back }: { batch: Batch; back: ReactNode }) {
       toast.error(describeError(error));
     }
     setLeaving(null);
+  };
+
+  const unassign = async (teacherId: string, name: string) => {
+    try {
+      await removeTeacher.mutateAsync({ batchId: batch.id, teacherId });
+      toast.success(t('detail.teacherRemoved', { name }));
+    } catch (error) {
+      toast.error(describeError(error));
+    }
   };
 
   const setActive = async (isActive: boolean) => {
@@ -269,8 +281,20 @@ function BatchView({ batch, back }: { batch: Batch; back: ReactNode }) {
                 <ul className="flex flex-col gap-2">
                   {teachers.map((teacher) => (
                     <li key={teacher.teacherId} className="flex items-center gap-2 text-sm">
-                      <GraduationCap className="size-4 text-primary" aria-hidden />
-                      {teacher.teacherName}
+                      <GraduationCap className="size-4 shrink-0 text-primary" aria-hidden />
+                      <span className="min-w-0 flex-1 truncate">{teacher.teacherName}</span>
+                      {canManage ? (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-8"
+                          disabled={removeTeacher.isPending}
+                          aria-label={t('detail.removeTeacher', { name: teacher.teacherName })}
+                          onClick={() => void unassign(teacher.teacherId, teacher.teacherName)}
+                        >
+                          <X aria-hidden />
+                        </Button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

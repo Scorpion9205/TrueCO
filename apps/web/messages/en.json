@@ -399,7 +399,15 @@
       "INSTALLMENT_WAIVED": "This instalment was waived, so it cannot take a payment.",
       "CANNOT_WAIVE_PAID": "A fully paid instalment cannot be waived.",
       "INSTALLMENT_NOT_WAIVABLE": "This instalment can no longer be waived.",
-      "INSTALLMENT_NOT_FOUND": "This instalment no longer exists."
+      "INSTALLMENT_NOT_FOUND": "This instalment no longer exists.",
+      "EXPENSE_NOT_FOUND": "This expense no longer exists.",
+      "SALARY_ALREADY_GENERATED": "This month's salary was already added for this teacher.",
+      "SALARY_ALREADY_PAID": "This salary has already been paid.",
+      "SALARY_AMOUNT_REQUIRED": "Enter the salary amount for this teacher.",
+      "SALARY_NOT_FOUND": "This salary record no longer exists.",
+      "EMAIL_TAKEN": "Someone in your institute already signs in with this email.",
+      "TEACHER_NOT_FOUND": "This teacher no longer exists. Refresh the page.",
+      "TEACHER_NOT_ASSIGNED": "This teacher is no longer assigned to that batch."
     },
     "days": {
       "MON": "Mon",
@@ -422,6 +430,11 @@
       "noBatchesOwner": "Create a batch and add students first.",
       "noBatchesTeacher": "You haven't been assigned to a batch yet. Ask your institute owner to add you to one.",
       "goToBatches": "Go to batches"
+    },
+    "month": {
+      "label": "Month",
+      "previous": "Previous month",
+      "next": "Next month"
     }
   },
   "Students": {
@@ -573,7 +586,9 @@
       "deleteTitle": "Delete {name}?",
       "deleteBody": "The batch disappears from your lists. Past attendance and test results for it are kept.",
       "deleteBlocked": "{count, plural, one {# student is} other {# students are}} still in this batch. Remove them or move them to another batch first — or mark the batch inactive to hide it from daily use.",
-      "deleted": "{name} deleted"
+      "deleted": "{name} deleted",
+      "removeTeacher": "Remove {name} from this batch",
+      "teacherRemoved": "{name} removed from this batch"
     }
   },
   "Attendance": {
@@ -871,6 +886,183 @@
       "note": "Note",
       "footer": "This is a computer-generated receipt.",
       "notFound": "This receipt could not be found."
+    }
+  },
+  "Expenses": {
+    "title": "Expenses",
+    "add": "Add expense",
+    "kpi": {
+      "spent": "Expenses this month",
+      "count": "{count, plural, =0 {No expenses} one {# expense} other {# expenses}}",
+      "salaries": "Salaries paid",
+      "outgoing": "Total outgoing",
+      "outgoingHint": "Expenses plus salaries paid"
+    },
+    "byCategory": "By category",
+    "category": {
+      "RENT": "Rent",
+      "UTILITIES": "Electricity & utilities",
+      "STATIONERY": "Stationery & printing",
+      "MARKETING": "Marketing",
+      "MAINTENANCE": "Repairs & maintenance",
+      "TRAVEL": "Travel",
+      "SALARY": "Salary",
+      "OTHER": "Other"
+    },
+    "empty": {
+      "title": "No expenses this month",
+      "body": "Record rent, bills and purchases to see where money goes each month."
+    },
+    "receipt": "Receipt",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{name}”?",
+    "deleteBody": "This expense will be removed from your monthly totals.",
+    "deleted": "Expense deleted",
+    "form": {
+      "createTitle": "Add expense",
+      "editTitle": "Edit expense",
+      "title": "What was it for?",
+      "titlePlaceholder": "e.g. September rent",
+      "category": "Category",
+      "customCategory": "Category name",
+      "amount": "Amount (₹)",
+      "date": "Date",
+      "method": "Paid by",
+      "receiptUrl": "Link to bill or receipt (optional)",
+      "remarks": "Note (optional)",
+      "invalidUrl": "Enter a full link starting with https://",
+      "create": "Add expense",
+      "creating": "Adding…",
+      "created": "Expense added",
+      "updated": "Changes saved"
+    }
+  },
+  "Salary": {
+    "title": "Salary",
+    "kpi": {
+      "payroll": "Payroll this month",
+      "paid": "Paid",
+      "pending": "Still to pay"
+    },
+    "columns": {
+      "teacher": "Teacher",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "status": {
+      "PENDING": "To pay",
+      "PAID": "Paid",
+      "none": "Not added"
+    },
+    "paidOn": "Paid {date} · {method}",
+    "noDefault": "No monthly salary set",
+    "generate": "Add salary",
+    "generateAll": "Add salaries for everyone",
+    "generateAllHint": "{count, plural, one {# teacher has} other {# teachers have}} a monthly salary set and no salary for this month yet.",
+    "generatedAll": "{count, plural, one {# salary added} other {# salaries added}}",
+    "generatedSome": "{done} added, {failed} could not be added",
+    "pay": "Mark paid",
+    "empty": {
+      "title": "No teachers yet",
+      "body": "Add teachers to run their monthly salary here.",
+      "goToTeachers": "Go to teachers"
+    },
+    "generateForm": {
+      "title": "Add salary",
+      "for": "{teacher} · {month}",
+      "amount": "Amount (₹)",
+      "remarks": "Note (optional)",
+      "submit": "Add salary",
+      "submitting": "Adding…",
+      "done": "Salary added for {teacher}"
+    },
+    "payForm": {
+      "title": "Mark salary paid",
+      "for": "{teacher} · {amount}",
+      "method": "Paid by",
+      "date": "Paid on",
+      "remarks": "Note (optional)",
+      "submit": "Mark paid",
+      "submitting": "Saving…",
+      "done": "Salary marked paid for {teacher}"
+    }
+  },
+  "Teachers": {
+    "title": "Teachers",
+    "count": "{count, plural, =0 {No active teachers} one {# active teacher} other {# active teachers}}",
+    "add": "Add teacher",
+    "searchLabel": "Search teachers",
+    "searchPlaceholder": "Name, subject, phone or email",
+    "statusFilter": "Show",
+    "filter": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "all": "All"
+    },
+    "noSubject": "No subject set",
+    "salaryPerMonth": "{amount} / month",
+    "noSalary": "No monthly salary set",
+    "batchesLabel": "Batches",
+    "noBatches": "Not teaching any batch yet",
+    "manageBatches": "Batches",
+    "deactivate": "Mark inactive",
+    "reactivate": "Mark active",
+    "deactivateTitle": "Mark {name} inactive?",
+    "deactivateBody": "They lose access to TrueCO straight away. Their attendance, tests and salary records are kept, and you can mark them active again later.",
+    "deactivated": "{name} marked inactive",
+    "reactivated": "{name} marked active",
+    "empty": {
+      "title": "No teachers yet",
+      "body": "Add your teachers so they can take attendance, run tests and give homework for their batches — and so you can run payroll.",
+      "filteredTitle": "No teachers found",
+      "filteredBody": "No teachers match this filter.",
+      "searchBody": "No teachers match “{search}”."
+    },
+    "form": {
+      "createTitle": "Add teacher",
+      "editTitle": "Edit teacher",
+      "name": "Full name",
+      "phone": "Mobile number",
+      "email": "Email",
+      "emailHint": "They sign in to TrueCO with this email.",
+      "emailFixed": "This is their sign-in email, so it can't be changed here.",
+      "specialization": "Subject",
+      "specializationPlaceholder": "e.g. Physics",
+      "monthlySalary": "Monthly salary (₹)",
+      "monthlySalaryHint": "Used to fill in payroll each month.",
+      "salaryInvalid": "Enter an amount like 20000 or 20,000.",
+      "joiningDate": "Joining date",
+      "password": "Sign-in password",
+      "passwordHint": "We've made one up for you. You'll see it once more after saving, to share with them.",
+      "newPassword": "Make a new password",
+      "create": "Add teacher",
+      "creating": "Adding…",
+      "updated": "{name} updated",
+      "signIn": {
+        "title": "Teacher added",
+        "body": "Share these sign-in details with {name}.",
+        "page": "Sign-in page",
+        "email": "Email",
+        "code": "Institute code",
+        "password": "Password",
+        "once": "The password is shown only this once. Copy it or note it down before closing.",
+        "copy": "Copy details",
+        "copied": "Copied",
+        "copyFailed": "Couldn't copy. Select the details and copy them yourself.",
+        "done": "Done"
+      }
+    },
+    "batches": {
+      "title": "{name}'s batches",
+      "body": "Teachers can take attendance, run tests and give homework only for their own batches.",
+      "none": "Not teaching any batch yet.",
+      "pick": "Batch",
+      "choose": "Choose a batch",
+      "add": "Add",
+      "added": "{name} now teaches {batch}",
+      "removed": "{name} removed from {batch}",
+      "remove": "Remove from {batch}"
     }
   }
 }

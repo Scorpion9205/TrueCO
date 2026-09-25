@@ -11,7 +11,11 @@ import {
   UpdateBatchDto,
 } from './dto/batch.dto.js';
 import { BatchMapper } from './batch.mapper.js';
-import { createBatchCreatedEvent, createStudentEnrolledInBatchEvent, createStudentTransferredBatchEvent } from './batch.events.js';
+import {
+  createBatchCreatedEvent,
+  createStudentEnrolledInBatchEvent,
+  createStudentTransferredBatchEvent,
+} from './batch.events.js';
 
 export class BatchService {
   public constructor(
@@ -150,6 +154,17 @@ export class BatchService {
     });
   }
 
+  public async removeTeacher(batchId: string, teacherId: string): Promise<void> {
+    const removed = await this.batchRepository.removeTeacher(batchId, teacherId);
+    if (removed === 0) {
+      throw new AppError(
+        'TEACHER_NOT_ASSIGNED',
+        'This teacher is not assigned to the batch',
+        StatusCodes.NOT_FOUND,
+      );
+    }
+  }
+
   public async getBatchById(id: string): Promise<BatchResponseDto> {
     const batch = await this.batchRepository.findById(id);
     if (!batch) {
@@ -158,7 +173,11 @@ export class BatchService {
     return BatchMapper.toResponseDto(batch);
   }
 
-  public async listBatches(filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<BatchResponseDto[]> {
+  public async listBatches(filters?: {
+    isActive?: boolean;
+    academicYear?: string;
+    teacherId?: string;
+  }): Promise<BatchResponseDto[]> {
     const batches = await this.batchRepository.findMany(filters);
     return batches.map(BatchMapper.toResponseDto);
   }
@@ -175,7 +194,11 @@ export class BatchService {
     correlationId: string = crypto.randomUUID(),
   ): Promise<void> {
     if (fromBatchId === dto.targetBatchId) {
-      throw new AppError('BAD_REQUEST', 'Source and target batches cannot be the same', StatusCodes.BAD_REQUEST);
+      throw new AppError(
+        'BAD_REQUEST',
+        'Source and target batches cannot be the same',
+        StatusCodes.BAD_REQUEST,
+      );
     }
 
     const fromBatch = await this.batchRepository.findById(fromBatchId);

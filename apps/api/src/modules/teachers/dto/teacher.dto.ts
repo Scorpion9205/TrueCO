@@ -2,7 +2,7 @@ export interface CreateTeacherDto {
   readonly name: string;
   readonly phone: string;
   readonly email: string;
-  readonly password?: string; // Optional temporary password; defaults to phone if not provided
+  readonly password: string;
   readonly specialization?: string;
   readonly monthlySalary?: number;
   readonly joiningDate?: string;
@@ -11,8 +11,8 @@ export interface CreateTeacherDto {
 export interface UpdateTeacherDto {
   readonly name?: string;
   readonly phone?: string;
-  readonly specialization?: string;
-  readonly monthlySalary?: number;
+  readonly specialization?: string | null;
+  readonly monthlySalary?: number | null;
   readonly isActive?: boolean;
 }
 
