@@ -21,6 +21,7 @@ export class MockPaymentGatewayAdapter implements IPaymentGatewayAdapter {
       currency: input.currency || 'INR',
       keyId,
       receipt: input.receipt,
+      mock: true,
     };
   }
 

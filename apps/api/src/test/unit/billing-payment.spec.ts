@@ -160,6 +160,42 @@ describe('Payment Gateway & Webhook Lifecycle', () => {
       });
     });
 
+    it('marks mock orders so the web app does not open a checkout', async () => {
+      const order = await billingService.createOrder({ type: 'AI_CREDITS', credits: 10 }, coachingId);
+      expect(order.mock).toBe(true);
+    });
+
+    it('can simulate paying an order in development, then lists it with its invoice', async () => {
+      const order = await billingService.createOrder(
+        { type: 'PLAN_UPGRADE', planCode: PlanCode.PRO_AI, billingCycle: 'YEARLY' },
+        coachingId,
+      );
+      expect(await billingService.listPayments(coachingId)).toEqual([]);
+
+      expect(await billingService.simulatePayment(order.orderId, coachingId)).toEqual({
+        status: 'PROCESSED',
+      });
+      expect((await billingRepo.findCurrentSubscription(coachingId)).status).toBe(
+        SubscriptionStatus.ACTIVE,
+      );
+      const [payment] = await billingService.listPayments(coachingId);
+      expect(payment).toMatchObject({
+        type: 'PLAN_UPGRADE',
+        status: 'PAID',
+        planCode: PlanCode.PRO_AI,
+        billingCycle: 'YEARLY',
+        amount: 19990,
+        invoiceNumber: expect.stringMatching(/^INV\//),
+      });
+    });
+
+    it("refuses to simulate another coaching's order", async () => {
+      const order = await billingService.createOrder({ type: 'AI_CREDITS', credits: 10 }, coachingId);
+      await expect(
+        billingService.simulatePayment(order.orderId, '22222222-2222-2222-2222-222222222222'),
+      ).rejects.toMatchObject({ code: 'ORDER_NOT_FOUND' });
+    });
+
     it('applies a replayed or paired webhook only once', async () => {
       const order = await billingService.createOrder({ type: 'AI_CREDITS', credits: 300 }, coachingId);
       const webhook = paidWebhook(order.orderId, 30000);

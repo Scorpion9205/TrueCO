@@ -28,6 +28,22 @@ export function createBillingRoutes(controller: BillingController): Router {
     controller.createOrder,
   );
 
+  router.get(
+    '/payments',
+    authenticateMiddleware,
+    requirePermission('billing:read'),
+    controller.listPayments,
+  );
+
+  // Development only (refused with a real gateway or in production): marks an order paid so the
+  // purchase flow can be tried without Razorpay keys
+  router.post(
+    '/orders/:orderId/simulate-payment',
+    authenticateMiddleware,
+    requirePermission('billing:manage'),
+    controller.simulatePayment,
+  );
+
   // Razorpay webhook endpoint
   router.post('/webhook', controller.handleWebhook);
 

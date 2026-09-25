@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/format';
@@ -11,7 +11,7 @@ import { isCustomPriced, type PublicPlan } from '@/lib/plans';
 import { CONTACT_EMAIL } from '@/lib/site';
 import { cn } from '@/lib/utils';
 
-type Period = 'monthly' | 'yearly';
+export type Period = 'monthly' | 'yearly';
 
 /** Message key for a plan feature code: next-intl reserves "." for nesting ("ai.summary" -> "ai_summary") */
 const featureKey = (code: string) => code.replaceAll('.', '_');
@@ -22,7 +22,14 @@ function popularIndex(plans: PublicPlan[]): number {
   return pro >= 0 ? pro : Math.floor((plans.length - 1) / 2);
 }
 
-export function PricingCards({ plans }: { plans: PublicPlan[] }) {
+export function PricingCards({
+  plans,
+  action,
+}: {
+  plans: PublicPlan[];
+  /** Replaces each paid plan's sign-up button (e.g. "Choose plan" inside the app) */
+  action?: (plan: PublicPlan, period: Period, highlighted: boolean) => ReactNode;
+}) {
   const t = useTranslations('Pricing');
   const [period, setPeriod] = useState<Period>('monthly');
   const popular = popularIndex(plans);
@@ -130,20 +137,24 @@ export function PricingCards({ plans }: { plans: PublicPlan[] }) {
                 ) : null}
               </ul>
 
-              <Button
-                asChild
-                size="lg"
-                variant={highlighted ? 'primary' : 'outline'}
-                className="mt-8 w-full"
-              >
-                {custom ? (
-                  <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(plan.name)}`}>
-                    {t('contact')}
-                  </a>
-                ) : (
-                  <Link href={`/signup?plan=${encodeURIComponent(plan.code)}`}>{t('start')}</Link>
-                )}
-              </Button>
+              {action && !custom ? (
+                <div className="mt-8">{action(plan, period, highlighted)}</div>
+              ) : (
+                <Button
+                  asChild
+                  size="lg"
+                  variant={highlighted ? 'primary' : 'outline'}
+                  className="mt-8 w-full"
+                >
+                  {custom ? (
+                    <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(plan.name)}`}>
+                      {t('contact')}
+                    </a>
+                  ) : (
+                    <Link href={`/signup?plan=${encodeURIComponent(plan.code)}`}>{t('start')}</Link>
+                  )}
+                </Button>
+              )}
             </li>
           );
         })}

@@ -30,6 +30,17 @@ export class BillingController {
     res.status(StatusCodes.CREATED).json({ data: result });
   };
 
+  public listPayments = async (_req: Request, res: Response): Promise<void> => {
+    const coachingId = RequestContextService.getRequiredCoachingId();
+    res.status(StatusCodes.OK).json({ data: await this.billingService.listPayments(coachingId) });
+  };
+
+  public simulatePayment = async (req: Request, res: Response): Promise<void> => {
+    const coachingId = RequestContextService.getRequiredCoachingId();
+    const result = await this.billingService.simulatePayment(req.params.orderId, coachingId);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
   public handleWebhook = async (req: Request, res: Response): Promise<void> => {
     const signature = (req.headers['x-razorpay-signature'] as string) || '';
     const rawBody = (req as any).rawBody;

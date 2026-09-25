@@ -48,6 +48,9 @@ export interface IBillingRepository {
    * issues the invoice number and applies the plan or credits.
    */
   settlePayment(input: SettlePaymentInput): Promise<SettlePaymentResult>;
+  /** Orders that were paid or failed, newest first (abandoned checkouts are left out) */
+  listPayments(coachingId: string, limit: number): Promise<any[]>;
+  findPaymentByOrderId(gatewayOrderId: string): Promise<any | null>;
 }
 
 function periodEnd(from: Date, cycle: BillingCycle): Date {
@@ -119,6 +122,18 @@ export class PrismaBillingRepository implements IBillingRepository {
   public async createPaymentRecord(input: CreateBillingPaymentInput): Promise<any> {
     const rawPrisma = this.prisma as any;
     return rawPrisma.billingPayment.create({ data: { ...input } });
+  }
+
+  public async listPayments(coachingId: string, limit: number): Promise<any[]> {
+    return (this.prisma as any).billingPayment.findMany({
+      where: { coachingId, status: { not: 'CREATED' } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: limit,
+    });
+  }
+
+  public async findPaymentByOrderId(gatewayOrderId: string): Promise<any | null> {
+    return (this.prisma as any).billingPayment.findUnique({ where: { gatewayOrderId } });
   }
 
   public async settlePayment(input: SettlePaymentInput): Promise<SettlePaymentResult> {
