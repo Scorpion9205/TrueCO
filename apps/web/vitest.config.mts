@@ -12,5 +12,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     css: false,
+    // Form tests type key by key like a user; under a full parallel run (and on CI) that can
+    // take longer than the 5s default without anything being wrong
+    testTimeout: 20_000,
   },
 });

@@ -389,4 +389,40 @@ describe('FeeService (Phase 4 Domain Unit Tests)', () => {
       ).rejects.toThrow(AppError);
     });
   });
+
+  describe('getDefaulters', () => {
+    it("lists overdue balances with the student's primary parent to remind", async () => {
+      feeRepo.installments.set('inst-overdue', {
+        id: 'inst-overdue',
+        coachingId: 'coaching-1',
+        installmentNo: 2,
+        amount: 5000,
+        paidAmount: 1500,
+        dueDate: new Date('2026-09-01'),
+        status: FeeInstallmentStatus.PARTIAL,
+        feePlan: {
+          student: {
+            id: 's1',
+            firstName: 'Aarav',
+            lastName: 'Sharma',
+            phone: null,
+            email: null,
+            studentParents: [
+              { parent: { name: 'Old', phone: '1111111111', deletedAt: new Date() } },
+              { parent: { name: 'Rakesh Sharma', phone: '9876543210', deletedAt: null } },
+            ],
+          },
+        },
+      });
+
+      const [row] = await feeService.getDefaulters('coaching-1');
+
+      expect(row).toMatchObject({
+        installmentId: 'inst-overdue',
+        pendingAmount: 3500,
+        student: { id: 's1', name: 'Aarav Sharma' },
+        parent: { name: 'Rakesh Sharma', phone: '9876543210' },
+      });
+    });
+  });
 });

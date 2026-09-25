@@ -63,7 +63,10 @@ export interface FeePlanResponseDto {
   readonly finalAmount: number;
   readonly academicYear: string;
   readonly totalPaid: number;
+  /** Still to be collected: the fee minus payments and waived amounts */
   readonly totalPending: number;
+  /** Forgiven through waivers */
+  readonly totalWaived: number;
   readonly installments?: FeeInstallmentResponseDto[];
   readonly createdAt: Date;
 }

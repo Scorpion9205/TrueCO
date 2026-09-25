@@ -211,6 +211,9 @@ export class FeeService {
     const filtered = installments.filter((i: any) => i.coachingId === coachingId);
     return filtered.map((inst: any) => {
       const balance = toRupees(money(inst.amount).minus(money(inst.paidAmount)));
+      const parent = (inst.feePlan?.student?.studentParents ?? []).find(
+        (link: any) => link.parent && !link.parent.deletedAt,
+      )?.parent;
       return {
         installmentId: inst.id,
         installmentNo: inst.installmentNo,
@@ -227,6 +230,7 @@ export class FeeService {
               email: inst.feePlan.student.email,
             }
           : undefined,
+        parent: parent ? { name: parent.name, phone: parent.phone } : null,
       };
     });
   }
