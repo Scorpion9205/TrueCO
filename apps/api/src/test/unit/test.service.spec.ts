@@ -56,6 +56,18 @@ class InMemoryTestRepository implements ITestRepository {
     return test;
   }
 
+  public async update(id: string, data: any): Promise<any> {
+    const test = this.tests.get(id);
+    if (!test) throw new Error('Test not found');
+    Object.assign(test, data);
+    return test;
+  }
+
+  public async softDelete(id: string): Promise<void> {
+    const test = this.tests.get(id);
+    if (test) test.deletedAt = new Date();
+  }
+
   public async findByStudent(studentId: string): Promise<any[]> {
     const results: any[] = [];
     for (const test of this.tests.values()) {
@@ -205,5 +217,79 @@ describe('TestService (Phase 2 Domain Unit Tests)', () => {
         'coaching-1',
       ),
     ).rejects.toThrow(AppError);
+  });
+
+  describe('editing, deleting and student reports', () => {
+    const create = () =>
+      testService.createTest(
+        {
+          batchId: 'batch-101',
+          title: 'Unit Test 1',
+          subject: 'Physics',
+          testDate: '2026-09-20',
+          totalMarks: 50,
+          passingMarks: 20,
+        },
+        'coaching-1',
+      );
+
+    it('updates details and can remove the pass mark', async () => {
+      const test = await create();
+      const updated = await testService.updateTest(test.id, {
+        title: 'Unit Test 1 (retest)',
+        passingMarks: null,
+      });
+      expect(updated).toMatchObject({ title: 'Unit Test 1 (retest)', passingMarks: undefined });
+    });
+
+    it('rejects a pass mark above the total, checking against the saved total', async () => {
+      const test = await create();
+      await expect(testService.updateTest(test.id, { passingMarks: 60 })).rejects.toMatchObject({
+        code: 'INVALID_PASSING_MARKS',
+      });
+    });
+
+    it('will not lower the total below marks already given', async () => {
+      const test = await create();
+      await testService.uploadMarks(
+        test.id,
+        { results: [{ studentId: 's1', marksObtained: 42, isAbsent: false }] },
+        'coaching-1',
+      );
+
+      await expect(testService.updateTest(test.id, { totalMarks: 40 })).rejects.toMatchObject({
+        code: 'MARKS_EXCEED_TOTAL',
+      });
+      await expect(testService.updateTest(test.id, { totalMarks: 45 })).resolves.toMatchObject({
+        totalMarks: 45,
+      });
+    });
+
+    it('deletes a test', async () => {
+      const test = await create();
+      await testService.deleteTest(test.id);
+      await expect(testService.getTestById(test.id)).rejects.toMatchObject({ statusCode: 404 });
+    });
+
+    it("lists a student's results as numbers with a percentage", async () => {
+      const test = await create();
+      await testService.uploadMarks(
+        test.id,
+        { results: [{ studentId: 's1', marksObtained: 40, isAbsent: false }] },
+        'coaching-1',
+      );
+
+      const [result] = await testService.getResultsByStudent('s1');
+      expect(result).toMatchObject({
+        testId: test.id,
+        title: 'Unit Test 1',
+        subject: 'Physics',
+        totalMarks: 50,
+        passingMarks: 20,
+        marksObtained: 40,
+        percentage: 80,
+        isAbsent: false,
+      });
+    });
   });
 });

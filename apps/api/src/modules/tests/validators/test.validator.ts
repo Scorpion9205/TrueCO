@@ -9,6 +9,17 @@ export const createTestSchema = z.object({
   passingMarks: z.number().positive().max(1000).optional(),
 });
 
+/** Partial update; null removes the pass mark. Marks already entered are checked against totalMarks. */
+export const updateTestSchema = z
+  .object({
+    title: z.string().min(1).max(255).optional(),
+    subject: z.string().min(1).max(100).optional(),
+    testDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
+    totalMarks: z.number().positive().max(1000).optional(),
+    passingMarks: z.number().positive().max(1000).nullable().optional(),
+  })
+  .strict();
+
 export const studentMarkEntrySchema = z.object({
   studentId: z.string().uuid(),
   marksObtained: z.number().min(0, 'Marks obtained cannot be negative').max(1000),
@@ -21,4 +32,5 @@ export const uploadMarksSchema = z.object({
 });
 
 export type CreateTestSchemaType = z.infer<typeof createTestSchema>;
+export type UpdateTestSchemaType = z.infer<typeof updateTestSchema>;
 export type UploadMarksSchemaType = z.infer<typeof uploadMarksSchema>;

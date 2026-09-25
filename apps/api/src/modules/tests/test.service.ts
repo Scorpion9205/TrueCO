@@ -2,7 +2,13 @@ import { StatusCodes } from 'http-status-codes';
 import { ITestRepository } from './test.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { CreateTestDto, TestResponseDto, UploadMarksDto } from './dto/test.dto.js';
+import {
+  CreateTestDto,
+  StudentTestResultDto,
+  TestResponseDto,
+  UpdateTestDto,
+  UploadMarksDto,
+} from './dto/test.dto.js';
 import { TestMapper } from './test.mapper.js';
 import {
   createMarksUploadedEvent,
@@ -141,7 +147,56 @@ export class TestService {
     return tests.map((t) => TestMapper.toResponseDto(t));
   }
 
-  public async getResultsByStudent(studentId: string): Promise<any[]> {
-    return this.testRepository.findByStudent(studentId);
+  public async getResultsByStudent(studentId: string): Promise<StudentTestResultDto[]> {
+    const rows = await this.testRepository.findByStudent(studentId);
+    return rows.map(TestMapper.toStudentResultDto);
+  }
+
+  public async updateTest(id: string, dto: UpdateTestDto): Promise<TestResponseDto> {
+    const existing = await this.testRepository.findById(id);
+    if (!existing) {
+      throw new AppError('TEST_NOT_FOUND', 'Test not found', StatusCodes.NOT_FOUND);
+    }
+
+    const totalMarks = dto.totalMarks ?? Number(existing.totalMarks);
+    const savedPassing =
+      existing.passingMarks === null || existing.passingMarks === undefined
+        ? null
+        : Number(existing.passingMarks);
+    const passingMarks = dto.passingMarks !== undefined ? dto.passingMarks : savedPassing;
+    if (passingMarks !== null && passingMarks > totalMarks) {
+      throw new AppError(
+        'INVALID_PASSING_MARKS',
+        'Passing marks cannot be greater than total marks',
+        StatusCodes.BAD_REQUEST,
+      );
+    }
+    // Lowering the total below a mark already given would leave a score over 100%
+    const highest = Math.max(
+      0,
+      ...(existing.results ?? []).map((result: any) => Number(result.marksObtained)),
+    );
+    if (highest > totalMarks) {
+      throw new AppError(
+        'MARKS_EXCEED_TOTAL',
+        `A student already has ${highest} marks; total marks cannot be lower than that`,
+        StatusCodes.BAD_REQUEST,
+        { highestMarks: highest },
+      );
+    }
+
+    const data: any = { ...dto };
+    if (dto.testDate) data.testDate = new Date(dto.testDate);
+    const updated = await this.testRepository.update(id, data);
+    return TestMapper.toResponseDto(updated);
+  }
+
+  /** Soft delete: the test and its results disappear from lists and report cards */
+  public async deleteTest(id: string): Promise<void> {
+    const existing = await this.testRepository.findById(id);
+    if (!existing) {
+      throw new AppError('TEST_NOT_FOUND', 'Test not found', StatusCodes.NOT_FOUND);
+    }
+    await this.testRepository.softDelete(id);
   }
 }

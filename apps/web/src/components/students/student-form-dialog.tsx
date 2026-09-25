@@ -24,6 +24,7 @@ import {
 } from '@/lib/academics';
 import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
+import { todayInIndia } from '@/lib/dates';
 import { isValidPhone, normalisePhone } from '@/lib/phone';
 import { useApiError } from '@/lib/use-api-error';
 
@@ -41,11 +42,6 @@ const STUDENT_FIELDS = [
   'address',
   'joiningDate',
 ] as const;
-
-/** Today in India as YYYY-MM-DD, the default joining date */
-export function todayInIndia(now: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
-}
 
 interface StudentFormDialogProps {
   open: boolean;

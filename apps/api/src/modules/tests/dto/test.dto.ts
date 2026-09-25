@@ -7,6 +7,28 @@ export interface CreateTestDto {
   readonly passingMarks?: number;
 }
 
+export interface UpdateTestDto {
+  readonly title?: string;
+  readonly subject?: string;
+  readonly testDate?: string; // YYYY-MM-DD
+  readonly totalMarks?: number;
+  readonly passingMarks?: number | null;
+}
+
+/** One test from a student's point of view (GET /tests/student/:studentId) */
+export interface StudentTestResultDto {
+  readonly testId: string;
+  readonly title: string;
+  readonly subject: string;
+  readonly testDate: Date;
+  readonly totalMarks: number;
+  readonly passingMarks?: number | null;
+  readonly marksObtained: number;
+  readonly isAbsent: boolean;
+  readonly percentage: number;
+  readonly remarks?: string | null;
+}
+
 export interface StudentMarkEntryDto {
   readonly studentId: string;
   readonly marksObtained: number;

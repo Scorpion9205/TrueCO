@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { todayInIndia } from '@/components/students/student-form-dialog';
+import { todayInIndia } from './dates';
 import { changedFields, compact, fullName } from './academics';
 import { whatsappLink } from './phone';
 import { currentAcademicYear, formatTime, sortDays } from './schedule';

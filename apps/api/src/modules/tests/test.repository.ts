@@ -18,6 +18,9 @@ export interface ITestRepository {
   findByBatch(batchId: string): Promise<any[]>;
   findByStudent(studentId: string): Promise<any[]>;
   upsertMarks(testId: string, coachingId: string, entries: StudentMarkEntryDto[]): Promise<any>;
+  update(id: string, data: any): Promise<any>;
+  /** Soft delete; the tenant extension sets deletedAt */
+  softDelete(id: string): Promise<void>;
 }
 
 export class PrismaTestRepository implements ITestRepository {
@@ -68,6 +71,18 @@ export class PrismaTestRepository implements ITestRepository {
     });
   }
 
+  public async update(id: string, data: any): Promise<any> {
+    return (this.prisma as any).test.update({
+      where: { id },
+      data,
+      include: { results: { include: { student: true } } },
+    });
+  }
+
+  public async softDelete(id: string): Promise<void> {
+    await (this.prisma as any).test.delete({ where: { id } });
+  }
+
   public async findByStudent(studentId: string): Promise<any[]> {
     const rawPrisma = this.prisma as any;
     return rawPrisma.testResult.findMany({
@@ -76,7 +91,7 @@ export class PrismaTestRepository implements ITestRepository {
       include: {
         test: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { test: { testDate: 'desc' } },
     });
   }
 
