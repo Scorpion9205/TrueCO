@@ -1,107 +1,94 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import { money, Money } from '../../common/money/money.js';
+import { dateRange, ReportRange, timestampRange } from './report.dates.js';
 
 export interface IReportRepository {
+  /** Fee plans and their instalments, for students who are still on the books */
   getFeeData(coachingId: string): Promise<{
     plans: any[];
     installments: any[];
-    transactions: any[];
   }>;
   getAttendanceData(
     coachingId: string,
     batchId?: string,
-    startDate?: Date,
-    endDate?: Date,
+    range?: ReportRange,
   ): Promise<{
     sessions: any[];
     records: any[];
   }>;
   getPnLData(
     coachingId: string,
-    startDate?: Date,
-    endDate?: Date,
+    range?: ReportRange,
   ): Promise<{
-    feeRevenue: number;
-    salaryExpenses: number;
-    generalExpenses: number;
+    feeRevenue: Money;
+    salaryExpenses: Money;
+    generalExpenses: Money;
   }>;
 }
+
+const sum = (rows: Array<{ amount: unknown }>): Money =>
+  rows.reduce((acc: Money, row) => acc.plus(money(row.amount as any)), money(0));
 
 export class PrismaReportRepository implements IReportRepository {
   public constructor(private readonly prisma: ExtendedPrismaClient = getPrismaClient()) {}
 
-  public async getFeeData(coachingId: string): Promise<{
-    plans: any[];
-    installments: any[];
-    transactions: any[];
-  }> {
+  public async getFeeData(coachingId: string): Promise<{ plans: any[]; installments: any[] }> {
     const rawPrisma = this.prisma as any;
+    const livePlan = { deletedAt: null, student: { deletedAt: null } };
 
-    const [plans, installments, transactions] = await Promise.all([
+    const [plans, installments] = await Promise.all([
       rawPrisma.feePlan.findMany({
-        where: { coachingId, deletedAt: null },
-        include: {
-          student: {
-            include: {
-              studentParents: { include: { parent: true } },
-            },
-          },
-        },
+        where: { coachingId, ...livePlan },
+        select: { id: true, finalAmount: true },
       }),
       rawPrisma.feeInstallment.findMany({
-        where: { coachingId, deletedAt: null },
+        where: { coachingId, deletedAt: null, feePlan: livePlan },
         include: {
           feePlan: {
             include: {
               student: {
                 include: {
-                  studentParents: { include: { parent: true } },
+                  studentParents: {
+                    include: { parent: true },
+                    orderBy: { isPrimary: 'desc' },
+                  },
                 },
               },
             },
           },
         },
-      }),
-      rawPrisma.feeTransaction.findMany({
-        where: { coachingId, deletedAt: null },
+        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
       }),
     ]);
 
-    return { plans, installments, transactions };
+    return { plans, installments };
   }
 
   public async getAttendanceData(
     coachingId: string,
     batchId?: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<{
-    sessions: any[];
-    records: any[];
-  }> {
+    range: ReportRange = {},
+  ): Promise<{ sessions: any[]; records: any[] }> {
     const rawPrisma = this.prisma as any;
-
-    const sessionWhere: any = {
-      coachingId,
-      deletedAt: null,
-      ...(batchId && { batchId }),
-      ...(startDate && { sessionDate: { gte: startDate } }),
-      ...(endDate && { sessionDate: { lte: endDate } }),
-    };
+    const sessionDate = dateRange(range);
 
     const sessions = await rawPrisma.attendanceSession.findMany({
-      where: sessionWhere,
-      include: { batch: true },
+      where: {
+        coachingId,
+        deletedAt: null,
+        ...(batchId ? { batchId } : {}),
+        ...(sessionDate ? { sessionDate } : {}),
+      },
+      include: { batch: { select: { id: true, name: true } } },
     });
-
-    const sessionIds = sessions.map((s: any) => s.id);
 
     const records = await rawPrisma.attendanceRecord.findMany({
       where: {
-        sessionId: { in: sessionIds },
+        coachingId,
+        sessionId: { in: sessions.map((s: any) => s.id) },
+        student: { deletedAt: null },
       },
-      include: {
-        student: true,
-      },
+      include: { student: { select: { id: true, firstName: true, lastName: true } } },
     });
 
     return { sessions, records };
@@ -109,47 +96,31 @@ export class PrismaReportRepository implements IReportRepository {
 
   public async getPnLData(
     coachingId: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<{
-    feeRevenue: number;
-    salaryExpenses: number;
-    generalExpenses: number;
-  }> {
+    range: ReportRange = {},
+  ): Promise<{ feeRevenue: Money; salaryExpenses: Money; generalExpenses: Money }> {
     const rawPrisma = this.prisma as any;
-
-    const txWhere: any = {
-      coachingId,
-      deletedAt: null,
-      ...(startDate && { paidAt: { gte: startDate } }),
-      ...(endDate && { paidAt: { lte: endDate } }),
-    };
-
-    const salaryWhere: any = {
-      coachingId,
-      deletedAt: null,
-      status: 'PAID',
-      ...(startDate && { paidAt: { gte: startDate } }),
-      ...(endDate && { paidAt: { lte: endDate } }),
-    };
-
-    const expenseWhere: any = {
-      coachingId,
-      deletedAt: null,
-      ...(startDate && { expenseDate: { gte: startDate } }),
-      ...(endDate && { expenseDate: { lte: endDate } }),
-    };
+    const paidAt = timestampRange(range);
+    const expenseDate = dateRange(range);
 
     const [transactions, salaries, expenses] = await Promise.all([
-      rawPrisma.feeTransaction.findMany({ where: txWhere }),
-      rawPrisma.salary.findMany({ where: salaryWhere }),
-      rawPrisma.expense.findMany({ where: expenseWhere }),
+      rawPrisma.feeTransaction.findMany({
+        where: { coachingId, deletedAt: null, ...(paidAt ? { paidAt } : {}) },
+        select: { amount: true },
+      }),
+      rawPrisma.salary.findMany({
+        where: { coachingId, deletedAt: null, status: 'PAID', ...(paidAt ? { paidAt } : {}) },
+        select: { amount: true },
+      }),
+      rawPrisma.expense.findMany({
+        where: { coachingId, deletedAt: null, ...(expenseDate ? { expenseDate } : {}) },
+        select: { amount: true },
+      }),
     ]);
 
-    const feeRevenue = transactions.reduce((acc: number, t: any) => acc + Number(t.amount), 0);
-    const salaryExpenses = salaries.reduce((acc: number, s: any) => acc + Number(s.amount), 0);
-    const generalExpenses = expenses.reduce((acc: number, e: any) => acc + Number(e.amount), 0);
-
-    return { feeRevenue, salaryExpenses, generalExpenses };
+    return {
+      feeRevenue: sum(transactions),
+      salaryExpenses: sum(salaries),
+      generalExpenses: sum(expenses),
+    };
   }
 }

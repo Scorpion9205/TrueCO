@@ -70,6 +70,21 @@ export class AuthController {
     res.status(StatusCodes.OK).json({ data: result });
   };
 
+  public changePassword = async (req: Request, res: Response): Promise<void> => {
+    const userId = RequestContextService.getUserId();
+    if (!userId) {
+      res.status(StatusCodes.UNAUTHORIZED).json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+      return;
+    }
+    const validated = (await import('./validators/auth.validator.js')).changePasswordSchema.parse(req.body);
+    const result = await this.authService.changePassword(
+      userId,
+      validated.currentPassword,
+      validated.newPassword,
+    );
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
   public verifyEmail = async (req: Request, res: Response): Promise<void> => {
     const validated = (await import('./validators/auth.validator.js')).verifyEmailSchema.parse(req.body);
     const result = await this.authService.verifyEmail(validated.token);

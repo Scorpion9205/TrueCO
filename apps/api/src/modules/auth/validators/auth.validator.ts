@@ -28,6 +28,13 @@ export const resetPasswordSchema = z
   })
   .strict();
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(128),
+    newPassword: z.string().min(8, 'New password must be at least 8 characters long').max(128),
+  })
+  .strict();
+
 export const verifyEmailSchema = z
   .object({
     token: z.string().min(10, 'Invalid verification token'),

@@ -438,6 +438,41 @@ export class AuthService {
     };
   }
 
+  /**
+   * Changes the signed-in user's password after checking the current one, then signs them out
+   * everywhere: anyone holding an old session loses it along with the old password.
+   */
+  public async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new AppError('USER_NOT_FOUND', 'User not found', StatusCodes.NOT_FOUND);
+    }
+    if (!(await this.passwordService.verify(user.passwordHash, currentPassword))) {
+      throw new AppError(
+        'WRONG_PASSWORD',
+        'The current password is not correct',
+        StatusCodes.BAD_REQUEST,
+        [{ path: ['currentPassword'], message: 'The current password is not correct' }],
+      );
+    }
+    if (currentPassword === newPassword) {
+      throw new AppError(
+        'SAME_PASSWORD',
+        'The new password must be different from the current one',
+        StatusCodes.BAD_REQUEST,
+        [{ path: ['newPassword'], message: 'Choose a different password' }],
+      );
+    }
+
+    await this.userRepository.updatePassword(userId, await this.passwordService.hash(newPassword));
+    await this.refreshTokenRepository.revokeAllForUser(userId);
+    return { message: 'Password changed. Please sign in again with your new password.' };
+  }
+
   public async verifyEmail(token: string): Promise<{ message: string }> {
     const userId = await this.actionTokenRepository.consume(
       this.tokenService.hashToken(token),

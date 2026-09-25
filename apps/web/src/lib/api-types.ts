@@ -10,7 +10,9 @@ export interface CoachingProfile {
   code: string;
   phone: string;
   email: string;
+  address?: string | null;
   city?: string | null;
+  state?: string | null;
   logoUrl?: string | null;
   timezone: string;
   currency: string;

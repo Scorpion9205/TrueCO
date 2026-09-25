@@ -81,4 +81,13 @@ export class CoachingService {
     }
     return CoachingMapper.toResponseDto(coaching);
   }
+
+  public async updateCoaching(
+    id: string,
+    changes: Record<string, unknown>,
+  ): Promise<CoachingResponseDto> {
+    await this.getCoachingById(id);
+    const updated = await this.coachingRepository.update(id, changes);
+    return CoachingMapper.toResponseDto(updated);
+  }
 }

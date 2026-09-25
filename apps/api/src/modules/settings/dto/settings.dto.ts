@@ -29,7 +29,6 @@ export interface UpdateSettingsDto {
   readonly notifications?: NotificationSettingsConfig;
   readonly receiptPrefix?: string;
   readonly attendanceThreshold?: number;
-  readonly extraConfig?: Record<string, unknown>;
 }
 
 export interface SettingsResponseDto {

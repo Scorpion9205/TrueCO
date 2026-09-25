@@ -6,13 +6,22 @@ export function SubmitButton({
   pending,
   label,
   pendingLabel,
+  disabled = false,
 }: {
   pending: boolean;
   label: string;
   pendingLabel: string;
+  /** Blocks submitting for another reason, e.g. nothing has changed */
+  disabled?: boolean;
 }) {
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending} aria-busy={pending}>
+    <Button
+      type="submit"
+      size="lg"
+      className="w-full"
+      disabled={pending || disabled}
+      aria-busy={pending}
+    >
       {pending ? (
         <>
           <Loader2 className="animate-spin" aria-hidden />

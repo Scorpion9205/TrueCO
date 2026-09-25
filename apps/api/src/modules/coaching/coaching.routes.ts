@@ -3,6 +3,7 @@ import { createRouter } from '../../common/http/async-router.js';
 import { CoachingController } from './coaching.controller.js';
 import { authenticateMiddleware } from '../../common/middleware/auth.middleware.js';
 import { rateLimit } from '../../common/middleware/rate-limit.middleware.js';
+import { requirePermission } from '../../common/decorators/require-permission.decorator.js';
 
 export function createCoachingRoutes(controller: CoachingController): Router {
   const router = createRouter();
@@ -12,6 +13,8 @@ export function createCoachingRoutes(controller: CoachingController): Router {
 
   // Protected: Current coaching institute profile
   router.get('/me', authenticateMiddleware, controller.getProfile);
+  // Allowed without an active subscription, like billing: the owner can always fix contact details
+  router.put('/me', authenticateMiddleware, requirePermission('settings:manage'), controller.updateProfile);
 
   return router;
 }
