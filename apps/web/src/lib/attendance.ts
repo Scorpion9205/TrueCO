@@ -1,11 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { TeacherDashboard } from './api-types';
-import { type Batch, useBatches } from './academics';
 import { api } from './auth/session';
-import { can } from './auth/permissions';
-import { useSession } from './auth/use-session';
 import { useQueryScope } from './queries';
 
 // ---------- Types (apps/api attendance DTOs; dates are ISO strings) ----------
@@ -38,9 +34,6 @@ export interface MarkAttendanceInput {
   sessionDate: string;
   records: Array<{ studentId: string; status: AttendanceStatus }>;
 }
-
-/** A batch the user can take attendance for */
-export type AttendanceBatch = Pick<Batch, 'id' | 'name' | 'subject'>;
 
 /** Below this share of classes attended, a student is flagged (a common coaching/board rule) */
 export const LOW_ATTENDANCE_PERCENT = 75;
@@ -113,35 +106,6 @@ export function summariseByStudent(sessions: AttendanceSession[]): StudentAttend
 }
 
 // ---------- Queries ----------
-
-/**
- * Batches the user can take attendance for. The API only lets teachers mark their own batches,
- * so teachers get the batches assigned to them (from their dashboard) instead of every batch.
- */
-export function useAttendanceBatches() {
-  const user = useSession()?.user;
-  const scope = useQueryScope();
-  const isTeacherOnly = can(user, 'dashboard:teacher') && !can(user, 'dashboard:owner');
-
-  const all = useBatches(!isTeacherOnly);
-  const mine = useQuery({
-    queryKey: [scope, 'dashboard', 'teacher'],
-    queryFn: ({ signal }) => api.get<TeacherDashboard>('/dashboard/teacher', { signal }),
-    enabled: isTeacherOnly,
-  });
-
-  if (isTeacherOnly) {
-    return {
-      ...mine,
-      data: mine.data?.assignedBatches.map((batch): AttendanceBatch => ({
-        id: batch.batchId,
-        name: batch.batchName,
-        subject: batch.subject,
-      })),
-    };
-  }
-  return { ...all, data: all.data?.filter((batch) => batch.isActive) };
-}
 
 /** Sessions of a batch between two days (inclusive), newest first */
 export function useAttendanceSessions(batchId: string | null, from: string, to: string) {

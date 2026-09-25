@@ -43,6 +43,7 @@ import { whatsappLink } from '@/lib/phone';
 import { useApiError } from '@/lib/use-api-error';
 import { ParentDialog } from './parent-dialog';
 import { StudentFormDialog } from './student-form-dialog';
+import { StudentResults } from './student-results';
 
 export function StudentDetail({ id }: { id: string }) {
   const t = useTranslations('Students.detail');
@@ -101,6 +102,7 @@ function StudentProfile({ student, back }: { student: Student; back: ReactNode }
   const canUpdate = can(user, 'students:update');
   const canDelete = can(user, 'students:delete');
   const canManageBatches = can(user, 'batches:update');
+  const canSeeResults = can(user, 'tests:read');
 
   const toggleActive = async () => {
     try {
@@ -178,21 +180,26 @@ function StudentProfile({ student, back }: { student: Student; back: ReactNode }
       />
 
       <div className="grid items-start gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t('detail.personal')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-              {details.map(([label, value]) => (
-                <div key={label} className="min-w-0">
-                  <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-                  <dd className="mt-0.5 text-sm break-words">{value || t('detail.notProvided')}</dd>
-                </div>
-              ))}
-            </dl>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('detail.personal')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                {details.map(([label, value]) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                    <dd className="mt-0.5 text-sm break-words">
+                      {value || t('detail.notProvided')}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </CardContent>
+          </Card>
+          {canSeeResults ? <StudentResults studentId={student.id} /> : null}
+        </div>
 
         <div className="flex flex-col gap-6">
           <Card>
@@ -339,7 +346,8 @@ function EnrolDialog({
   const t = useTranslations('Students');
   const common = useTranslations('Common');
   const describeError = useApiError();
-  const batches = useBatches();
+  // Only needed once the dialog is opened
+  const batches = useBatches(open);
   const enrol = useEnrolStudent();
   const [batchId, setBatchId] = useState('');
   const available = (batches.data ?? []).filter(

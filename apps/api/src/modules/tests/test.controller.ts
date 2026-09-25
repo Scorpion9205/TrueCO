@@ -1,8 +1,12 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { TestService } from './test.service.js';
-import { createTestSchema, uploadMarksSchema } from './validators/test.validator.js';
-import { CreateTestDto, UploadMarksDto } from './dto/test.dto.js';
+import {
+  createTestSchema,
+  updateTestSchema,
+  uploadMarksSchema,
+} from './validators/test.validator.js';
+import { CreateTestDto, UpdateTestDto, UploadMarksDto } from './dto/test.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 
 export class TestController {
@@ -37,6 +41,17 @@ export class TestController {
   public getById = async (req: Request, res: Response): Promise<void> => {
     const result = await this.testService.getTestById(req.params.id);
     res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public update = async (req: Request, res: Response): Promise<void> => {
+    const validated = updateTestSchema.parse(req.body) as UpdateTestDto;
+    const result = await this.testService.updateTest(req.params.id, validated);
+    res.status(StatusCodes.OK).json({ data: result });
+  };
+
+  public delete = async (req: Request, res: Response): Promise<void> => {
+    await this.testService.deleteTest(req.params.id);
+    res.status(StatusCodes.OK).json({ data: { message: 'Test deleted' } });
   };
 
   public getByBatch = async (req: Request, res: Response): Promise<void> => {

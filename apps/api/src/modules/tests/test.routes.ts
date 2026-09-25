@@ -24,6 +24,19 @@ export function createTestRoutes(controller: TestController): Router {
     requireBatchAccess({ resource: 'test' }),
     controller.getById,
   );
+  // Tests have no separate edit/delete permissions; whoever may create them may correct them
+  router.put(
+    '/:id',
+    requirePermission('tests:create'),
+    requireBatchAccess({ resource: 'test' }),
+    controller.update,
+  );
+  router.delete(
+    '/:id',
+    requirePermission('tests:create'),
+    requireBatchAccess({ resource: 'test' }),
+    controller.delete,
+  );
   router.get(
     '/batch/:batchId',
     requirePermission('tests:read'),

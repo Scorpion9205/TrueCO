@@ -264,6 +264,11 @@ describe('StudentFormDialog', () => {
 });
 
 describe('StudentDetail', () => {
+  // The profile also shows test results; those have their own tests
+  beforeEach(() => {
+    server.use(http.get(`${API_URL}/tests/student/:id`, () => HttpResponse.json({ data: [] })));
+  });
+
   const profile = student({
     parents: [
       { id: 'p1', name: 'Rakesh Sharma', phone: '9876543210', relation: 'FATHER', isPrimary: true },

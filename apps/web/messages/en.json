@@ -388,7 +388,11 @@
       "unexpected": "Something went wrong. Please try again.",
       "BATCH_HAS_STUDENTS": "This batch still has students. Remove them or move them to another batch first, or mark the batch inactive instead.",
       "INVALID_SCHEDULE": "The end time must be after the start time.",
-      "FORBIDDEN_BATCH_ACCESS": "You can only take attendance for batches you teach."
+      "FORBIDDEN_BATCH_ACCESS": "You can only take attendance for batches you teach.",
+      "MARKS_EXCEED_TOTAL": "Marks can't be more than the test's total marks.",
+      "INVALID_PASSING_MARKS": "The pass mark can't be more than the total marks.",
+      "TEST_NOT_FOUND": "This test no longer exists. It may have been deleted.",
+      "HOMEWORK_NOT_FOUND": "This homework no longer exists. It may have been deleted."
     },
     "days": {
       "MON": "Mon",
@@ -402,6 +406,15 @@
     "status": {
       "active": "Active",
       "inactive": "Inactive"
+    },
+    "batchPicker": {
+      "label": "Batch",
+      "choose": "Choose a batch",
+      "pick": "Choose a batch to continue.",
+      "noBatches": "No batches yet",
+      "noBatchesOwner": "Create a batch and add students first.",
+      "noBatchesTeacher": "You haven't been assigned to a batch yet. Ask your institute owner to add you to one.",
+      "goToBatches": "Go to batches"
     }
   },
   "Students": {
@@ -615,6 +628,111 @@
       "classes": "{attended} of {marked} classes",
       "low": "Below {percent}%",
       "average": "Average attendance: {percent}%"
+    }
+  },
+  "Tests": {
+    "title": "Tests",
+    "add": "New test",
+    "empty": {
+      "title": "No tests yet",
+      "body": "Create a test to enter marks and share results with parents."
+    },
+    "outOf": "out of {total}",
+    "marked": "{count, plural, =0 {No marks entered} one {# result entered} other {# results entered}}",
+    "average": "Average {score}",
+    "highest": "Highest {score}",
+    "form": {
+      "createTitle": "Create a test",
+      "editTitle": "Edit test",
+      "title": "Test name",
+      "titlePlaceholder": "e.g. Unit Test 3 — Motion",
+      "subject": "Subject",
+      "testDate": "Date",
+      "totalMarks": "Total marks",
+      "passingMarks": "Pass mark",
+      "passingHint": "Optional. Used to show pass or fail.",
+      "create": "Create test",
+      "creating": "Creating…",
+      "created": "{name} created",
+      "updated": "Changes saved",
+      "marksRange": "Enter a number from 1 to 1000.",
+      "passAboveTotal": "The pass mark can't be more than the total marks."
+    },
+    "detail": {
+      "back": "All tests",
+      "edit": "Edit",
+      "delete": "Delete test",
+      "deleteTitle": "Delete {name}?",
+      "deleteBody": "The test and all its marks will be removed from reports. This cannot be undone from the app.",
+      "deleted": "{name} deleted",
+      "stats": {
+        "average": "Average",
+        "highest": "Highest",
+        "passRate": "Passed",
+        "entered": "Marks entered",
+        "none": "—"
+      },
+      "marks": "Marks",
+      "marksFor": "Marks for {name}",
+      "absent": "Absent",
+      "absentFor": "{name} was absent",
+      "pass": "Pass",
+      "fail": "Fail",
+      "notEnrolled": "No longer in this batch",
+      "noStudents": "There are no students in this batch yet.",
+      "save": "Save marks",
+      "saving": "Saving…",
+      "saved": "Marks saved",
+      "unsaved": "Unsaved changes",
+      "filled": "{filled} of {total} entered",
+      "tooHigh": "Max {total}",
+      "parentsNotified": "Parents get each student's result on WhatsApp.",
+      "blankSkipped": "Students left blank are not saved."
+    },
+    "student": {
+      "title": "Test results",
+      "empty": "No test results yet.",
+      "absent": "Absent"
+    },
+    "totalOf": "{total} marks"
+  },
+  "Homework": {
+    "title": "Homework",
+    "add": "Assign homework",
+    "empty": {
+      "title": "No homework yet",
+      "body": "Assign homework to a batch; parents are told on WhatsApp."
+    },
+    "due": "Due {date}",
+    "status": {
+      "overdue": "Past due",
+      "today": "Due today",
+      "tomorrow": "Due tomorrow",
+      "upcoming": "Upcoming"
+    },
+    "upcoming": "Current",
+    "past": "Past",
+    "attachment": "Attachment",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{name}”?",
+    "deleteBody": "Students and parents will no longer see this homework.",
+    "deleted": "Homework deleted",
+    "form": {
+      "createTitle": "Assign homework",
+      "editTitle": "Edit homework",
+      "title": "Title",
+      "titlePlaceholder": "e.g. Exercise 4.2, questions 1–10",
+      "description": "Instructions",
+      "dueDate": "Due date",
+      "attachmentUrl": "Link to worksheet (optional)",
+      "attachmentHint": "A Google Drive, PDF or video link.",
+      "invalidUrl": "Enter a full link starting with https://",
+      "create": "Assign",
+      "creating": "Assigning…",
+      "created": "Homework assigned",
+      "updated": "Changes saved",
+      "parentsNotified": "Parents of students in this batch get a WhatsApp message."
     }
   }
 }

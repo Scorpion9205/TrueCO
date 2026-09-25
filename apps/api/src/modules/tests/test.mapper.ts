@@ -1,6 +1,27 @@
-import { TestResponseDto, TestResultResponseDto } from './dto/test.dto.js';
+import { StudentTestResultDto, TestResponseDto, TestResultResponseDto } from './dto/test.dto.js';
 
 export class TestMapper {
+  /** A TestResult row with its test, as one line of a student's report */
+  public static toStudentResultDto(entity: any): StudentTestResultDto {
+    const totalMarks = Number(entity.test.totalMarks);
+    const marksObtained = Number(entity.marksObtained);
+    return {
+      testId: entity.testId,
+      title: entity.test.title,
+      subject: entity.test.subject,
+      testDate: new Date(entity.test.testDate),
+      totalMarks,
+      passingMarks:
+        entity.test.passingMarks === null || entity.test.passingMarks === undefined
+          ? null
+          : Number(entity.test.passingMarks),
+      marksObtained,
+      isAbsent: Boolean(entity.isAbsent),
+      percentage: totalMarks > 0 ? Math.round((marksObtained / totalMarks) * 10000) / 100 : 0,
+      remarks: entity.remarks,
+    };
+  }
+
   public static toResponseDto(entity: any): TestResponseDto {
     const totalMarks = Number(entity.totalMarks);
     const passingMarks = entity.passingMarks !== null && entity.passingMarks !== undefined

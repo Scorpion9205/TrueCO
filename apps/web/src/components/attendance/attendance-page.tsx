@@ -11,10 +11,11 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatePanel } from '@/components/ui/state-panel';
-import { addDays, shiftMonth, useAttendanceBatches } from '@/lib/attendance';
+import { addDays, shiftMonth } from '@/lib/attendance';
 import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
 import { todayInIndia } from '@/lib/dates';
+import { useTeachingBatches } from '@/lib/teaching-batches';
 import { cn } from '@/lib/utils';
 import { HistoryView } from './history-view';
 import { MarkSheet } from './mark-sheet';
@@ -27,7 +28,7 @@ export function AttendancePage() {
   const t = useTranslations('Attendance');
   const user = useSession()?.user;
   const today = todayInIndia();
-  const batches = useAttendanceBatches();
+  const batches = useTeachingBatches();
 
   // Batch, day and tab live in the URL, so a shared link opens the same register
   const [params, setParams] = useQueryStates({
