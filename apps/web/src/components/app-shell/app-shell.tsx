@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {t('skip')}
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-background lg:flex print:hidden">
         <div className="flex h-16 shrink-0 items-center px-6">
           <Logo href="/app" />
         </div>
@@ -47,10 +47,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-dvh flex-col lg:pl-64">
-        {coaching.data ? <SubscriptionBanner subscription={coaching.data.subscription} /> : null}
+      <div className="flex min-h-dvh flex-col lg:pl-64 print:pl-0">
+        {coaching.data ? (
+          <div className="print:hidden">
+            <SubscriptionBanner subscription={coaching.data.subscription} />
+          </div>
+        ) : null}
 
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-20 flex h-16 print:hidden shrink-0 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur sm:px-6">
           <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
             <Dialog.Trigger asChild>
               <Button
@@ -93,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main id="content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main id="content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 print:p-0">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>

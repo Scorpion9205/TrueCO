@@ -149,7 +149,17 @@ export class PrismaFeeRepository implements IFeeRepository {
       },
       include: {
         feePlan: {
-          include: { student: true },
+          include: {
+            // Parents are who fee reminders go to; the primary contact comes first
+            student: {
+              include: {
+                studentParents: {
+                  include: { parent: true },
+                  orderBy: { isPrimary: 'desc' },
+                },
+              },
+            },
+          },
         },
       },
       orderBy: { dueDate: 'asc' },

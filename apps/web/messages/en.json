@@ -392,7 +392,14 @@
       "MARKS_EXCEED_TOTAL": "Marks can't be more than the test's total marks.",
       "INVALID_PASSING_MARKS": "The pass mark can't be more than the total marks.",
       "TEST_NOT_FOUND": "This test no longer exists. It may have been deleted.",
-      "HOMEWORK_NOT_FOUND": "This homework no longer exists. It may have been deleted."
+      "HOMEWORK_NOT_FOUND": "This homework no longer exists. It may have been deleted.",
+      "INVALID_INSTALLMENT_SUM": "The instalments don't add up to the fee after discount.",
+      "AMOUNT_EXCEEDS_BALANCE": "The payment is more than the amount still due.",
+      "INSTALLMENT_ALREADY_PAID": "This instalment is already fully paid.",
+      "INSTALLMENT_WAIVED": "This instalment was waived, so it cannot take a payment.",
+      "CANNOT_WAIVE_PAID": "A fully paid instalment cannot be waived.",
+      "INSTALLMENT_NOT_WAIVABLE": "This instalment can no longer be waived.",
+      "INSTALLMENT_NOT_FOUND": "This instalment no longer exists."
     },
     "days": {
       "MON": "Mon",
@@ -733,6 +740,137 @@
       "created": "Homework assigned",
       "updated": "Changes saved",
       "parentsNotified": "Parents of students in this batch get a WhatsApp message."
+    }
+  },
+  "Fees": {
+    "title": "Fees",
+    "kpi": {
+      "collected": "Collected this month",
+      "pending": "Due this month",
+      "overdue": "Overdue now"
+    },
+    "overdue": {
+      "title": "Overdue fees",
+      "count": "{count, plural, one {# student} other {# students}} · {amount} overdue",
+      "searchLabel": "Search overdue fees",
+      "searchPlaceholder": "Search by student or parent",
+      "instalments": "{count, plural, one {# instalment} other {# instalments}}",
+      "late": "{days, plural, one {# day late} other {# days late}}",
+      "since": "Oldest due {date}",
+      "open": "Open fees",
+      "remind": "Remind on WhatsApp",
+      "noParent": "No parent number",
+      "reminder": "Dear {parent}, this is a reminder from {institute} that {amount} in fees for {student} is overdue (due since {date}). Please pay at the earliest. Thank you.",
+      "empty": "No overdue fees. Everyone is up to date.",
+      "noMatch": "No overdue fees match “{search}”."
+    },
+    "status": {
+      "PENDING": "Due",
+      "PARTIAL": "Part paid",
+      "PAID": "Paid",
+      "WAIVED": "Waived",
+      "OVERDUE": "Overdue"
+    },
+    "method": {
+      "CASH": "Cash",
+      "UPI": "UPI",
+      "BANK_TRANSFER": "Bank transfer",
+      "CHEQUE": "Cheque",
+      "CARD": "Card",
+      "ONLINE": "Online"
+    },
+    "student": {
+      "title": "Fees",
+      "empty": "No fee plan yet.",
+      "addPlan": "Add fee plan",
+      "plan": "Fees {year}",
+      "discount": "{amount} discount",
+      "paidOf": "{paid} paid of {total}",
+      "pending": "{amount} pending",
+      "columns": {
+        "no": "#",
+        "due": "Due",
+        "amount": "Amount",
+        "paid": "Paid",
+        "status": "Status"
+      },
+      "instalment": "Instalment {no}",
+      "recordPayment": "Record payment",
+      "waive": "Waive",
+      "receipt": "Receipt {number}",
+      "viewReceipt": "View receipt {number}",
+      "waived": "{amount} waived"
+    },
+    "plan": {
+      "title": "Add a fee plan",
+      "academicYear": "Academic year",
+      "totalAmount": "Total fee (₹)",
+      "discountType": "Discount",
+      "noDiscount": "No discount",
+      "percentage": "Percentage (%)",
+      "fixed": "Fixed amount (₹)",
+      "discountValue": "Discount value",
+      "final": "Fee after discount",
+      "count": "Instalments",
+      "firstDue": "First due date",
+      "every": "Then every",
+      "frequency": {
+        "1": "Month",
+        "3": "3 months",
+        "6": "6 months"
+      },
+      "schedule": "Schedule",
+      "resplit": "Split equally again",
+      "rowAmount": "Amount for instalment {no}",
+      "rowDue": "Due date for instalment {no}",
+      "sumOk": "Instalments add up to {amount}",
+      "sumOff": "Instalments add up to {sum} — {diff} {direction} the fee",
+      "more": "more than",
+      "less": "less than",
+      "create": "Create fee plan",
+      "creating": "Creating…",
+      "created": "Fee plan created",
+      "amountInvalid": "Enter an amount in rupees, like 25000 or 2500.50.",
+      "discountTooBig": "The discount is larger than the fee.",
+      "percentTooBig": "A percentage discount can be at most 100."
+    },
+    "pay": {
+      "title": "Record payment",
+      "for": "{student} · Instalment {no} · {balance} due",
+      "amount": "Amount (₹)",
+      "method": "Paid by",
+      "reference": "Reference (UPI / cheque / transaction no.)",
+      "remarks": "Note (optional)",
+      "submit": "Record payment",
+      "submitting": "Recording…",
+      "recorded": "Payment recorded. Receipt {number}",
+      "duplicate": "This payment was already recorded. Receipt {number}",
+      "viewReceipt": "View receipt",
+      "overBalance": "This is more than the {balance} still due."
+    },
+    "waive": {
+      "title": "Waive instalment {no}?",
+      "body": "The remaining {amount} will no longer be collected. Payments already made are kept.",
+      "confirm": "Waive {amount}",
+      "done": "Instalment waived"
+    },
+    "receipt": {
+      "title": "Fee receipt",
+      "back": "Back to student",
+      "print": "Print",
+      "number": "Receipt no.",
+      "date": "Date",
+      "student": "Student",
+      "academicYear": "Academic year",
+      "instalment": "Instalment",
+      "method": "Payment method",
+      "reference": "Reference",
+      "amount": "Amount received",
+      "inWords": "In words",
+      "balance": "Balance for this instalment",
+      "note": "Note",
+      "footer": "This is a computer-generated receipt.",
+      "notFound": "This receipt could not be found."
     }
   }
 }

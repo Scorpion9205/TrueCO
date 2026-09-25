@@ -4,6 +4,7 @@ import {
   FeeTransactionResponseDto,
 } from './dto/fee.dto.js';
 import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { money, toRupees } from '../../common/money/money.js';
 
 export class FeeMapper {
   public static toTransactionDto(entity: any): FeeTransactionResponseDto {
@@ -23,7 +24,11 @@ export class FeeMapper {
   public static toInstallmentDto(entity: any): FeeInstallmentResponseDto {
     const amount = Number(entity.amount);
     const paidAmount = Number(entity.paidAmount || 0);
-    const balanceAmount = Math.max(0, amount - paidAmount);
+    // A waived instalment owes nothing more, whatever was left unpaid on it
+    const waived = entity.status === FeeInstallmentStatus.WAIVED;
+    const balanceAmount = waived
+      ? 0
+      : Math.max(0, toRupees(money(entity.amount).minus(money(entity.paidAmount))));
 
     return {
       id: entity.id,
@@ -41,9 +46,22 @@ export class FeeMapper {
 
   public static toPlanDto(entity: any): FeePlanResponseDto {
     const installments = entity.installments?.map(FeeMapper.toInstallmentDto) || [];
-    const totalPaid = installments.reduce((acc: number, i: any) => acc + i.paidAmount, 0);
+    const rawInstallments: any[] = entity.installments ?? [];
     const finalAmount = Number(entity.finalAmount);
-    const totalPending = Math.max(0, finalAmount - totalPaid);
+    // Summed as exact decimals: adding JavaScript numbers drifts by fractions of a paisa
+    const totalPaid = toRupees(
+      rawInstallments.reduce((acc, i) => acc.plus(money(i.paidAmount)), money(0)),
+    );
+    // What is still collectable: waived remainders are forgiven, not pending
+    const totalWaived = toRupees(
+      rawInstallments
+        .filter((i) => i.status === FeeInstallmentStatus.WAIVED)
+        .reduce((acc, i) => acc.plus(money(i.amount).minus(money(i.paidAmount))), money(0)),
+    );
+    const totalPending = Math.max(
+      0,
+      toRupees(money(entity.finalAmount).minus(totalPaid).minus(totalWaived)),
+    );
 
     const studentName = entity.student
       ? `${entity.student.firstName} ${entity.student.lastName}`
@@ -61,6 +79,7 @@ export class FeeMapper {
       academicYear: entity.academicYear,
       totalPaid,
       totalPending,
+      totalWaived,
       installments,
       createdAt: new Date(entity.createdAt),
     };

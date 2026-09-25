@@ -44,6 +44,7 @@ import { useApiError } from '@/lib/use-api-error';
 import { ParentDialog } from './parent-dialog';
 import { StudentFormDialog } from './student-form-dialog';
 import { StudentResults } from './student-results';
+import { StudentFees } from '@/components/fees/student-fees';
 
 export function StudentDetail({ id }: { id: string }) {
   const t = useTranslations('Students.detail');
@@ -103,6 +104,7 @@ function StudentProfile({ student, back }: { student: Student; back: ReactNode }
   const canDelete = can(user, 'students:delete');
   const canManageBatches = can(user, 'batches:update');
   const canSeeResults = can(user, 'tests:read');
+  const canSeeFees = can(user, 'fees:read');
 
   const toggleActive = async () => {
     try {
@@ -198,6 +200,7 @@ function StudentProfile({ student, back }: { student: Student; back: ReactNode }
               </dl>
             </CardContent>
           </Card>
+          {canSeeFees ? <StudentFees studentId={student.id} studentName={name} /> : null}
           {canSeeResults ? <StudentResults studentId={student.id} /> : null}
         </div>
 

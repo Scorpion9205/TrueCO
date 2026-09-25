@@ -57,7 +57,9 @@ describe('HomeworkPage', () => {
     signInAs(OWNER);
     renderWithIntl(<HomeworkPage />);
 
-    const titles = (await screen.findAllByRole('heading', { level: 3 })).map((h) => h.textContent);
+    // Wait for the whole list (the past section included) before reading its order
+    await screen.findByRole('heading', { name: 'Old worksheet' });
+    const titles = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(titles).toEqual(['Tonight', 'Next week', 'Old worksheet']);
     expect(screen.getByText('Due today')).toBeInTheDocument();
     expect(screen.getByText('Past due')).toBeInTheDocument();
