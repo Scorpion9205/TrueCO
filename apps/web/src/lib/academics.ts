@@ -151,11 +151,12 @@ export function useStudent(id: string) {
   });
 }
 
-export function useBatches() {
+export function useBatches(enabled = true) {
   const scope = useQueryScope();
   return useQuery({
     queryKey: [scope, 'batches', 'list'],
     queryFn: ({ signal }) => api.get<Batch[]>('/batches', { signal }),
+    enabled,
   });
 }
 
