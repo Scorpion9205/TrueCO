@@ -1,4 +1,17 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import { money, toRupees } from '../../common/money/money.js';
+import { dateRange, timestampRange, todayInIndia } from '../reports/report.dates.js';
+
+/** Last day of the month a YYYY-MM-DD falls in */
+function monthEnd(day: string): string {
+  const d = new Date(`${day.slice(0, 7)}-01T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  d.setUTCDate(0);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Fee rows of students still on the books */
+const LIVE_PLAN = { feePlan: { deletedAt: null, student: { deletedAt: null } } };
 
 export interface IDashboardRepository {
   getOwnerDashboardData(coachingId: string): Promise<any>;
@@ -11,15 +24,11 @@ export class PrismaDashboardRepository implements IDashboardRepository {
   public async getOwnerDashboardData(coachingId: string): Promise<any> {
     const rawPrisma = this.prisma as any;
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-
-    const nextWeek = new Date(now);
-    nextWeek.setDate(nextWeek.getDate() + 7);
+    // "Today" and "this month" are India's, whatever the server's clock zone
+    const today = todayInIndia();
+    const month = { startDate: `${today.slice(0, 7)}-01`, endDate: monthEnd(today) };
+    const nextWeek = new Date(`${today}T00:00:00Z`);
+    nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
 
     const [
       totalStudents,
@@ -40,29 +49,36 @@ export class PrismaDashboardRepository implements IDashboardRepository {
         where: {
           coachingId,
           deletedAt: null,
-          paidAt: { gte: startOfMonth, lte: endOfMonth },
+          paidAt: timestampRange(month),
         },
+        select: { amount: true },
       }),
       rawPrisma.expense.findMany({
         where: {
           coachingId,
           deletedAt: null,
-          expenseDate: { gte: startOfMonth, lte: endOfMonth },
+          expenseDate: dateRange(month),
         },
+        select: { amount: true },
       }),
       rawPrisma.feeInstallment.findMany({
         where: {
           coachingId,
           deletedAt: null,
           status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] },
-          dueDate: { lte: endOfMonth },
+          dueDate: { lte: dateRange(month)!.lte },
+          ...LIVE_PLAN,
         },
+        select: { amount: true, paidAmount: true },
       }),
+      // Today's classes (by class date, not when the register was saved)
       rawPrisma.attendanceRecord.findMany({
         where: {
           coachingId,
-          createdAt: { gte: todayStart, lte: todayEnd },
+          session: { deletedAt: null, sessionDate: new Date(`${today}T00:00:00Z`) },
+          student: { deletedAt: null },
         },
+        select: { status: true },
       }),
       rawPrisma.riskScore.count({
         where: {
@@ -81,7 +97,8 @@ export class PrismaDashboardRepository implements IDashboardRepository {
           coachingId,
           deletedAt: null,
           status: { in: ['PENDING', 'PARTIAL'] },
-          dueDate: { gte: now, lte: nextWeek },
+          dueDate: { gte: new Date(`${today}T00:00:00Z`), lte: nextWeek },
+          ...LIVE_PLAN,
         },
         include: {
           feePlan: { include: { student: true } },
@@ -91,21 +108,27 @@ export class PrismaDashboardRepository implements IDashboardRepository {
       }),
     ]);
 
-    const monthlyRevenue = monthTransactions.reduce((acc: number, t: any) => acc + Number(t.amount), 0);
-    const monthlyExpenses = monthExpenses.reduce((acc: number, e: any) => acc + Number(e.amount), 0);
-    const monthlyPendingFees = pendingInstallments.reduce(
-      (acc: number, i: any) => acc + (Number(i.amount) - Number(i.paidAmount || 0)),
-      0,
+    const monthlyRevenue = toRupees(
+      monthTransactions.reduce((acc: any, t: any) => acc.plus(money(t.amount)), money(0)),
+    );
+    const monthlyExpenses = toRupees(
+      monthExpenses.reduce((acc: any, e: any) => acc.plus(money(e.amount)), money(0)),
+    );
+    const monthlyPendingFees = toRupees(
+      pendingInstallments.reduce(
+        (acc: any, i: any) => acc.plus(money(i.amount).minus(money(i.paidAmount))),
+        money(0),
+      ),
     );
 
-    const presentCount = todayRecords.filter(
+    // Excused absences count neither way, as in the attendance report
+    const counted = todayRecords.filter((r: any) => r.status !== 'EXCUSED');
+    const presentCount = counted.filter(
       (r: any) => r.status === 'PRESENT' || r.status === 'LATE',
     ).length;
     // No records means attendance has not been marked yet today, not that everyone came
     const todayAttendanceRate =
-      todayRecords.length > 0
-        ? Number(((presentCount / todayRecords.length) * 100).toFixed(2))
-        : null;
+      counted.length > 0 ? Number(((presentCount / counted.length) * 100).toFixed(2)) : null;
 
     return {
       metrics: {
@@ -126,12 +149,12 @@ export class PrismaDashboardRepository implements IDashboardRepository {
   public async getTeacherDashboardData(coachingId: string, teacherId: string): Promise<any> {
     const rawPrisma = this.prisma as any;
 
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    // Today in India, as date-only columns store it
+    const today = new Date(`${todayInIndia()}T00:00:00Z`);
 
     const teacherBatches = await rawPrisma.teacherBatch.findMany({
-      where: { coachingId, teacherId },
+      // Deleted batches drop out; inactive ones stay so their history is still reachable
+      where: { coachingId, teacherId, batch: { deletedAt: null } },
       include: {
         batch: {
           include: {
@@ -149,7 +172,8 @@ export class PrismaDashboardRepository implements IDashboardRepository {
         where: {
           coachingId,
           batchId: { in: batchIds },
-          sessionDate: { gte: todayStart, lte: todayEnd },
+          deletedAt: null,
+          sessionDate: today,
         },
         include: {
           batch: true,
@@ -161,7 +185,7 @@ export class PrismaDashboardRepository implements IDashboardRepository {
           coachingId,
           batchId: { in: batchIds },
           deletedAt: null,
-          dueDate: { gte: todayStart },
+          dueDate: { gte: today },
         },
       }),
     ]);

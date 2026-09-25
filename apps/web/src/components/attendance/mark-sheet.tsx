@@ -253,10 +253,10 @@ function MarkForm({
 }
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
-  PRESENT: 'aria-pressed:border-success aria-pressed:bg-success aria-pressed:text-white',
-  ABSENT: 'aria-pressed:border-destructive aria-pressed:bg-destructive aria-pressed:text-white',
-  LATE: 'aria-pressed:border-warning aria-pressed:bg-warning aria-pressed:text-white',
-  EXCUSED: 'aria-pressed:border-info aria-pressed:bg-info aria-pressed:text-white',
+  PRESENT: 'aria-pressed:border-success aria-pressed:bg-success aria-pressed:text-background',
+  ABSENT: 'aria-pressed:border-destructive aria-pressed:bg-destructive aria-pressed:text-background',
+  LATE: 'aria-pressed:border-warning aria-pressed:bg-warning aria-pressed:text-background',
+  EXCUSED: 'aria-pressed:border-info aria-pressed:bg-info aria-pressed:text-background',
 };
 
 /** Four large toggle buttons; the full word on wider screens, a letter on phones */

@@ -170,7 +170,7 @@ export async function openCheckout(
       name: details.name,
       description: details.description,
       prefill: { email: details.email, contact: details.contact },
-      theme: { color: '#cf4a12' },
+      theme: { color: '#c2410c' },
       handler: () => finish('paid'),
       modal: { ondismiss: () => finish('cancelled') },
     });

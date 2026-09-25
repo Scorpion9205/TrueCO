@@ -14,6 +14,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -47,8 +48,10 @@ import { can } from '@/lib/auth/permissions';
 import { useSession } from '@/lib/auth/use-session';
 import { useRemoveTeacherFromBatch } from '@/lib/teachers';
 import { useApiError } from '@/lib/use-api-error';
-import { BatchFormDialog } from './batch-form-dialog';
 import { ScheduleText } from './batches-page';
+
+// Forms are left out of the page's first download and load just after it
+const BatchFormDialog = dynamic(() => import('./batch-form-dialog').then((m) => m.BatchFormDialog));
 
 export function BatchDetail({ id }: { id: string }) {
   const t = useTranslations('Batches.detail');

@@ -139,7 +139,8 @@
   "NotFound": {
     "title": "Page not found",
     "body": "The page you are looking for does not exist or has moved.",
-    "home": "Back to home"
+    "home": "Back to home",
+    "dashboard": "Back to dashboard"
   },
   "Auth": {
     "panel": {
@@ -291,14 +292,15 @@
       "choosePlan": "Choose a plan",
       "askOwner": "Ask your institute owner to renew."
     },
-    "comingSoon": {
-      "title": "Coming soon",
-      "body": "{section} is being built and will appear here shortly.",
-      "back": "Back to dashboard"
-    },
     "noAccess": {
       "title": "You don't have access",
       "body": "Your role doesn't include this section. Ask your institute owner if you need it."
+    },
+    "theme": {
+      "label": "Appearance",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "Same as device"
     }
   },
   "Dashboard": {
@@ -1336,5 +1338,13 @@
       "mockLive": "Online payment isn't available right now. Please contact TrueCO support to upgrade.",
       "simulate": "Mark as paid (development)"
     }
+  },
+  "Errors": {
+    "title": "Something went wrong",
+    "body": "This page couldn't load. Try again, and if it keeps happening, contact TrueCO support.",
+    "reference": "Reference: {id}",
+    "retry": "Try again",
+    "dashboard": "Back to dashboard",
+    "home": "Back to home"
   }
 }

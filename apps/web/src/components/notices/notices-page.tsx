@@ -2,6 +2,7 @@
 
 import { CalendarClock, Megaphone, Pencil, Pin, PinOff, Plus, Trash2, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import { parseAsBoolean, parseAsStringLiteral, useQueryStates } from 'nuqs';
 import { useState } from 'react';
 import { QueryError } from '@/components/dashboard/query-error';
@@ -26,7 +27,11 @@ import {
 } from '@/lib/notices';
 import { cn } from '@/lib/utils';
 import { useApiError } from '@/lib/use-api-error';
-import { NoticeFormDialog } from './notice-form-dialog';
+
+// Forms are left out of the page's first download and load just after it
+const NoticeFormDialog = dynamic(() =>
+  import('./notice-form-dialog').then((m) => m.NoticeFormDialog),
+);
 
 const AUDIENCE_FILTERS = ['any', ...AUDIENCES.filter((value) => value !== 'ALL')] as const;
 

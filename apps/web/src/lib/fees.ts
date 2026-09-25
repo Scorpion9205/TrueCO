@@ -201,3 +201,11 @@ export function useWaiveInstallment() {
     onSuccess: invalidate,
   });
 }
+
+/** A rupee amount as typed: "25000", "2,500.50" (commas allowed), at most two decimals */
+export function parseRupees(value: string): number | null {
+  const cleaned = value.replace(/,/g, '').trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(cleaned)) return null;
+  const n = Number(cleaned);
+  return n > 0 ? n : null;
+}

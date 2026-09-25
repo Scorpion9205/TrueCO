@@ -10,7 +10,8 @@
  *
  * Brand: black, white and orange.
  * - --brand (#F26B3A) is the vivid accent for highlights, icons and illustration.
- * - --primary (#CF4A12) is the button/link orange: white text on it passes WCAG AA (4.5:1).
+ * - --primary (#C2410C) is the button/link orange: white text on it, and it as text on white,
+ *   grey or the soft orange tint, all pass WCAG AA (4.5:1).
  */
 :root {
   --radius: 1rem;
@@ -24,8 +25,8 @@
 
   --brand: #f26b3a;
   --brand-soft: #fff3ed;
-  --primary: #cf4a12;
-  --primary-hover: #b53f0f;
+  --primary: #c2410c;
+  --primary-hover: #a8380a;
   --primary-foreground: #ffffff;
 
   --secondary: #f5f5f4;
@@ -35,20 +36,20 @@
   --accent: #fff3ed;
   --accent-foreground: #9a3412;
 
-  --info: #2563eb;
-  --success: #15803d;
-  --warning: #b45309;
+  --info: #1d4ed8;
+  --success: #13733a;
+  --warning: #92400e;
   --destructive: #b91c1c;
   --destructive-foreground: #ffffff;
   /* WhatsApp message status */
-  --whatsapp: #1c9e57;
+  --whatsapp: #147a43;
   /* Deep blue for highlight bands; white text on it passes AA */
   --band: #1d4ed8;
   --band-foreground: #ffffff;
 
   --border: #e7e5e4;
   --input: #d6d3d1;
-  --ring: #cf4a12;
+  --ring: #c2410c;
 }
 
 .dark {

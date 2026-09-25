@@ -94,7 +94,7 @@ describe('TeachersPage', () => {
     renderWithIntl(<TeachersPage />);
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'Add teacher' }))[0]!);
-    const dialog = screen.getByRole('dialog', { name: 'Add teacher' });
+    const dialog = await screen.findByRole('dialog', { name: 'Add teacher' });
     await userEvent.type(within(dialog).getByLabelText('Full name'), 'Anita Rao');
     await userEvent.type(within(dialog).getByLabelText('Mobile number'), '98765 00001');
     await userEvent.type(within(dialog).getByLabelText('Email'), 'Anita@Sharma.in');
@@ -130,7 +130,7 @@ describe('TeachersPage', () => {
     renderWithIntl(<TeachersPage />);
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'Add teacher' }))[0]!);
-    const dialog = screen.getByRole('dialog', { name: 'Add teacher' });
+    const dialog = await screen.findByRole('dialog', { name: 'Add teacher' });
     await userEvent.type(within(dialog).getByLabelText('Full name'), 'Anita Rao');
     await userEvent.type(within(dialog).getByLabelText('Mobile number'), '9876500001');
     await userEvent.type(within(dialog).getByLabelText('Email'), 'owner@sharma.in');
@@ -156,7 +156,7 @@ describe('TeachersPage', () => {
     renderWithIntl(<TeachersPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit: Anita Rao' }));
-    const dialog = screen.getByRole('dialog', { name: 'Edit teacher' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit teacher' });
     expect(within(dialog).getByLabelText('Email')).toHaveAttribute('readonly');
     await userEvent.clear(within(dialog).getByLabelText(/Monthly salary/));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
@@ -211,7 +211,7 @@ describe('TeachersPage', () => {
     renderWithIntl(<TeachersPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Batches' }));
-    const dialog = screen.getByRole('dialog', { name: "Anita Rao's batches" });
+    const dialog = await screen.findByRole('dialog', { name: "Anita Rao's batches" });
     // Only batches they don't teach yet are offered
     const select = within(dialog).getByLabelText('Batch');
     await within(dialog).findByRole('option', { name: 'Class 12 Physics' });

@@ -5,6 +5,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { pickClientMessages } from '@/i18n/client-messages';
 import { SITE_URL } from '@/lib/site';
+import { THEME_SCRIPT } from '@/lib/theme-script';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -42,7 +43,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const locale = await getLocale();
   const messages = pickClientMessages(await getMessages());
   return (
-    <html lang={locale} className={jakarta.variable}>
+    // The theme script changes <html> before React loads, which React would otherwise flag
+    <html lang={locale} className={jakarta.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh font-sans">
         <NextIntlClientProvider messages={messages}>
           <Providers>{children}</Providers>

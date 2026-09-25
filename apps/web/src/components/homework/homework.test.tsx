@@ -82,7 +82,7 @@ describe('HomeworkPage', () => {
     renderWithIntl(<HomeworkPage />);
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'Assign homework' }))[0]!);
-    const dialog = screen.getByRole('dialog', { name: 'Assign homework' });
+    const dialog = await screen.findByRole('dialog', { name: 'Assign homework' });
     await userEvent.type(within(dialog).getByLabelText('Title'), 'Ex 4.2');
     await userEvent.type(within(dialog).getByLabelText('Instructions'), 'Questions 1 to 10');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Assign' }));
@@ -103,7 +103,7 @@ describe('HomeworkPage', () => {
     renderWithIntl(<HomeworkPage />);
 
     await userEvent.click((await screen.findAllByRole('button', { name: 'Assign homework' }))[0]!);
-    const dialog = screen.getByRole('dialog', { name: 'Assign homework' });
+    const dialog = await screen.findByRole('dialog', { name: 'Assign homework' });
     await userEvent.type(within(dialog).getByLabelText('Title'), 'Ex 4.2');
     await userEvent.type(within(dialog).getByLabelText('Instructions'), 'Questions');
     await userEvent.type(within(dialog).getByLabelText(/Link to worksheet/), 'drive folder');
@@ -125,7 +125,7 @@ describe('HomeworkPage', () => {
     renderWithIntl(<HomeworkPage />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-    const dialog = screen.getByRole('dialog', { name: 'Edit homework' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit homework' });
     await userEvent.clear(within(dialog).getByLabelText(/Link to worksheet/));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 
