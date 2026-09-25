@@ -104,7 +104,10 @@ export interface Teacher {
   phone: string;
   email: string;
   specialization?: string | null;
+  monthlySalary?: number | null;
+  joiningDate?: string;
   isActive: boolean;
+  assignedBatches?: Array<{ batchId: string; batchName: string; isPrimary: boolean }>;
 }
 
 export const STUDENTS_PAGE_SIZE = 25;
@@ -194,7 +197,7 @@ function useInvalidateAcademics() {
   const scope = useQueryScope();
   return () =>
     Promise.all(
-      ['students', 'batches', 'dashboard'].map((key) =>
+      ['students', 'batches', 'teachers', 'dashboard'].map((key) =>
         queryClient.invalidateQueries({ queryKey: [scope, key] }),
       ),
     );

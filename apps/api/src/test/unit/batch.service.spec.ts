@@ -7,8 +7,19 @@ import { BATCH_EVENTS } from '../../modules/batches/batch.events.js';
 
 class InMemoryBatchRepository implements IBatchRepository {
   public batches: Map<string, any> = new Map();
-  public enrollments: Array<{ batchId: string; studentId: string; coachingId: string; joinedAt: Date; leftAt?: Date }> = [];
-  public teacherAssignments: Array<{ batchId: string; teacherId: string; coachingId: string; isPrimary: boolean }> = [];
+  public enrollments: Array<{
+    batchId: string;
+    studentId: string;
+    coachingId: string;
+    joinedAt: Date;
+    leftAt?: Date;
+  }> = [];
+  public teacherAssignments: Array<{
+    batchId: string;
+    teacherId: string;
+    coachingId: string;
+    isPrimary: boolean;
+  }> = [];
 
   public async create(data: any, teacherIds?: string[]): Promise<any> {
     const batch = {
@@ -40,7 +51,11 @@ class InMemoryBatchRepository implements IBatchRepository {
     return b;
   }
 
-  public async findMany(_filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<any[]> {
+  public async findMany(_filters?: {
+    isActive?: boolean;
+    academicYear?: string;
+    teacherId?: string;
+  }): Promise<any[]> {
     return Array.from(this.batches.values()).filter((b) => !b.deletedAt);
   }
 
@@ -57,7 +72,11 @@ class InMemoryBatchRepository implements IBatchRepository {
     if (b) b.deletedAt = new Date();
   }
 
-  public async enrollStudent(data: { batchId: string; studentId: string; coachingId: string }): Promise<any> {
+  public async enrollStudent(data: {
+    batchId: string;
+    studentId: string;
+    coachingId: string;
+  }): Promise<any> {
     const entry = {
       batchId: data.batchId,
       studentId: data.studentId,
@@ -69,20 +88,40 @@ class InMemoryBatchRepository implements IBatchRepository {
   }
 
   public async withdrawStudent(batchId: string, studentId: string): Promise<void> {
-    const entry = this.enrollments.find((e) => e.batchId === batchId && e.studentId === studentId && !e.leftAt);
+    const entry = this.enrollments.find(
+      (e) => e.batchId === batchId && e.studentId === studentId && !e.leftAt,
+    );
     if (entry) {
       entry.leftAt = new Date();
     }
   }
 
-  public async assignTeacher(data: { batchId: string; teacherId: string; coachingId: string; isPrimary: boolean }): Promise<void> {
+  public async assignTeacher(data: {
+    batchId: string;
+    teacherId: string;
+    coachingId: string;
+    isPrimary: boolean;
+  }): Promise<void> {
     this.teacherAssignments.push(data);
+  }
+
+  public async removeTeacher(batchId: string, teacherId: string): Promise<number> {
+    const before = this.teacherAssignments.length;
+    this.teacherAssignments = this.teacherAssignments.filter(
+      (a) => !(a.batchId === batchId && a.teacherId === teacherId),
+    );
+    return before - this.teacherAssignments.length;
   }
 
   public async findActiveStudents(batchId: string): Promise<any[]> {
     return this.enrollments
       .filter((e) => e.batchId === batchId && !e.leftAt)
-      .map((e) => ({ id: `bs-${e.studentId}`, studentId: e.studentId, joinedAt: e.joinedAt, student: { firstName: 'Test', lastName: 'Student' } }));
+      .map((e) => ({
+        id: `bs-${e.studentId}`,
+        studentId: e.studentId,
+        joinedAt: e.joinedAt,
+        student: { firstName: 'Test', lastName: 'Student' },
+      }));
   }
 
   public async transferStudent(data: {
@@ -91,7 +130,9 @@ class InMemoryBatchRepository implements IBatchRepository {
     fromBatchId: string;
     toBatchId: string;
   }): Promise<{ previous: any; current: any }> {
-    const prev = this.enrollments.find((e) => e.batchId === data.fromBatchId && e.studentId === data.studentId && !e.leftAt);
+    const prev = this.enrollments.find(
+      (e) => e.batchId === data.fromBatchId && e.studentId === data.studentId && !e.leftAt,
+    );
     if (prev) {
       prev.leftAt = new Date();
     }
@@ -194,7 +235,12 @@ describe('BatchService (Phase 2 Domain Unit Tests)', () => {
       'coaching-1',
     );
 
-    await batchService.enrollStudent(batch1.id, { studentId: 'student-42' }, 'coaching-1', 'user-1');
+    await batchService.enrollStudent(
+      batch1.id,
+      { studentId: 'student-42' },
+      'coaching-1',
+      'user-1',
+    );
 
     await batchService.transferStudent(
       batch1.id,
@@ -298,6 +344,28 @@ describe('BatchService (Phase 2 Domain Unit Tests)', () => {
 
     it('reports a missing batch', async () => {
       await expect(batchService.deleteBatch('nope')).rejects.toMatchObject({ statusCode: 404 });
+    });
+  });
+
+  describe('removing a teacher', () => {
+    it('removes only that teacher from that batch', async () => {
+      batchRepo.teacherAssignments.push(
+        { batchId: 'b1', teacherId: 't1', coachingId: 'c1', isPrimary: true },
+        { batchId: 'b1', teacherId: 't2', coachingId: 'c1', isPrimary: true },
+        { batchId: 'b2', teacherId: 't1', coachingId: 'c1', isPrimary: true },
+      );
+      await batchService.removeTeacher('b1', 't1');
+      expect(batchRepo.teacherAssignments.map((a) => `${a.batchId}:${a.teacherId}`)).toEqual([
+        'b1:t2',
+        'b2:t1',
+      ]);
+    });
+
+    it('says so when the teacher was not assigned', async () => {
+      await expect(batchService.removeTeacher('b1', 't9')).rejects.toMatchObject({
+        code: 'TEACHER_NOT_ASSIGNED',
+        statusCode: 404,
+      });
     });
   });
 });

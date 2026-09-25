@@ -22,8 +22,15 @@ export class TeacherService {
     userId?: string,
     correlationId: string = crypto.randomUUID(),
   ): Promise<TeacherResponseDto> {
-    const rawPassword = dto.password || dto.phone; // Fallback temporary password
-    const passwordHash = await this.passwordService.hash(rawPassword);
+    if (await this.teacherRepository.emailInUse(dto.email)) {
+      throw new AppError(
+        'EMAIL_TAKEN',
+        'Someone in this coaching already signs in with this email',
+        StatusCodes.CONFLICT,
+        [{ path: ['email'], message: 'Email already in use' }],
+      );
+    }
+    const passwordHash = await this.passwordService.hash(dto.password);
 
     const teacher = await this.teacherRepository.createWithUser({
       coachingId,
@@ -67,12 +74,19 @@ export class TeacherService {
   public async getTeacherByUserId(userId: string): Promise<TeacherResponseDto> {
     const teacher = await this.teacherRepository.findByUserId(userId);
     if (!teacher) {
-      throw new AppError('TEACHER_NOT_FOUND', 'Teacher profile not found for user', StatusCodes.NOT_FOUND);
+      throw new AppError(
+        'TEACHER_NOT_FOUND',
+        'Teacher profile not found for user',
+        StatusCodes.NOT_FOUND,
+      );
     }
     return TeacherMapper.toResponseDto(teacher);
   }
 
-  public async listTeachers(filters?: { isActive?: boolean; search?: string }): Promise<TeacherResponseDto[]> {
+  public async listTeachers(filters?: {
+    isActive?: boolean;
+    search?: string;
+  }): Promise<TeacherResponseDto[]> {
     const teachers = await this.teacherRepository.findMany(filters);
     return teachers.map(TeacherMapper.toResponseDto);
   }

@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
+import { money, Money, toRupees } from '../../common/money/money.js';
 import { IExpenseRepository } from './expense.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
@@ -125,6 +126,23 @@ export class ExpenseService {
     return list.map(ExpenseMapper.toResponseDto);
   }
 
+  /** A page of expenses plus how many match in total */
+  public async listExpensesPage(
+    coachingId: string,
+    filter?: ExpenseFilterDto,
+  ): Promise<{ expenses: ExpenseResponseDto[]; total: number }> {
+    const options = {
+      category: filter?.category,
+      startDate: filter?.startDate ? new Date(filter.startDate) : undefined,
+      endDate: filter?.endDate ? new Date(filter.endDate) : undefined,
+    };
+    const [expenses, total] = await Promise.all([
+      this.listExpenses(coachingId, filter),
+      this.expenseRepository.count(coachingId, options),
+    ]);
+    return { expenses, total };
+  }
+
   public async deleteExpense(id: string, coachingId: string, userId?: string): Promise<void> {
     const existing = await this.expenseRepository.findById(id);
     if (!existing || existing.coachingId !== coachingId) {
@@ -138,20 +156,27 @@ export class ExpenseService {
     month: number,
     year: number,
   ): Promise<{ total: number; count: number; byCategory: Record<string, number> }> {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59);
+    // expenseDate is a calendar date (stored at UTC midnight), so the month is taken in UTC
+    // rather than in whatever time zone the server happens to run
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 0));
 
     const expenses = await this.expenseRepository.getSummary(coachingId, startDate, endDate);
 
-    let total = 0;
-    const byCategory: Record<string, number> = {};
-
+    // Exact decimals: adding JavaScript numbers drifts by fractions of a paisa
+    let total = money(0);
+    const byCategory: Record<string, Money> = {};
     for (const exp of expenses) {
-      const amt = Number(exp.amount);
-      total += amt;
-      byCategory[exp.category] = (byCategory[exp.category] || 0) + amt;
+      total = total.plus(money(exp.amount));
+      byCategory[exp.category] = (byCategory[exp.category] ?? money(0)).plus(money(exp.amount));
     }
 
-    return { total, count: expenses.length, byCategory };
+    return {
+      total: toRupees(total),
+      count: expenses.length,
+      byCategory: Object.fromEntries(
+        Object.entries(byCategory).map(([category, amount]) => [category, toRupees(amount)]),
+      ),
+    };
   }
 }

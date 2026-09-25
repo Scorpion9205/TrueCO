@@ -1,6 +1,9 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { PaymentMethod } from '@trueco/types';
 
+// The mapper reports teacherName; without the relation every salary row was nameless
+const WITH_TEACHER = { teacher: { select: { name: true } } } as const;
+
 export interface CreateSalaryInput {
   coachingId: string;
   teacherId: string;
@@ -44,6 +47,7 @@ export class PrismaSalaryRepository implements ISalaryRepository {
         remarks: input.remarks,
         status: 'PENDING',
       },
+      include: WITH_TEACHER,
     });
   }
 
@@ -51,6 +55,7 @@ export class PrismaSalaryRepository implements ISalaryRepository {
     const rawPrisma = this.prisma as any;
     return rawPrisma.salary.findFirst({
       where: { id, deletedAt: null },
+      include: WITH_TEACHER,
     });
   }
 
@@ -58,6 +63,7 @@ export class PrismaSalaryRepository implements ISalaryRepository {
     const rawPrisma = this.prisma as any;
     return rawPrisma.salary.findMany({
       where: { teacherId, deletedAt: null },
+      include: WITH_TEACHER,
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
   }
@@ -76,6 +82,7 @@ export class PrismaSalaryRepository implements ISalaryRepository {
         ...(filter?.year && { year: filter.year }),
         ...(filter?.status && { status: filter.status }),
       },
+      include: WITH_TEACHER,
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
   }
@@ -92,7 +99,7 @@ export class PrismaSalaryRepository implements ISalaryRepository {
         ...(data.remarks && { remarks: data.remarks }),
       },
     });
-    return count === 0 ? null : rawPrisma.salary.findUnique({ where: { id } });
+    return count === 0 ? null : rawPrisma.salary.findUnique({ where: { id }, include: WITH_TEACHER });
   }
 
   public async getTeacherMonthlySalary(teacherId: string): Promise<number | null> {

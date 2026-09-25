@@ -16,7 +16,7 @@ export class TeacherMapper {
       phone: entity.phone,
       email: entity.email,
       specialization: entity.specialization,
-      monthlySalary: entity.monthlySalary ? Number(entity.monthlySalary) : null,
+      monthlySalary: entity.monthlySalary != null ? Number(entity.monthlySalary) : null,
       joiningDate: new Date(entity.joiningDate),
       isActive: entity.isActive,
       assignedBatches,

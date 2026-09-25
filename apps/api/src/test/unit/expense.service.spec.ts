@@ -4,6 +4,7 @@ import {
   CreateExpenseInput,
   ExpenseFilterOptions,
   IExpenseRepository,
+  PrismaExpenseRepository,
   UpdateExpenseInput,
 } from '../../modules/expenses/expense.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
@@ -80,6 +81,10 @@ class InMemoryExpenseRepository implements IExpenseRepository {
       if (filter?.endDate && e.expenseDate > filter.endDate) return false;
       return true;
     });
+  }
+
+  public async count(coachingId: string, filter?: ExpenseFilterOptions): Promise<number> {
+    return (await this.findMany(coachingId, filter)).length;
   }
 
   public async getSummary(coachingId: string, startDate: Date, endDate: Date): Promise<any[]> {
@@ -242,5 +247,47 @@ describe('ExpenseService (Phase 4 Domain Unit Tests)', () => {
       expect(summary.byCategory[TEST_CATEGORIES.RENT]).toBe(25000);
       expect(summary.byCategory[TEST_CATEGORIES.MARKETING]).toBe(5000);
     });
+  });
+
+  it('sums a month exactly and returns a page with the total count', async () => {
+    for (const [amount, category] of [
+      [0.1, 'STATIONERY'],
+      [0.2, 'STATIONERY'],
+      [15000, 'RENT'],
+    ] as const) {
+      await expenseService.recordExpense(
+        {
+          title: 'x',
+          category,
+          amount,
+          expenseDate: '2026-09-10',
+          paymentMethod: PaymentMethod.CASH,
+        },
+        'coaching-1',
+      );
+    }
+
+    const summary = await expenseService.getExpenseSummary('coaching-1', 9, 2026);
+    expect(summary.total).toBe(15000.3);
+    expect(summary.byCategory).toEqual({ STATIONERY: 0.3, RENT: 15000 });
+
+    const page = await expenseService.listExpensesPage('coaching-1', { limit: 2, offset: 0 });
+    expect(page.total).toBe(3);
+  });
+});
+
+describe('PrismaExpenseRepository filters', () => {
+  it('applies both ends of a date range (the end must not replace the start)', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const count = vi.fn().mockResolvedValue(0);
+    const repo = new PrismaExpenseRepository({ expense: { findMany, count } } as any);
+    const range = { startDate: new Date('2026-09-01'), endDate: new Date('2026-09-30') };
+
+    await repo.findMany('coaching-1', range);
+    await repo.count('coaching-1', range);
+
+    for (const call of [findMany.mock.calls[0][0], count.mock.calls[0][0]]) {
+      expect(call.where.expenseDate).toEqual({ gte: range.startDate, lte: range.endDate });
+    }
   });
 });

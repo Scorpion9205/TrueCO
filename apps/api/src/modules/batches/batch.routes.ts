@@ -39,6 +39,11 @@ export function createBatchRoutes(controller: BatchController): Router {
     controller.transferStudent,
   );
   router.post('/:id/teachers', requirePermission('batches:update'), controller.assignTeacher);
+  router.delete(
+    '/:id/teachers/:teacherId',
+    requirePermission('batches:update'),
+    controller.removeTeacher,
+  );
 
   return router;
 }

@@ -47,8 +47,11 @@ export class ExpenseController {
     const coachingId = RequestContextService.getRequiredCoachingId();
     const filter = expenseFilterSchema.parse(req.query);
 
-    const result = await this.expenseService.listExpenses(coachingId, filter);
-    res.status(StatusCodes.OK).json({ data: result });
+    const result = await this.expenseService.listExpensesPage(coachingId, filter);
+    res.status(StatusCodes.OK).json({
+      data: result.expenses,
+      meta: { total: result.total, limit: filter.limit, offset: filter.offset },
+    });
   };
 
   public delete = async (req: Request, res: Response): Promise<void> => {

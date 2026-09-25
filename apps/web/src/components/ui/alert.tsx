@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { CircleAlert, CircleCheck, Info } from 'lucide-react';
+import { CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +10,7 @@ const alertVariants = cva(
       tone: {
         info: 'border-info/30 bg-info/5 text-foreground [&>svg]:text-info',
         success: 'border-success/30 bg-success/5 text-foreground [&>svg]:text-success',
+        warning: 'border-warning/30 bg-warning/5 text-foreground [&>svg]:text-warning',
         danger: 'border-destructive/30 bg-destructive/5 text-foreground [&>svg]:text-destructive',
       },
     },
@@ -17,7 +18,12 @@ const alertVariants = cva(
   },
 );
 
-const ICONS = { info: Info, success: CircleCheck, danger: CircleAlert } as const;
+const ICONS = {
+  info: Info,
+  success: CircleCheck,
+  warning: TriangleAlert,
+  danger: CircleAlert,
+} as const;
 
 export interface AlertProps
   extends React.ComponentProps<'div'>, VariantProps<typeof alertVariants> {}

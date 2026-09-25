@@ -1,4 +1,7 @@
-import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
+import {
+  getPrismaClient,
+  ExtendedPrismaClient,
+} from '../../database/prisma/tenant-prisma.extension.js';
 
 export interface IBatchRepository {
   create(data: any, teacherIds?: string[]): Promise<any>;
@@ -6,10 +9,21 @@ export interface IBatchRepository {
   update(id: string, data: any): Promise<any>;
   /** Soft delete; history (attendance, tests) keeps pointing at the batch */
   softDelete(id: string): Promise<void>;
-  findMany(filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<any[]>;
+  findMany(filters?: {
+    isActive?: boolean;
+    academicYear?: string;
+    teacherId?: string;
+  }): Promise<any[]>;
   enrollStudent(data: { batchId: string; studentId: string; coachingId: string }): Promise<any>;
   withdrawStudent(batchId: string, studentId: string): Promise<any>;
-  assignTeacher(data: { batchId: string; teacherId: string; coachingId: string; isPrimary?: boolean }): Promise<any>;
+  assignTeacher(data: {
+    batchId: string;
+    teacherId: string;
+    coachingId: string;
+    isPrimary?: boolean;
+  }): Promise<any>;
+  /** Returns how many assignments were removed (0 when the teacher did not teach the batch) */
+  removeTeacher(batchId: string, teacherId: string): Promise<number>;
   findActiveStudents(batchId: string): Promise<any[]>;
   transferStudent(data: {
     coachingId: string;
@@ -82,7 +96,11 @@ export class PrismaBatchRepository implements IBatchRepository {
     await (this.prisma as any).batch.delete({ where: { id } });
   }
 
-  public async findMany(filters?: { isActive?: boolean; academicYear?: string; teacherId?: string }): Promise<any[]> {
+  public async findMany(filters?: {
+    isActive?: boolean;
+    academicYear?: string;
+    teacherId?: string;
+  }): Promise<any[]> {
     const where: any = { deletedAt: null };
     if (filters?.isActive !== undefined) {
       where.isActive = filters.isActive;
@@ -106,7 +124,11 @@ export class PrismaBatchRepository implements IBatchRepository {
     });
   }
 
-  public async enrollStudent(data: { batchId: string; studentId: string; coachingId: string }): Promise<any> {
+  public async enrollStudent(data: {
+    batchId: string;
+    studentId: string;
+    coachingId: string;
+  }): Promise<any> {
     const rawPrisma = this.prisma as any;
 
     // Check if previous record exists
@@ -173,6 +195,13 @@ export class PrismaBatchRepository implements IBatchRepository {
         isPrimary: data.isPrimary ?? true,
       },
     });
+  }
+
+  public async removeTeacher(batchId: string, teacherId: string): Promise<number> {
+    const result = await (this.prisma as any).teacherBatch.deleteMany({
+      where: { batchId, teacherId },
+    });
+    return result.count;
   }
 
   public async findActiveStudents(batchId: string): Promise<any[]> {
