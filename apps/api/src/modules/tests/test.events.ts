@@ -20,6 +20,7 @@ export interface MarksUploadedPayload {
 
 export interface TestResultReadyPayload {
   readonly testId: string;
+  readonly testTitle?: string;
   readonly studentId: string;
   readonly coachingId: string;
   readonly marksObtained: number;

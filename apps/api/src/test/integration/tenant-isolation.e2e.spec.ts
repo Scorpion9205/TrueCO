@@ -21,7 +21,6 @@ const PASSWORD = 'Str0ng!Passw0rd';
 function registration(code: string) {
   return {
     coachingName: `Coaching ${code}`,
-    coachingCode: code,
     phone: '9876543210',
     email: `${code}@institute.in`,
     ownerName: `Owner ${code}`,
@@ -48,9 +47,12 @@ describe.skipIf(!enabled)('Tenant isolation end-to-end (HTTP + PostgreSQL)', () 
     const { createApp } = await import('../../main.js');
     app = createApp();
 
-    for (const code of ['alpha-e2e', 'beta-e2e']) {
-      const res = await request(app).post('/api/v1/coachings/register').send(registration(code));
+    // The server makes each institute's code; sign in with the ones it returns
+    const codes: string[] = [];
+    for (const name of ['alpha-e2e', 'beta-e2e']) {
+      const res = await request(app).post('/api/v1/coachings/register').send(registration(name));
       expect(res.status, JSON.stringify(res.body)).toBe(201);
+      codes.push(res.body.data.code);
     }
 
     const login = async (coachingCode: string) => {
@@ -60,8 +62,8 @@ describe.skipIf(!enabled)('Tenant isolation end-to-end (HTTP + PostgreSQL)', () 
       expect(res.status, JSON.stringify(res.body)).toBe(200);
       return res.body.data.tokens.accessToken as string;
     };
-    tokenA = await login('alpha-e2e');
-    tokenB = await login('beta-e2e');
+    tokenA = await login(codes[0]!);
+    tokenB = await login(codes[1]!);
   }, 60_000);
 
   afterAll(async () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CoachingService } from '../../modules/coaching/coaching.service.js';
+import { coachingCodeBase } from '../../modules/coaching/coaching-code.js';
 import { ICoachingRepository, CreateCoachingTransactionInput } from '../../modules/coaching/coaching.repository.js';
 import { IPasswordService } from '../../common/security/password.service.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
@@ -97,7 +98,6 @@ describe('CoachingService (Phase 1 Domain Unit Tests)', () => {
   it('should register a coaching institute with a 60-day full-feature trial', async () => {
     const result = await coachingService.registerCoaching({
       coachingName: 'Apex IIT Academy',
-      coachingCode: 'apex-iit',
       phone: '9876543210',
       email: 'contact@apexiit.com',
       ownerName: 'Dr. Sharma',
@@ -108,7 +108,8 @@ describe('CoachingService (Phase 1 Domain Unit Tests)', () => {
       currency: 'INR',
     });
 
-    expect(result.code).toBe('apex-iit');
+    // The code is made from the name
+    expect(result.code).toBe('apex-iit-academy');
     expect(result.name).toBe('Apex IIT Academy');
     expect(result.subscription.status).toBe(SubscriptionStatus.TRIALING);
     expect(result.subscription.daysRemaining).toBe(60);
@@ -117,23 +118,49 @@ describe('CoachingService (Phase 1 Domain Unit Tests)', () => {
     expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
   });
 
-  it('should reject registration if coaching code is already taken', async () => {
-    coachingRepo.coachings.set('existing', {
-      id: 'existing',
-      code: 'apex-iit',
+  it('gives an institute with a taken name its own code', async () => {
+    coachingRepo.coachings.set('existing', { id: 'existing', code: 'apex-iit-academy' });
+
+    const result = await coachingService.registerCoaching({
+      coachingName: 'Apex IIT Academy',
+      phone: '9876543210',
+      email: 'another@test.com',
+      ownerName: 'Owner',
+      ownerEmail: 'owner@test.com',
+      ownerPhone: '9876543210',
+      ownerPassword: 'Password123',
     });
 
-    await expect(
-      coachingService.registerCoaching({
-        coachingName: 'Another Academy',
-        coachingCode: 'apex-iit',
-        phone: '9876543210',
-        email: 'another@test.com',
-        ownerName: 'Owner',
-        ownerEmail: 'owner@test.com',
-        ownerPhone: '9876543210',
-        ownerPassword: 'Password123',
-      }),
-    ).rejects.toThrow(/already registered/);
+    expect(result.code).toMatch(/^apex-iit-academy-[a-z2-9]{4}$/);
+  });
+
+  it('retries with a new code when another sign-up takes it at the same moment', async () => {
+    const create = coachingRepo.createWithProvisioning.bind(coachingRepo);
+    let calls = 0;
+    coachingRepo.createWithProvisioning = async (input) => {
+      calls += 1;
+      if (calls === 1) throw Object.assign(new Error('unique'), { code: 'P2002' });
+      return create(input);
+    };
+
+    const result = await coachingService.registerCoaching({
+      coachingName: 'Race Academy',
+      phone: '9876543210',
+      email: 'race@test.com',
+      ownerName: 'Owner',
+      ownerEmail: 'race-owner@test.com',
+      ownerPhone: '9876543210',
+      ownerPassword: 'Password123',
+    });
+    expect(calls).toBe(2);
+    expect(result.code).toMatch(/^race-academy-[a-z2-9]{4}$/);
+  });
+});
+
+describe('institute codes', () => {
+  it('are readable, accent-free and never too short', () => {
+    expect(coachingCodeBase('Shārma Classes, Jaipur!')).toBe('sharma-classes-jaipur');
+    expect(coachingCodeBase('  A1 ')).toBe('institute');
+    expect(coachingCodeBase('x'.repeat(80))).toHaveLength(40);
   });
 });

@@ -38,6 +38,7 @@ export class WhatsAppAssistantSubscribers {
                 recipientType: 'PARENT',
                 content: event.payload.replyText,
                 idempotencyKey,
+                isReply: true,
               },
               event.coachingId || '',
               event.metadata?.correlationId,

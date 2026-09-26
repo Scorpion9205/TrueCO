@@ -4,6 +4,7 @@ import { DashboardService } from './dashboard.service.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import { teacherDashboardQuerySchema } from './validators/dashboard.validator.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
+import { RoleType } from '@vargly/types';
 
 export class DashboardController {
   public constructor(private readonly dashboardService: DashboardService) {}
@@ -29,13 +30,20 @@ export class DashboardController {
       const traceId = RequestContextService.getTraceId();
 
       const query = teacherDashboardQuerySchema.parse(req.query);
-      const teacherId = query.teacherId || userId;
+      // Teachers always see their own dashboard; only owners may look at another teacher's.
+      // The signed-in user's id is not the teacher's id, so the profile is looked up.
+      const roles = RequestContextService.getRoles();
+      const teacherId = await this.dashboardService.resolveTeacherId(
+        userId,
+        query.teacherId,
+        roles.includes(RoleType.OWNER) || roles.includes(RoleType.SUPER_ADMIN),
+      );
 
       if (!teacherId) {
         throw new AppError(
-          'TEACHER_ID_REQUIRED',
-          'teacherId must be provided in query or from authenticated context',
-          StatusCodes.BAD_REQUEST,
+          'TEACHER_NOT_FOUND',
+          'No teacher profile for this account',
+          StatusCodes.NOT_FOUND,
         );
       }
 

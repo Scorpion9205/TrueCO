@@ -7,8 +7,11 @@ export interface CreateNotificationHistoryInput {
   recipient: string;
   recipientType: string;
   templateName?: string;
+  templateVariables?: Record<string, string>;
   content: string;
   idempotencyKey: string;
+  /** Recorded as FAILED with this reason instead of being queued (e.g. the daily limit) */
+  failedReason?: string;
 }
 
 export interface UpdateNotificationStatusInput {
@@ -31,6 +34,8 @@ export interface INotificationRepository {
    * abandoned by a crashed worker). Only the caller that gets true may send it.
    */
   claimForSending(idempotencyKey: string): Promise<boolean>;
+  /** How many notifications on this channel the coaching has created since the given time */
+  countSince(coachingId: string, channel: NotificationChannel, since: Date): Promise<number>;
 }
 
 // A worker that crashed after claiming leaves SENDING behind; after this long another may retry it
@@ -49,9 +54,11 @@ export class PrismaNotificationRepository implements INotificationRepository {
         recipient: input.recipient,
         recipientType: input.recipientType,
         templateName: input.templateName,
+        templateVariables: input.templateVariables,
         content: input.content,
         idempotencyKey: input.idempotencyKey,
-        status: NotificationStatus.QUEUED,
+        status: input.failedReason ? NotificationStatus.FAILED : NotificationStatus.QUEUED,
+        errorMessage: input.failedReason,
       },
       update: {}, // keep existing state if already queued
     });
@@ -130,6 +137,16 @@ export class PrismaNotificationRepository implements INotificationRepository {
       data: { status: NotificationStatus.SENDING },
     });
     return count === 1;
+  }
+
+  public async countSince(
+    coachingId: string,
+    channel: NotificationChannel,
+    since: Date,
+  ): Promise<number> {
+    return (this.prisma as any).notificationHistory.count({
+      where: { coachingId, channel, createdAt: { gte: since } },
+    });
   }
 
   public async findByIdempotencyKey(key: string): Promise<any | null> {

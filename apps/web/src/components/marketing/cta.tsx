@@ -40,6 +40,8 @@ export async function Cta() {
             <label htmlFor="cta-email" className="sr-only">
               {t('emailLabel')}
             </label>
+            {/* Full width when stacked on phones; fills the row beside the button on wider screens
+                (flex-1 in a column would start it at zero height) */}
             <Input
               id="cta-email"
               name="email"
@@ -47,7 +49,7 @@ export async function Cta() {
               required
               autoComplete="email"
               placeholder={t('emailPlaceholder')}
-              className="h-12 flex-1 rounded-full border-transparent bg-background px-5 text-foreground"
+              className="h-12 w-full rounded-full border-transparent bg-background px-5 text-foreground sm:flex-1"
             />
             <Button type="submit" size="lg">
               {t('submit')} <ArrowRight />

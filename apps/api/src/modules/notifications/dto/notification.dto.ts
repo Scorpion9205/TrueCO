@@ -10,6 +10,10 @@ export interface SendNotificationDto {
   readonly templateVariables?: Record<string, string>;
   readonly subject?: string; // For EMAIL
   readonly idempotencyKey: string;
+  /** The student a message to someone else (e.g. the owner) is about, named in the template */
+  readonly studentId?: string;
+  /** A reply to someone who just wrote in; STOP and the daily limit cover only automatic messages */
+  readonly isReply?: boolean;
 }
 
 export interface NotificationResponseDto {

@@ -1,11 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { isApiError } from '@vargly/api-client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { Alert } from '@/components/ui/alert';
@@ -20,23 +19,12 @@ import { normalisePhone, PHONE_PATTERN } from '@/lib/phone';
 import { SubmitButton } from './submit-button';
 
 /** "Sharma Classes, Kota" -> "sharma-classes-kota" (the API allows a-z, 0-9, "-" and "_") */
-export function toCoachingCode(name: string): string {
-  return name
-    .normalize('NFKD')
-    .replace(/\p{M}/gu, '') // "É" decomposes to "E" + an accent mark; drop the mark
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 50);
-}
-
 const SERVER_FIELDS = [
   'ownerName',
   'ownerEmail',
   'ownerPhone',
   'ownerPassword',
   'coachingName',
-  'coachingCode',
   'city',
   'phone',
   'email',
@@ -48,7 +36,6 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
   const describeError = useAuthError();
   const [formError, setFormError] = useState<string | null>(null);
   // Suggest the code from the name until the owner types their own
-  const codeEdited = useRef(false);
 
   const schema = useMemo(() => {
     const required = t('validation.required');
@@ -64,11 +51,6 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
         ownerPhone: phone,
         ownerPassword: z.string().min(8, t('validation.passwordMin')),
         coachingName: z.string().trim().min(2, t('validation.nameMin')),
-        coachingCode: z
-          .string()
-          .trim()
-          .toLowerCase()
-          .regex(/^[a-z0-9_-]{3,50}$/, t('validation.code')),
         city: z.string().trim(),
         sameContact: z.boolean(),
         phone: z.string(),
@@ -91,7 +73,6 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
     register,
     handleSubmit,
     setError,
-    setValue,
     control,
     formState: { errors, isSubmitting },
   } = useForm<FormIn, unknown, FormOut>({
@@ -102,7 +83,6 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
       ownerPhone: '',
       ownerPassword: '',
       coachingName: '',
-      coachingCode: '',
       city: '',
       sameContact: true,
       phone: '',
@@ -119,7 +99,6 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
       ownerPhone: values.ownerPhone,
       ownerPassword: values.ownerPassword,
       coachingName: values.coachingName,
-      coachingCode: values.coachingCode,
       city: values.city || undefined,
       phone: values.sameContact ? values.ownerPhone : normalisePhone(values.phone),
       email: values.sameContact ? values.ownerEmail : values.email.trim(),
@@ -134,12 +113,7 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
         router.replace(`/login?${params}`);
       }
     } catch (error) {
-      const message = describeError(error, setError, SERVER_FIELDS);
-      if (isApiError(error) && error.code === 'CODE_CONFLICT') {
-        setError('coachingCode', { type: 'server', message }, { shouldFocus: true });
-      } else {
-        setFormError(message);
-      }
+      setFormError(describeError(error, setError, SERVER_FIELDS));
     }
   });
 
@@ -147,8 +121,6 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
     showLabel: t('fields.showPassword'),
     hideLabel: t('fields.hidePassword'),
   };
-  const coachingName = register('coachingName');
-  const coachingCode = register('coachingCode');
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-8">
@@ -205,40 +177,11 @@ export function SignupForm({ defaultEmail }: { defaultEmail?: string }) {
           label={t('fields.coachingName')}
           error={errors.coachingName?.message}
         >
-          <Input
-            autoComplete="organization"
-            {...coachingName}
-            onChange={(event) => {
-              void coachingName.onChange(event);
-              if (!codeEdited.current) {
-                setValue('coachingCode', toCoachingCode(event.target.value), {
-                  shouldValidate: false,
-                });
-              }
-            }}
-          />
+          <Input autoComplete="organization" {...register('coachingName')} />
         </FormField>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormField
-            id="coachingCode"
-            label={t('fields.coachingCode')}
-            hint={t('fields.coachingCodeHint')}
-            error={errors.coachingCode?.message}
-          >
-            <Input
-              autoCapitalize="none"
-              spellCheck={false}
-              {...coachingCode}
-              onChange={(event) => {
-                codeEdited.current = event.target.value !== '';
-                void coachingCode.onChange(event);
-              }}
-            />
-          </FormField>
           <FormField id="city" label={t('fields.city')} error={errors.city?.message}>
             <Input autoComplete="address-level2" {...register('city')} />
           </FormField>
-        </div>
 
         <label className="flex items-start gap-3 text-sm">
           <input

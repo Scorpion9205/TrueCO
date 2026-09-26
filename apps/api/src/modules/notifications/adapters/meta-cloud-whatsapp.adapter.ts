@@ -1,6 +1,15 @@
 import { IWhatsAppAdapter, SendWhatsAppInput, WhatsAppSendResult } from './whatsapp.adapter.interface.js';
 import { envConfig } from '../../../config/env.config.js';
 import { logger } from '../../../common/logger/logger.service.js';
+import { templateParameters } from '../whatsapp-templates.js';
+
+/** Meta wants the number with its country code; Indian numbers are usually saved as 10 digits */
+export function toWhatsAppNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.length === 11 && digits.startsWith('0')) return `91${digits.slice(1)}`;
+  return digits;
+}
 
 export class MetaCloudWhatsAppAdapter implements IWhatsAppAdapter {
   private readonly phoneNumberId?: string;
@@ -28,7 +37,7 @@ export class MetaCloudWhatsAppAdapter implements IWhatsAppAdapter {
       };
     }
 
-    const cleanPhone = input.to.replace(/\D/g, ''); // strip non-digits for Meta format
+    const cleanPhone = toWhatsAppNumber(input.to);
     const url = `https://graph.facebook.com/${this.apiVersion}/${this.phoneNumberId}/messages`;
 
     let payload: Record<string, unknown>;
@@ -47,10 +56,9 @@ export class MetaCloudWhatsAppAdapter implements IWhatsAppAdapter {
             components: [
               {
                 type: 'body',
-                parameters: Object.entries(input.templateVariables).map(([_, text]) => ({
-                  type: 'text',
-                  text,
-                })),
+                parameters: templateParameters(input.templateName, input.templateVariables).map(
+                  (text) => ({ type: 'text', text }),
+                ),
               },
             ],
           }),

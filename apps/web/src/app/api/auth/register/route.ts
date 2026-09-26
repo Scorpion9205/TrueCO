@@ -12,7 +12,6 @@ import type { RegisterInput, SessionUser } from '@/lib/auth/types';
 
 const FIELDS: ReadonlyArray<keyof RegisterInput> = [
   'coachingName',
-  'coachingCode',
   'phone',
   'email',
   'city',
@@ -34,8 +33,11 @@ export async function POST(request: NextRequest) {
   ) as Partial<RegisterInput>;
 
   const api = apiFor(request);
+  // The API makes the institute's code; sign in with it, since the owner's email may already
+  // belong to another institute and would then be ambiguous on its own
+  let code: string;
   try {
-    await api.post('/coachings/register', input);
+    ({ code } = await api.post<{ code: string }>('/coachings/register', input));
   } catch (error) {
     return errorResponse(error);
   }
@@ -44,7 +46,7 @@ export async function POST(request: NextRequest) {
     const result = await api.post<{ user: SessionUser; tokens: ApiTokens }>('/auth/login', {
       email: input.ownerEmail,
       password: input.ownerPassword,
-      coachingCode: input.coachingCode?.trim().toLowerCase(),
+      coachingCode: code,
     });
     return sessionResponse(result.user, result.tokens, 201);
   } catch {

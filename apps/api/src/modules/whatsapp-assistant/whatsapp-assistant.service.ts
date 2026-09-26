@@ -17,6 +17,21 @@ import { AiService } from '../ai/ai.service.js';
 import { buildWhatsAppRagSystemPrompt } from './prompts/whatsapp-rag-system.prompt.js';
 import { logger } from '../../common/logger/logger.service.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
+import {
+  WhatsAppOptOutRepository,
+  whatsAppOptOuts,
+} from '../notifications/whatsapp-opt-out.repository.js';
+
+const STOP_WORDS = new Set(['STOP', 'STOP MESSAGES', 'UNSUBSCRIBE', 'OPT OUT', 'OPTOUT', 'BAND KARO']);
+const START_WORDS = new Set(['START', 'SUBSCRIBE', 'OPT IN', 'OPTIN']);
+
+/** Whether a message asks to stop or restart automatic messages */
+export function optOutCommand(body: string): 'OPT_OUT' | 'OPT_IN' | null {
+  const text = body.trim().toUpperCase().replace(/[.!]+$/, '').replace(/\s+/g, ' ');
+  if (STOP_WORDS.has(text)) return 'OPT_OUT';
+  if (START_WORDS.has(text)) return 'OPT_IN';
+  return null;
+}
 
 export class WhatsAppAssistantService {
   private readonly intentClassifier: NlpIntentClassifier;
@@ -27,6 +42,7 @@ export class WhatsAppAssistantService {
     private readonly knowledgeBaseService?: KnowledgeBaseService,
     private readonly aiService?: AiService,
     intentClassifier?: NlpIntentClassifier,
+    private readonly optOuts: Pick<WhatsAppOptOutRepository, 'optOut' | 'optIn'> = whatsAppOptOuts,
   ) {
     this.intentClassifier = intentClassifier || new NlpIntentClassifier();
   }
@@ -59,18 +75,32 @@ export class WhatsAppAssistantService {
       ),
     );
 
-    // 2. Identity resolution: exact phone match, possibly at several coachings
+    // 2. STOP / START work for anyone, registered or not, across every institute
+    const command = optOutCommand(dto.body);
+    if (command) {
+      const optingOut = command === 'OPT_OUT';
+      await (optingOut ? this.optOuts.optOut(dto.from) : this.optOuts.optIn(dto.from));
+      const text = optingOut
+        ? 'You will no longer get automatic messages from Vargly. Reply START to receive them again.'
+        : 'You will now get updates from your institute on WhatsApp again. Reply STOP at any time to stop them.';
+      return { ...WhatsAppAssistantMapper.toReplyDto(dto.from, text, command), sendDirectly: true };
+    }
+
+    // 3. Identity resolution: exact phone match, possibly at several coachings
     const parents = await this.repository.resolveParentsByPhone(dto.from);
     if (parents.length === 0) {
-      return WhatsAppAssistantMapper.toReplyDto(
-        dto.from,
-        'Hello! This mobile number is not registered with our coaching institute. Please contact the front office to register your phone number.',
-        'UNKNOWN',
-      );
+      return {
+        ...WhatsAppAssistantMapper.toReplyDto(
+          dto.from,
+          'Hello! This mobile number is not registered with our coaching institute. Please contact the front office to register your phone number.',
+          'UNKNOWN',
+        ),
+        sendDirectly: true,
+      };
     }
 
     const chosen = await this.chooseCoaching(dto, parents);
-    if ('reply' in chosen) return chosen.reply;
+    if ('reply' in chosen) return { ...chosen.reply, sendDirectly: true };
 
     // Everything after identification acts on behalf of the parent's coaching only
     const parent = chosen.parent;

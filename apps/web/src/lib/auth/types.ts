@@ -26,7 +26,6 @@ export interface LoginInput {
 /** POST /coachings/register body (apps/api registerCoachingSchema) */
 export interface RegisterInput {
   coachingName: string;
-  coachingCode: string;
   phone: string;
   email: string;
   city?: string;

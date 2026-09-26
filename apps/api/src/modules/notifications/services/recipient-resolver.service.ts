@@ -10,6 +10,12 @@ export interface ResolvedRecipient {
   readonly email?: string;
   readonly name: string;
   readonly recipientType: 'PARENT' | 'STUDENT' | 'TEACHER';
+  /** The child a parent or student message is about (siblings joined), for template text */
+  readonly studentName?: string;
+}
+
+function fullName(student: { firstName?: string; lastName?: string | null }): string {
+  return [student.firstName, student.lastName].filter(Boolean).join(' ');
 }
 
 export class RecipientResolverService {
@@ -89,6 +95,7 @@ export class RecipientResolverService {
               [sp.parent.firstName, sp.parent.lastName].filter(Boolean).join(' ') ||
               'Parent',
             recipientType: 'PARENT',
+            studentName: fullName(student),
           },
         ];
       }
@@ -102,6 +109,7 @@ export class RecipientResolverService {
             email: student.email || undefined,
             name: `${student.firstName} ${student.lastName}`,
             recipientType: 'PARENT',
+            studentName: fullName(student),
           },
         ];
       }
@@ -129,6 +137,7 @@ export class RecipientResolverService {
           email: student.email || undefined,
           name: `${student.firstName} ${student.lastName}`,
           recipientType: 'STUDENT',
+          studentName: fullName(student),
         },
       ];
     }
@@ -144,6 +153,7 @@ export class RecipientResolverService {
           email: student.email || undefined,
           name: `${student.firstName} ${student.lastName}`,
           recipientType: 'STUDENT' as const,
+          studentName: fullName(student),
         }));
       }
     }
@@ -192,6 +202,23 @@ export class RecipientResolverService {
     return [];
   }
 
+  /** The institute's name as parents know it, for template text */
+  public async instituteName(coachingId: string): Promise<string> {
+    const coaching = await (this.prisma as any).coaching.findFirst({
+      where: { id: coachingId },
+      select: { name: true },
+    });
+    return coaching?.name ?? 'your institute';
+  }
+
+  public async studentName(studentId: string, coachingId: string): Promise<string | undefined> {
+    const student = await (this.prisma as any).student.findFirst({
+      where: { id: studentId, coachingId },
+      select: { firstName: true, lastName: true },
+    });
+    return student ? fullName(student) : undefined;
+  }
+
   /** Active students currently in the batch, or in the whole coaching when batchId is null */
   private async findStudents(batchId: string | null, coachingId: string): Promise<any[]> {
     const where: any = { coachingId, deletedAt: null, isActive: true };
@@ -204,23 +231,24 @@ export class RecipientResolverService {
 
   /** Each student's primary parent (or first linked), once per parent even with siblings */
   private parentsOf(students: any[]): ResolvedRecipient[] {
-    const seen = new Set<string>();
-    const parents: ResolvedRecipient[] = [];
+    const byParent = new Map<string, { parent: any; children: string[] }>();
     for (const student of students) {
       const link =
         student.studentParents?.find((p: any) => p.isPrimary) ?? student.studentParents?.[0];
       const parent = link?.parent;
-      if (!parent || parent.deletedAt || seen.has(parent.id)) continue;
-      seen.add(parent.id);
-      parents.push({
-        recipientId: parent.id,
-        phone: parent.phone,
-        email: parent.email || undefined,
-        name: parent.name || 'Parent',
-        recipientType: 'PARENT',
-      });
+      if (!parent || parent.deletedAt) continue;
+      const entry = byParent.get(parent.id) ?? { parent, children: [] };
+      entry.children.push(fullName(student));
+      byParent.set(parent.id, entry);
     }
-    return parents;
+    return [...byParent.values()].map(({ parent, children }) => ({
+      recipientId: parent.id,
+      phone: parent.phone,
+      email: parent.email || undefined,
+      name: parent.name || 'Parent',
+      recipientType: 'PARENT' as const,
+      studentName: children.join(' and '),
+    }));
   }
 }
 

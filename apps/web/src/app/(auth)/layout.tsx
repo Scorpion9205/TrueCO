@@ -4,7 +4,10 @@ import type { ReactNode } from 'react';
 import { Logo } from '@/components/brand/logo';
 import { TRIAL_DAYS } from '@/lib/site';
 
-/** Split screen: the form on the left, a brand panel on the right (hidden on small screens) */
+/**
+ * Split screen: the form on the left, a brand panel on the right (hidden on small screens). The
+ * panel stays in view at screen height while a long form scrolls beside it.
+ */
 export default async function AuthLayout({ children }: Readonly<{ children: ReactNode }>) {
   const t = await getTranslations('Auth.panel');
 
@@ -17,7 +20,7 @@ export default async function AuthLayout({ children }: Readonly<{ children: Reac
         </main>
       </div>
 
-      <aside className="relative hidden overflow-hidden bg-foreground p-12 text-background lg:flex lg:flex-col lg:justify-end">
+      <aside className="relative hidden overflow-hidden bg-foreground p-12 text-background lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:justify-between lg:self-start">
         <div
           aria-hidden
           className="absolute -top-32 -right-32 size-96 rounded-full bg-brand/40 blur-3xl"
@@ -26,6 +29,19 @@ export default async function AuthLayout({ children }: Readonly<{ children: Reac
           aria-hidden
           className="absolute bottom-40 -left-24 size-72 rounded-full bg-brand/20 blur-3xl"
         />
+        {/* Wordmark until there is a designed logo: "Varg" in the panel text colour, "ly" in orange */}
+        <div className="relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <p
+            aria-hidden
+            className="text-7xl leading-none font-extrabold tracking-tighter xl:text-8xl"
+          >
+            Varg<span className="text-brand">ly</span>
+          </p>
+          <p className="mt-4 text-sm font-semibold tracking-[0.2em] text-background/70 uppercase">
+            {t('tagline')}
+          </p>
+        </div>
+
         <div className="relative max-w-md">
           <h2 className="text-4xl font-extrabold tracking-tight text-balance">{t('title')}</h2>
           <p className="mt-4 text-lg text-background/75">{t('body')}</p>

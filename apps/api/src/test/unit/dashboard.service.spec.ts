@@ -19,6 +19,12 @@ class InMemoryDashboardRepository implements IDashboardRepository {
   public async getTeacherDashboardData(_coachingId: string, _teacherId: string): Promise<any> {
     return this.teacherData;
   }
+
+  public profiles = new Map<string, string>([['user-ritik', 'teacher-ritik']]);
+
+  public async findTeacherIdByUserId(userId: string): Promise<string | null> {
+    return this.profiles.get(userId) ?? null;
+  }
 }
 
 describe('DashboardService (Phase 5 Dashboard Unit Tests)', () => {
@@ -193,4 +199,30 @@ describe('PrismaDashboardRepository', () => {
       sessionDate: new Date(`${todayInIndia()}T00:00:00Z`),
     });
   });
+
+  describe('whose teacher dashboard is shown', () => {
+    const dashboardService = new DashboardService(new InMemoryDashboardRepository(), {
+      publish: async () => undefined,
+      subscribe: () => undefined,
+    } as any);
+    it("uses the signed-in teacher's profile, not their user id", async () => {
+      expect(await dashboardService.resolveTeacherId('user-ritik', undefined, false)).toBe(
+        'teacher-ritik',
+      );
+    });
+
+    it("ignores another teacher's id from a teacher, but lets an owner look", async () => {
+      expect(await dashboardService.resolveTeacherId('user-ritik', 'teacher-other', false)).toBe(
+        'teacher-ritik',
+      );
+      expect(await dashboardService.resolveTeacherId('user-owner', 'teacher-other', true)).toBe(
+        'teacher-other',
+      );
+    });
+
+    it('finds nothing for an account without a teacher profile', async () => {
+      expect(await dashboardService.resolveTeacherId('user-owner', undefined, true)).toBeNull();
+    });
+  });
 });
+
