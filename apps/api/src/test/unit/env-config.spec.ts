@@ -59,4 +59,15 @@ describe('environment configuration', () => {
     expect(parse('1')).toBe(1);
     expect(parse('10.0.0.0/8')).toBe('10.0.0.0/8');
   });
+
+  it('reads SMTP_SECURE=false as false (plain text would coerce to true)', () => {
+    const parse = (value?: string) => {
+      const result = parseEnvConfig({ NODE_ENV: 'development', DATABASE_URL: 'x', SMTP_SECURE: value });
+      return result.success ? result.data.SMTP_SECURE : 'invalid';
+    };
+    expect(parse('false')).toBe(false);
+    expect(parse(undefined)).toBe(false);
+    expect(parse('true')).toBe(true);
+    expect(parse('yes')).toBe('invalid');
+  });
 });
