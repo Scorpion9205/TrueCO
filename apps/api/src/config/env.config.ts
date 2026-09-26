@@ -52,6 +52,9 @@ const envSchema = z.object({
   WHATSAPP_APP_SECRET: z.string().optional(),
   WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().default('vargly_webhook_secret_token'),
   WHATSAPP_API_VERSION: z.string().default('v19.0'),
+  // Most automatic WhatsApp messages one institute may send per day (Meta limits the whole
+  // number to 250 people a day until the business is verified)
+  WHATSAPP_DAILY_LIMIT_PER_COACHING: z.coerce.number().int().positive().default(200),
   // SMTP Email
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional().default(587),

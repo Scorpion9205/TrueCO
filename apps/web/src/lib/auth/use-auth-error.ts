@@ -39,6 +39,11 @@ export function useAuthError() {
         if (matched) return t('validation');
       }
 
+      const wait = (error.details as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds;
+      if (error.code === 'RATE_LIMITED' && typeof wait === 'number' && wait > 0) {
+        return t('rateLimitedFor', { minutes: Math.ceil(wait / 60) });
+      }
+
       return t.has(error.code as 'unexpected') ? t(error.code as 'unexpected') : t('unexpected');
     },
     [t],

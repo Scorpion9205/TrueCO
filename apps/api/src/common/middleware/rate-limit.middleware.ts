@@ -55,6 +55,8 @@ export function rateLimit(options: RateLimitOptions): RequestHandler {
         error: {
           code: 'RATE_LIMITED',
           message: `Too many requests. Try again in ${retryAfter} seconds.`,
+          // Lets the app say how long to wait (the limits run from one minute to an hour)
+          details: { retryAfterSeconds: retryAfter },
         },
       };
       res.status(StatusCodes.TOO_MANY_REQUESTS).json(body);

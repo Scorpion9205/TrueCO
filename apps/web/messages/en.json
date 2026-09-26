@@ -144,6 +144,7 @@
   },
   "Auth": {
     "panel": {
+      "tagline": "Coaching management on WhatsApp",
       "title": "Your institute, organised",
       "body": "Attendance, fees and results in one place — and parents kept up to date on WhatsApp.",
       "point1": "{days}-day free trial with every feature",
@@ -155,10 +156,8 @@
       "password": "Password",
       "newPassword": "New password",
       "confirmPassword": "Confirm new password",
-      "coachingCode": "Institute code",
       "coachingCodeOptional": "Institute code (optional)",
       "coachingCodeLoginHint": "Only needed if your email is used at more than one institute.",
-      "coachingCodeHint": "A short ID for your institute, like sharma-classes. Letters, numbers and dashes.",
       "ownerName": "Your full name",
       "ownerEmail": "Your email",
       "ownerPhone": "Your mobile number",
@@ -177,7 +176,6 @@
       "passwordMin": "Use at least 8 characters.",
       "passwordsMatch": "Passwords do not match.",
       "phone": "Enter a 10-digit mobile number (with country code if outside India).",
-      "code": "Use 3–50 lowercase letters, numbers, dashes or underscores.",
       "nameMin": "Enter at least 2 characters."
     },
     "errors": {
@@ -189,7 +187,8 @@
       "INVALID_OR_EXPIRED_TOKEN": "This link is invalid or has expired. Request a new one.",
       "network": "Could not reach Vargly. Check your internet connection and try again.",
       "validation": "Please check the highlighted fields.",
-      "unexpected": "Something went wrong. Please try again."
+      "unexpected": "Something went wrong. Please try again.",
+      "rateLimitedFor": "Too many attempts from this network. Please try again in {minutes, plural, one {# minute} other {# minutes}}."
     },
     "login": {
       "metaTitle": "Sign in",

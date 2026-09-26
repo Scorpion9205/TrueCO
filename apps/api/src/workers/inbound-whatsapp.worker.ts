@@ -4,6 +4,8 @@ import { WhatsAppAssistantService } from '../modules/whatsapp-assistant/whatsapp
 import { PrismaWhatsAppAssistantRepository } from '../modules/whatsapp-assistant/whatsapp-assistant.repository.js';
 import { eventBus } from '../events/event-bus.js';
 import { logger } from '../common/logger/logger.service.js';
+import { IWhatsAppAdapter } from '../modules/notifications/adapters/whatsapp.adapter.interface.js';
+import { MetaCloudWhatsAppAdapter } from '../modules/notifications/adapters/meta-cloud-whatsapp.adapter.js';
 
 export interface InboundWhatsAppJobPayload {
   readonly messageId: string;
@@ -16,7 +18,10 @@ export class InboundWhatsAppWorker {
   private worker: Worker | null = null;
   private assistantService: WhatsAppAssistantService;
 
-  public constructor(assistantService?: WhatsAppAssistantService) {
+  public constructor(
+    assistantService?: WhatsAppAssistantService,
+    private readonly whatsApp: IWhatsAppAdapter = new MetaCloudWhatsAppAdapter(),
+  ) {
     if (assistantService) {
       this.assistantService = assistantService;
     } else {
@@ -74,6 +79,14 @@ export class InboundWhatsAppWorker {
         body,
         timestamp,
       });
+
+      // Replies given before a coaching is known have no institute to send them through
+      if (reply?.sendDirectly) {
+        const sent = await this.whatsApp.sendMessage({ to: reply.to, coachingId: '', bodyText: reply.text });
+        if (sent.status !== 'SENT') {
+          logger.warn(`[InboundWhatsAppWorker] Reply to ${messageId} not sent: ${sent.errorMessage}`);
+        }
+      }
 
       logger.info(
         `[InboundWhatsAppWorker] Completed inbound processing for ${messageId} (intent: ${reply?.intent || 'NONE'})`,

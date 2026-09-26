@@ -118,6 +118,7 @@ export class TestService {
         createTestResultReadyEvent(
           {
             testId,
+            testTitle: existingTest.title,
             studentId: result.studentId,
             coachingId,
             marksObtained: result.marksObtained,

@@ -14,7 +14,8 @@ import type { Express } from 'express';
 const OWNER_URL = process.env.TEST_DATABASE_OWNER_URL;
 const enabled = !!OWNER_URL && !!process.env.TEST_DATABASE_URL;
 
-const CODE = 'gamma-authz';
+// Institute codes are made from the name at sign-up: "Gamma Tutorials" -> "gamma-tutorials"
+const CODE = 'gamma-tutorials';
 const OWNER = { email: 'owner@gamma.in', password: 'Own3r!Passw0rd' };
 const TEACHER = { email: 'teacher@gamma.in', password: 'Teach3r!Pass' };
 
@@ -62,7 +63,6 @@ describe.skipIf(!enabled)('Authorization end-to-end (HTTP + PostgreSQL)', () => 
 
     const reg = await request(app).post('/api/v1/coachings/register').send({
       coachingName: 'Gamma Tutorials',
-      coachingCode: CODE,
       phone: '9876500000',
       email: 'office@gamma.in',
       ownerName: 'Gamma Owner',
@@ -71,6 +71,7 @@ describe.skipIf(!enabled)('Authorization end-to-end (HTTP + PostgreSQL)', () => 
       ownerPassword: OWNER.password,
     });
     expect(reg.status, JSON.stringify(reg.body)).toBe(201);
+    expect(reg.body.data.code).toBe(CODE);
     coachingId = reg.body.data.id;
     ownerToken = await login(OWNER.email, OWNER.password);
     const owner = as(ownerToken);
@@ -123,6 +124,20 @@ describe.skipIf(!enabled)('Authorization end-to-end (HTTP + PostgreSQL)', () => 
   });
 
   describe('teachers are confined to their own batches', () => {
+    it('shows a teacher the batches they are assigned to on their dashboard', async () => {
+      const res = await as(teacherToken).get('/api/v1/dashboard/teacher');
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      expect(res.body.data.assignedBatches.map((b: any) => b.batchId)).toEqual([ids.taughtBatch]);
+    });
+
+    it("never shows a teacher another teacher's dashboard", async () => {
+      const res = await as(teacherToken).get(
+        `/api/v1/dashboard/teacher?teacherId=00000000-0000-4000-8000-000000000000`,
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.data.assignedBatches.map((b: any) => b.batchId)).toEqual([ids.taughtBatch]);
+    });
+
     it('can read and edit homework of a batch they teach', async () => {
       const teacher = as(teacherToken);
       expect((await teacher.get(`/api/v1/homework/${ids.taughtHomework}`)).status).toBe(200);

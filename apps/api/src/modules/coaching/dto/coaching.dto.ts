@@ -2,7 +2,6 @@ import { SubscriptionStatus } from '@vargly/types';
 
 export interface RegisterCoachingDto {
   readonly coachingName: string;
-  readonly coachingCode: string;
   readonly phone: string;
   readonly email: string;
   readonly address?: string;

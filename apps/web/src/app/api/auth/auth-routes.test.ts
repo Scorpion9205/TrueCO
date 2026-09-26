@@ -113,12 +113,14 @@ describe('POST /api/auth/login', () => {
 });
 
 describe('POST /api/auth/register', () => {
-  it('creates the institute and signs the owner in', async () => {
+  it('creates the institute and signs the owner in with the code the API made', async () => {
     let loginBody: unknown;
+    let registerBody: Record<string, unknown> = {};
     server.use(
-      http.post(`${API_URL}/coachings/register`, () =>
-        HttpResponse.json({ data: {} }, { status: 201 }),
-      ),
+      http.post(`${API_URL}/coachings/register`, async ({ request }) => {
+        registerBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ data: { code: 'sharma-classes-k7m2' } }, { status: 201 });
+      }),
       http.post(`${API_URL}/auth/login`, async ({ request }) => {
         loginBody = await request.json();
         return HttpResponse.json({ data: { user, tokens } });
@@ -128,7 +130,8 @@ describe('POST /api/auth/register', () => {
     const response = await register(
       post('register', {
         coachingName: 'Sharma Classes',
-        coachingCode: 'Sharma-Classes',
+        // Ignored: the API makes the code
+        coachingCode: 'my-own-code',
         phone: '9876543210',
         email: 'asha@example.com',
         ownerName: 'Asha',
@@ -140,10 +143,11 @@ describe('POST /api/auth/register', () => {
 
     expect(response.status).toBe(201);
     expect((await response.json()).data.accessToken).toBe('access-1');
+    expect(registerBody).not.toHaveProperty('coachingCode');
     expect(loginBody).toEqual({
       email: 'asha@example.com',
       password: 'secret123',
-      coachingCode: 'sharma-classes',
+      coachingCode: 'sharma-classes-k7m2',
     });
     expect(response.cookies.get(REFRESH_COOKIE)?.value).toBe('refresh-1');
   });
@@ -151,7 +155,7 @@ describe('POST /api/auth/register', () => {
   it('reports success without a session when signing in afterwards fails', async () => {
     server.use(
       http.post(`${API_URL}/coachings/register`, () =>
-        HttpResponse.json({ data: {} }, { status: 201 }),
+        HttpResponse.json({ data: { code: 'x-code' } }, { status: 201 }),
       ),
       http.post(`${API_URL}/auth/login`, () =>
         HttpResponse.json({ error: { code: 'RATE_LIMITED' } }, { status: 429 }),

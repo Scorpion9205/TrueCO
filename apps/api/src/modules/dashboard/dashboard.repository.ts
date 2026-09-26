@@ -16,6 +16,8 @@ const LIVE_PLAN = { feePlan: { deletedAt: null, student: { deletedAt: null } } }
 export interface IDashboardRepository {
   getOwnerDashboardData(coachingId: string): Promise<any>;
   getTeacherDashboardData(coachingId: string, teacherId: string): Promise<any>;
+  /** The teacher profile of a signed-in user (their user id is not their teacher id) */
+  findTeacherIdByUserId(userId: string): Promise<string | null>;
 }
 
 export class PrismaDashboardRepository implements IDashboardRepository {
@@ -145,6 +147,14 @@ export class PrismaDashboardRepository implements IDashboardRepository {
       recentActivities,
       upcomingInstallments,
     };
+  }
+
+  public async findTeacherIdByUserId(userId: string): Promise<string | null> {
+    const teacher = await (this.prisma as any).teacher.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    return teacher?.id ?? null;
   }
 
   public async getTeacherDashboardData(coachingId: string, teacherId: string): Promise<any> {

@@ -89,7 +89,10 @@ export class NotificationController {
             // 2. Process Incoming Messages from Parents/Students (Asynchronous Queue Ingestion)
             const messages = value?.messages || [];
             for (const msg of messages) {
-              if (msg.type === 'text' && msg.text?.body) {
+              // A tapped quick-reply button (e.g. "Stop messages") arrives as type "button"
+              const text: string | undefined =
+                msg.type === 'text' ? msg.text?.body : msg.type === 'button' ? msg.button?.text : undefined;
+              if (text) {
                 try {
                   const queue = queueRegistry.getQueue(QUEUE_NAMES.INBOUND_WHATSAPP);
                   await queue.add(
@@ -97,7 +100,7 @@ export class NotificationController {
                     {
                       messageId: msg.id,
                       from: msg.from,
-                      body: msg.text.body,
+                      body: text,
                       timestamp: msg.timestamp ? Number(msg.timestamp) : Date.now(),
                     },
                     {
@@ -117,7 +120,7 @@ export class NotificationController {
                     await this.assistantService.processInboundMessage({
                       messageId: msg.id,
                       from: msg.from,
-                      body: msg.text.body,
+                      body: text,
                       timestamp: msg.timestamp ? Number(msg.timestamp) : Date.now(),
                     });
                   }

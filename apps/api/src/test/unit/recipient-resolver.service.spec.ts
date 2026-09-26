@@ -108,7 +108,7 @@ describe('RecipientResolverService Unit Tests', () => {
       const resolver = new RecipientResolverService(prismaFor([]) as any);
       const result = await resolver.resolveRecipients('batch:b1:parents', 'c1');
       expect(result).toEqual([
-        { recipientId: 'p1', phone: '+919800000001', email: undefined, name: 'Anand Sharma', recipientType: 'PARENT' },
+        { recipientId: 'p1', phone: '+919800000001', email: undefined, name: 'Anand Sharma', recipientType: 'PARENT', studentName: 'Aarav Sharma and Diya Sharma' },
       ]);
     });
 

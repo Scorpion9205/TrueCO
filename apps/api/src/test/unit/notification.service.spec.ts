@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NotificationService } from '../../modules/notifications/notification.service.js';
+import {
+  DAILY_LIMIT_REASON,
+  NotificationService,
+  startOfIndiaDay,
+} from '../../modules/notifications/notification.service.js';
 import {
   INotificationRepository,
   CreateNotificationHistoryInput,
@@ -24,9 +28,11 @@ class InMemoryNotificationRepository implements INotificationRepository {
       recipient: input.recipient,
       recipientType: input.recipientType,
       templateName: input.templateName,
+      templateVariables: input.templateVariables,
       content: input.content,
       idempotencyKey: input.idempotencyKey,
-      status: NotificationStatus.QUEUED,
+      status: input.failedReason ? NotificationStatus.FAILED : NotificationStatus.QUEUED,
+      errorMessage: input.failedReason,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -92,6 +98,12 @@ class InMemoryNotificationRepository implements INotificationRepository {
     return this.findByIdempotencyKeySync(key);
   }
 
+  public async countSince(coachingId: string, channel: NotificationChannel, since: Date): Promise<number> {
+    return Array.from(this.notifications.values()).filter(
+      (n) => n.coachingId === coachingId && n.channel === channel && n.createdAt >= since,
+    ).length;
+  }
+
   private findByIdempotencyKeySync(key: string): any | null {
     for (const record of this.notifications.values()) {
       if (record.idempotencyKey === key) return record;
@@ -106,8 +118,35 @@ describe('NotificationService (Phase 3 Domain Unit Tests)', () => {
   let mockQueueRegistry: any;
   let mockEventBus: IEventBus;
   let mockQueue: any;
+  let optedOut: Set<string>;
+  let dailyLimit: number;
+
+  /** A resolver that answers raw numbers and emails as the real one does, without a database */
+  const directResolver = {
+    resolveRecipients: async (token: string) => [
+      token.includes('@')
+        ? { recipientId: token, email: token, name: 'Direct', recipientType: 'PARENT' }
+        : { recipientId: token, phone: token, name: 'Direct', recipientType: 'PARENT' },
+    ],
+    instituteName: async () => 'Sharma Classes',
+    studentName: async () => 'Aarav Singh',
+  };
+  const serviceWith = (resolver: any) =>
+    new NotificationService(
+      notificationRepo,
+      mockQueueRegistry as unknown as QueueRegistry,
+      mockEventBus,
+      resolver,
+      {
+        findOptedOut: async (phones: string[]) =>
+          new Set(phones.map((p) => p.slice(-10)).filter((p) => optedOut.has(p))),
+      },
+      () => dailyLimit,
+    );
 
   beforeEach(() => {
+    optedOut = new Set();
+    dailyLimit = 200;
     notificationRepo = new InMemoryNotificationRepository();
 
     mockQueue = {
@@ -125,11 +164,7 @@ describe('NotificationService (Phase 3 Domain Unit Tests)', () => {
       unsubscribe: vi.fn(),
     };
 
-    notificationService = new NotificationService(
-      notificationRepo,
-      mockQueueRegistry as unknown as QueueRegistry,
-      mockEventBus,
-    );
+    notificationService = serviceWith(directResolver);
   });
 
   it('should enqueue a WhatsApp notification and record it with status QUEUED', async () => {
@@ -235,12 +270,7 @@ describe('NotificationService (Phase 3 Domain Unit Tests)', () => {
 
   describe('group recipients', () => {
     const withResolver = (targets: any[]) =>
-      new NotificationService(
-        notificationRepo,
-        mockQueueRegistry as unknown as QueueRegistry,
-        mockEventBus,
-        { resolveRecipients: vi.fn().mockResolvedValue(targets) } as any,
-      );
+      serviceWith({ ...directResolver, resolveRecipients: vi.fn().mockResolvedValue(targets) });
     const send = (service: NotificationService) =>
       service.enqueueNotification(
         {
@@ -269,5 +299,94 @@ describe('NotificationService (Phase 3 Domain Unit Tests)', () => {
       await expect(send(withResolver([]))).rejects.toMatchObject({ code: 'NO_RECIPIENTS' });
       expect(mockQueue.add).not.toHaveBeenCalled();
     });
+  });
+
+  describe('templates, STOP and the daily limit', () => {
+    const parents = [
+      { recipientId: 'p1', phone: '9800000001', name: 'A', recipientType: 'PARENT', studentName: 'Riya Verma' },
+      { recipientId: 'p2', phone: '9800000002', name: 'B', recipientType: 'PARENT', studentName: 'Kabir and Meera Rao' },
+      { recipientId: 'p3', phone: '9800000003', name: 'C', recipientType: 'PARENT', studentName: 'Dev Jain' },
+    ];
+    const absent = (overrides: Record<string, unknown> = {}) =>
+      serviceWith({ ...directResolver, resolveRecipients: vi.fn().mockResolvedValue(parents) }).enqueueNotification(
+        {
+          channel: NotificationChannel.WHATSAPP,
+          recipient: 'batch:b1:parents',
+          recipientType: 'PARENT',
+          content: 'absent',
+          templateName: 'student_absent_alert',
+          templateVariables: { date: '5 Oct 2026' },
+          idempotencyKey: 'absent.s1',
+          ...overrides,
+        },
+        'coaching-1',
+      );
+    const jobs = () => mockQueue.add.mock.calls.map((call: any[]) => call[1]);
+
+    it("names the institute and each parent's own child", async () => {
+      await absent();
+      expect(jobs().map((job: any) => job.templateVariables)).toEqual([
+        { institute: 'Sharma Classes', student: 'Riya Verma', date: '5 Oct 2026' },
+        { institute: 'Sharma Classes', student: 'Kabir and Meera Rao', date: '5 Oct 2026' },
+        { institute: 'Sharma Classes', student: 'Dev Jain', date: '5 Oct 2026' },
+      ]);
+      expect(jobs()[0].content).toBe(
+        'Attendance update from Sharma Classes: Riya Verma was marked absent on 5 Oct 2026. If this is not correct, please contact the institute.',
+      );
+    });
+
+    it('names the student a message is about, even when it goes to someone else', async () => {
+      await absent({ studentId: 's9' });
+      expect(jobs()[0].templateVariables.student).toBe('Aarav Singh');
+    });
+
+    it('skips people who replied STOP, and says so when that is everyone', async () => {
+      optedOut = new Set(['9800000002']);
+      await absent();
+      expect(jobs().map((job: any) => job.recipient)).toEqual(['9800000001', '9800000003']);
+
+      optedOut = new Set(['9800000001', '9800000002', '9800000003']);
+      await expect(absent({ idempotencyKey: 'absent.s2' })).rejects.toMatchObject({
+        code: 'RECIPIENT_OPTED_OUT',
+      });
+    });
+
+    it('still answers someone who wrote in after opting out', async () => {
+      optedOut = new Set(['9800000001', '9800000002', '9800000003']);
+      await absent({ isReply: true, templateName: undefined });
+      expect(jobs()).toHaveLength(3);
+    });
+
+    it("holds back what is over the institute's daily limit as failed, to retry later", async () => {
+      dailyLimit = 2;
+      await absent();
+      expect(jobs().map((job: any) => job.recipient)).toEqual(['9800000001', '9800000002']);
+      const held = [...notificationRepo.notifications.values()].find((n) => n.recipient === '9800000003');
+      expect(held).toMatchObject({ status: NotificationStatus.FAILED, errorMessage: DAILY_LIMIT_REASON });
+
+      // Nothing is left for another send today
+      await absent({ idempotencyKey: 'absent.s3' });
+      expect(jobs()).toHaveLength(2);
+    });
+
+    it('never holds back alerts to the owner', async () => {
+      dailyLimit = 1;
+      await absent();
+      await absent({ recipient: 'coaching:coaching-1:owner', idempotencyKey: 'risk.s1' });
+      expect(jobs()).toHaveLength(1 + 3);
+    });
+
+    it('keeps the template variables so a retry sends the same message', async () => {
+      const notif = await absent();
+      await notificationRepo.updateStatus(notif.idempotencyKey, NotificationStatus.FAILED);
+      await notificationService.retryNotification(notif.id, 'coaching-1');
+      expect(jobs().at(-1).templateVariables).toMatchObject({ student: 'Riya Verma' });
+    });
+  });
+
+  it('starts the WhatsApp day at midnight in India', () => {
+    // 20:00 UTC on 4 Oct is 01:30 on 5 Oct in India
+    expect(startOfIndiaDay(new Date('2026-10-04T20:00:00Z')).toISOString()).toBe('2026-10-04T18:30:00.000Z');
+    expect(startOfIndiaDay(new Date('2026-10-04T18:00:00Z')).toISOString()).toBe('2026-10-03T18:30:00.000Z');
   });
 });

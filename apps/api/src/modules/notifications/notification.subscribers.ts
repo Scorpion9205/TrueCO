@@ -41,7 +41,8 @@ export class NotificationSubscribers {
     eventBus.subscribe(
       ATTENDANCE_EVENTS.ATTENDANCE_MARKED,
       async (event: DomainEvent<AttendanceMarkedPayload>) => {
-        const { coachingId, sessionId, records } = event.payload;
+        const { coachingId, sessionId, sessionDate, records } = event.payload;
+        const date = indiaDate(sessionDate);
 
         for (const record of records) {
           if (record.status === AttendanceStatus.ABSENT) {
@@ -52,12 +53,10 @@ export class NotificationSubscribers {
                   channel: NotificationChannel.WHATSAPP,
                   recipient: `student:${record.studentId}:parent`,
                   recipientType: 'PARENT',
-                  content: `Dear Parent, your child was marked ABSENT today. Please contact coaching office if this is an error.`,
+                  content: `Your child was marked absent on ${date}.`,
                   templateName: 'student_absent_alert',
                   templateLanguage: 'en',
-                  templateVariables: {
-                    status: 'ABSENT',
-                  },
+                  templateVariables: { date },
                   idempotencyKey,
                 },
                 coachingId,
@@ -75,13 +74,21 @@ export class NotificationSubscribers {
     eventBus.subscribe(
       TEST_EVENTS.TEST_RESULT_READY,
       async (event: DomainEvent<TestResultReadyPayload>) => {
-        const { coachingId, testId, studentId, marksObtained, totalMarks, percentage, isAbsent } =
-          event.payload;
+        const {
+          coachingId,
+          testId,
+          testTitle,
+          studentId,
+          marksObtained,
+          totalMarks,
+          percentage,
+          isAbsent,
+        } = event.payload;
         const idempotencyKey = `test.result.${testId}.${studentId}`;
 
-        const textContent = isAbsent
-          ? `Dear Parent, test results have been declared. Your child was marked absent for this test.`
-          : `Dear Parent, your child scored ${marksObtained}/${totalMarks} (${percentage}%) in the recent test.`;
+        const result = isAbsent
+          ? 'absent for this test'
+          : `scored ${marksObtained}/${totalMarks} (${percentage}%)`;
 
         try {
           await service.enqueueNotification(
@@ -89,13 +96,10 @@ export class NotificationSubscribers {
               channel: NotificationChannel.WHATSAPP,
               recipient: `student:${studentId}:parent`,
               recipientType: 'PARENT',
-              content: textContent,
+              content: `Test result: ${result}.`,
               templateName: 'test_score_update',
               templateLanguage: 'en',
-              templateVariables: {
-                marks: `${marksObtained}/${totalMarks}`,
-                percentage: `${percentage}%`,
-              },
+              templateVariables: { test: testTitle ?? 'the recent test', result },
               idempotencyKey,
             },
             coachingId,
@@ -113,7 +117,7 @@ export class NotificationSubscribers {
       async (event: DomainEvent<HomeworkCreatedPayload>) => {
         const { coachingId, homeworkId, batchId, title, dueDate } = event.payload;
         const idempotencyKey = `homework.created.${homeworkId}`;
-        const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN');
+        const dueDateStr = indiaDate(dueDate);
 
         try {
           await service.enqueueNotification(
@@ -124,10 +128,7 @@ export class NotificationSubscribers {
               content: `New homework assigned: "${title}". Due date: ${dueDateStr}.`,
               templateName: 'homework_assigned',
               templateLanguage: 'en',
-              templateVariables: {
-                title,
-                dueDate: dueDateStr,
-              },
+              templateVariables: { title, dueDate: dueDateStr },
               idempotencyKey,
             },
             coachingId,
@@ -143,7 +144,7 @@ export class NotificationSubscribers {
     eventBus.subscribe(FEE_EVENTS.FEE_PAID, async (event: DomainEvent<FeePaidPayload>) => {
       const { coachingId, studentId, amount, receiptNumber, remainingBalance } = event.payload;
       const idempotencyKey = `fee.paid.${receiptNumber}`;
-      const content = `Payment Received: ₹${amount} received for student receipt #${receiptNumber}. Remaining balance: ₹${remainingBalance}. Thank you!`;
+      const content = `Payment received: ${rupees(amount)}, receipt #${receiptNumber}. Balance due: ${rupees(remainingBalance)}.`;
 
       try {
         await service.enqueueNotification(
@@ -155,9 +156,9 @@ export class NotificationSubscribers {
             templateName: 'fee_payment_confirmation',
             templateLanguage: 'en',
             templateVariables: {
-              amount: `₹${amount}`,
+              amount: rupees(amount),
               receipt: receiptNumber,
-              balance: `₹${remainingBalance}`,
+              balance: rupees(remainingBalance),
             },
             idempotencyKey,
           },
@@ -177,12 +178,12 @@ export class NotificationSubscribers {
           event.payload;
         // Keyed by stage, not by date: each stage (D-7, D-3, D0, D+3, ...) reaches a parent once
         const idempotencyKey = `fee.reminder.${installmentId}.${event.payload.stage}`;
-        const dueDateStr = new Date(dueDate).toLocaleDateString('en-IN');
-        const dueText =
+        const overdue = Math.abs(daysUntilDue);
+        const dueDateStr =
           daysUntilDue < 0
-            ? `is OVERDUE by ${Math.abs(daysUntilDue)} days`
-            : `is due on ${dueDateStr}`;
-        const content = `Fee Reminder: A payment of ₹${amount} ${dueText}. Please pay promptly.`;
+            ? `${indiaDate(dueDate)} (overdue by ${overdue} ${overdue === 1 ? 'day' : 'days'})`
+            : indiaDate(dueDate);
+        const content = `Fee reminder: ${rupees(amount)} is due on ${dueDateStr}.`;
 
         try {
           await service.enqueueNotification(
@@ -193,10 +194,7 @@ export class NotificationSubscribers {
               content,
               templateName: 'fee_payment_reminder',
               templateLanguage: 'en',
-              templateVariables: {
-                amount: `₹${amount}`,
-                dueDate: dueDateStr,
-              },
+              templateVariables: { amount: rupees(amount), dueDate: dueDateStr },
               idempotencyKey,
             },
             coachingId,
@@ -228,6 +226,9 @@ ${content}`
                 recipient: group.token,
                 recipientType: group.type,
                 content: text,
+                templateName: 'institute_notice',
+                templateLanguage: 'en',
+                templateVariables: { title, details: content || title },
                 idempotencyKey: `notice.created.${noticeId}.${group.type.toLowerCase()}`,
               },
               coachingId,
@@ -253,6 +254,9 @@ ${content}`
               recipient: `coaching:${coachingId}:owner`,
               recipientType: 'TEACHER',
               content: subscriptionReminderText(daysRemaining),
+              templateName: 'plan_expiry_reminder',
+              templateLanguage: 'en',
+              templateVariables: { status: planStatusText(daysRemaining) },
               idempotencyKey: `subscription.expiring.${coachingId}.${endDay}.${daysRemaining}`,
             },
             coachingId,
@@ -277,7 +281,11 @@ ${content}`
               channel: NotificationChannel.WHATSAPP,
               recipient: `coaching:${coachingId}:owner`,
               recipientType: 'TEACHER',
-              content: `⚠️ Risk Alert: Student ${studentId} flagged at ${level} risk (score: ${score}). Narrative: ${narrative}`,
+              content: `Risk alert: flagged at ${level} risk (score ${score}). ${narrative}`,
+              templateName: 'student_risk_alert',
+              templateLanguage: 'en',
+              templateVariables: { level: String(level).toLowerCase(), reason: narrative },
+              studentId,
               idempotencyKey,
             },
             coachingId,
@@ -310,6 +318,27 @@ export function noticeRecipients(
     default:
       return [students, parents, teachers];
   }
+}
+
+/** "5 Oct 2026", in India time */
+export function indiaDate(value: Date | string): string {
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
+}
+
+/** "₹12,500" or "₹99.50" */
+export function rupees(amount: number): string {
+  return `₹${Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+}
+
+/** Completes "your plan ..." in the plan_expiry_reminder template */
+export function planStatusText(daysRemaining: number): string {
+  if (daysRemaining <= 0) return 'has ended. Your data is safe';
+  return daysRemaining === 1 ? 'ends tomorrow' : `ends in ${daysRemaining} days`;
 }
 
 /** What the owner is told as the trial or paid period runs out */

@@ -7,7 +7,7 @@ import { __resetSessionForTests, getSession } from '@/lib/auth/session';
 import { renderWithIntl } from '@/test/render';
 import { LoginForm } from './login-form';
 import { normalisePhone } from '@/lib/phone';
-import { SignupForm, toCoachingCode } from './signup-form';
+import { SignupForm } from './signup-form';
 
 const router = { replace: vi.fn(), refresh: vi.fn(), push: vi.fn() };
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
@@ -114,18 +114,9 @@ describe('SignupForm', () => {
     await userEvent.type(screen.getByLabelText('Password'), 'secret123');
   }
 
-  it('suggests an institute code from the name until one is typed', async () => {
+  it('does not ask for an institute code: Vargly makes one', () => {
     renderWithIntl(<SignupForm />);
-    const name = screen.getByLabelText('Institute name');
-    const code = screen.getByLabelText('Institute code');
-
-    await userEvent.type(name, 'Sharma Classes, Kota');
-    expect(code).toHaveValue('sharma-classes-kota');
-
-    await userEvent.clear(code);
-    await userEvent.type(code, 'sck');
-    await userEvent.type(name, '!');
-    expect(code).toHaveValue('sck');
+    expect(screen.queryByLabelText(/Institute code/)).toBeNull();
   });
 
   it("uses the owner's contact details for the institute by default", async () => {
@@ -147,25 +138,26 @@ describe('SignupForm', () => {
       ownerPhone: '9876543210',
       phone: '9876543210',
       email: 'asha@example.com',
-      coachingCode: 'sharma-classes',
     });
     expect(body).not.toHaveProperty('sameContact');
+    expect(body).not.toHaveProperty('coachingCode');
   });
 
-  it('shows a taken institute code on the code field', async () => {
+  it('says how long to wait when sign-ups are rate limited', async () => {
     server.use(
       http.post(`${BFF}/register`, () =>
-        HttpResponse.json({ error: { code: 'CODE_CONFLICT' } }, { status: 409 }),
+        HttpResponse.json(
+          { error: { code: 'RATE_LIMITED', message: 'x', details: { retryAfterSeconds: 2400 } } },
+          { status: 429 },
+        ),
       ),
     );
     renderWithIntl(<SignupForm />);
-
     await fillOwner();
     await userEvent.type(screen.getByLabelText('Institute name'), 'Sharma Classes');
     await userEvent.click(screen.getByRole('button', { name: 'Create my institute' }));
 
-    expect(await screen.findByText(/institute code is taken/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Institute code')).toHaveAttribute('aria-invalid', 'true');
+    expect(await screen.findByText(/try again in 40 minutes/)).toBeInTheDocument();
   });
 
   it('asks for institute contact details when they differ', async () => {
@@ -181,11 +173,6 @@ describe('SignupForm', () => {
 });
 
 describe('signup helpers', () => {
-  it('makes codes the API accepts', () => {
-    expect(toCoachingCode('  Sharma Classes & Co. (Kota) ')).toBe('sharma-classes-co-kota');
-    expect(toCoachingCode('Élite Academy')).toBe('elite-academy');
-  });
-
   it('strips spacing people type in phone numbers', () => {
     expect(normalisePhone('+91 98765-43210')).toBe('+919876543210');
     expect(normalisePhone('(0744) 123 4567')).toBe('07441234567');

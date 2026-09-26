@@ -66,7 +66,7 @@ describe('Phase 3 Cross-Cutting Subscribers Integration', () => {
     expect(mockNotificationService.enqueueNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         recipient: 'student:student-B:parent',
-        content: expect.stringContaining('ABSENT'),
+        templateName: 'student_absent_alert',
       }),
       'coaching-1',
       'corr-123',

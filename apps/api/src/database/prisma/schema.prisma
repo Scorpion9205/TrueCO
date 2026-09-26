@@ -708,6 +708,7 @@ model NotificationHistory {
   recipient       String              @db.VarChar(255) // Phone or Email
   recipientType   String              @map("recipient_type") @db.VarChar(50) // PARENT, STUDENT, TEACHER
   templateName    String?             @map("template_name") @db.VarChar(100)
+  templateVariables Json?             @map("template_variables") // Kept so a retry sends the same message
   content         String              @db.Text
   status          NotificationStatus  @default(QUEUED)
   providerMessageId String?           @map("provider_message_id") @db.VarChar(255)
@@ -722,6 +723,15 @@ model NotificationHistory {
   @@index([coachingId, channel, status])
   @@index([coachingId, createdAt])
   @@map("notification_history")
+}
+
+/// Phones that replied STOP. Vargly sends from one number for every institute, so opting out
+/// is per phone, across institutes, until the person replies START.
+model WhatsAppOptOut {
+  phone           String              @id @db.VarChar(20) // Last 10 digits
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@map("whatsapp_opt_outs")
 }
 
 model StudentTimeline {

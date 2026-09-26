@@ -36,6 +36,16 @@ export class DashboardService {
     return responseDto;
   }
 
+  /** Resolves whose dashboard to show: a teacher's own, or (owners only) the teacher asked for */
+  public async resolveTeacherId(
+    userId: string | undefined,
+    requestedTeacherId: string | undefined,
+    canViewOthers: boolean,
+  ): Promise<string | null> {
+    if (requestedTeacherId && canViewOthers) return requestedTeacherId;
+    return userId ? this.dashboardRepository.findTeacherIdByUserId(userId) : null;
+  }
+
   public async getTeacherOverview(
     coachingId: string,
     teacherId: string,
