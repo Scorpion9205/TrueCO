@@ -57,7 +57,12 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().optional().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  // Direct TLS (port 465). z.coerce.boolean would read the text "false" as true, so the
+  // words are parsed explicitly: 587 with STARTTLS (Brevo, SES) needs this false.
+  SMTP_SECURE: z
+    .enum(['true', 'false', '1', '0', ''])
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
   EMAIL_FROM: z.string().default('Vargly Alerts <notifications@vargly.in>'),
   // AI Model Providers
   OPENAI_API_KEY: z.string().optional(),
