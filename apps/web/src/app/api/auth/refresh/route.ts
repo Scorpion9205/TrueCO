@@ -10,7 +10,7 @@ import {
 } from '@/lib/auth/bff';
 import { REFRESH_COOKIE } from '@/lib/auth/cookies';
 import type { SessionUser } from '@/lib/auth/types';
-import { isApiError } from '@trueco/api-client';
+import { isApiError } from '@vargly/api-client';
 
 /**
  * Swaps the refresh cookie for a new access token (and a rotated refresh token). Called when the

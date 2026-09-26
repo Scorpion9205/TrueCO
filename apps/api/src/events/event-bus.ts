@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { EventHandler, IEventBus } from './event-bus.interface.js';
 import { HandlerFailure, IEventStore } from './event-store.js';
 import { logger } from '../common/logger/logger.service.js';

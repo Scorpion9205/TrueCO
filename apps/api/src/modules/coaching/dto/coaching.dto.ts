@@ -1,4 +1,4 @@
-import { SubscriptionStatus } from '@trueco/types';
+import { SubscriptionStatus } from '@vargly/types';
 
 export interface RegisterCoachingDto {
   readonly coachingName: string;

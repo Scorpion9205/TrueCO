@@ -1,4 +1,4 @@
-import { DomainEvent, RoleType } from '@trueco/types';
+import { DomainEvent, RoleType } from '@vargly/types';
 
 export interface UserLoggedInPayload {
   readonly userId: string;

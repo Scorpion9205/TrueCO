@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { readPreferences } from '../settings/settings.preferences.js';
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@vargly/types';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
 import { money, MoneyInput, Money } from '../../common/money/money.js';
 import { nextDocumentNumber } from '../../common/money/document-number.js';

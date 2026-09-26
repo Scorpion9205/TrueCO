@@ -17,7 +17,7 @@ describe('Health Checks (Phase 0 Foundation)', () => {
     const res = await request(app).get('/api/v1');
 
     expect(res.status).toBe(200);
-    expect(res.body.name).toBe('TrueCO API');
+    expect(res.body.name).toBe('Vargly API');
     expect(res.body.version).toBe('1.0.0');
   });
 });

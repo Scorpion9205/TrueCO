@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 import { queueRegistry } from '../../queues/queue.registry.js';
 import { logger } from '../logger/logger.service.js';
 import { RequestContextService } from '../services/request-context.service.js';

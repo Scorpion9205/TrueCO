@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { PlanCode, RoleType } from '@trueco/types';
+import { PlanCode, RoleType } from '@vargly/types';
 
 const prisma = new PrismaClient();
 
@@ -50,7 +50,7 @@ const ALL_PERMISSIONS = [
   { code: 'notices:read', module: 'notices', action: 'read', description: 'Read institute notices' },
   { code: 'data:import', module: 'import', action: 'import', description: 'Execute bulk data import' },
   { code: 'billing:read', module: 'billing', action: 'read', description: 'View subscription and invoices' },
-  { code: 'billing:manage', module: 'billing', action: 'manage', description: 'Manage TrueCO subscription plan' },
+  { code: 'billing:manage', module: 'billing', action: 'manage', description: 'Manage Vargly subscription plan' },
   { code: 'dashboard:owner', module: 'dashboard', action: 'owner', description: 'View owner business dashboard' },
   { code: 'dashboard:teacher', module: 'dashboard', action: 'teacher', description: 'View teacher dashboard' },
   { code: 'audit:read', module: 'audit', action: 'read', description: 'View audit trail' },
@@ -76,7 +76,7 @@ const TEACHER_PERMISSION_CODES = [
 ];
 
 async function main() {
-  console.log('⚡ Initializing TrueCo System RBAC Permissions and Plans (Zero Dummy Data)...');
+  console.log('⚡ Initializing Vargly System RBAC Permissions and Plans (Zero Dummy Data)...');
 
   // 1. Seed Permissions
   for (const perm of ALL_PERMISSIONS) {
@@ -213,7 +213,7 @@ async function main() {
     },
   });
   console.log('✔ Synced subscription plans.');
-  console.log('🚀 TrueCo database is primed for live user signups and logins. Zero dummy entities exist.');
+  console.log('🚀 Vargly database is primed for live user signups and logins. Zero dummy entities exist.');
 }
 
 main()

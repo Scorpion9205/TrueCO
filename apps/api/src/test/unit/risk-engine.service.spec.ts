@@ -5,7 +5,7 @@ import {
   UpsertRiskScoreInput,
 } from '../../modules/risk-engine/risk-engine.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { FeeInstallmentStatus, RiskLevel } from '@trueco/types';
+import { FeeInstallmentStatus, RiskLevel } from '@vargly/types';
 import { RISK_EVENTS } from '../../modules/risk-engine/risk-engine.events.js';
 
 class InMemoryRiskEngineRepository implements IRiskEngineRepository {

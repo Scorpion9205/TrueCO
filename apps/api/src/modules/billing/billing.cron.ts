@@ -4,7 +4,7 @@ import { IEventBus } from '../../events/event-bus.interface.js';
 import { createSubscriptionExpiringEvent } from './billing.events.js';
 import { logger } from '../../common/logger/logger.service.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
-import { SubscriptionStatus } from '@trueco/types';
+import { SubscriptionStatus } from '@vargly/types';
 
 export class SubscriptionExpirationScheduler {
   public constructor(

@@ -128,7 +128,7 @@ export function TeachersPage() {
           <p>{q ? t('empty.searchBody', { search: q }) : t('empty.filteredBody')}</p>
         </StatePanel>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="enter-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((teacher) => (
             <li key={teacher.id}>
               <TeacherCard teacher={teacher} />

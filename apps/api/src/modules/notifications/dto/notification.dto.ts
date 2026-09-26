@@ -1,4 +1,4 @@
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 
 export interface SendNotificationDto {
   readonly channel: NotificationChannel;

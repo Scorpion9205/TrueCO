@@ -89,7 +89,7 @@ export function FeesPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title={t('title')} />
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <section className="enter-stagger grid grid-cols-2 gap-4 lg:grid-cols-3">
         {isOwner && dashboard.data ? (
           <>
             <KpiCard

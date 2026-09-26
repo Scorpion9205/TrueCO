@@ -1,4 +1,4 @@
-/** Error envelope the TrueCO API returns: `{ error: { code, message, details? } }`. */
+/** Error envelope the Vargly API returns: `{ error: { code, message, details? } }`. */
 export interface ApiErrorBody {
   readonly code: string;
   readonly message: string;

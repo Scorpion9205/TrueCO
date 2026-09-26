@@ -74,7 +74,7 @@ export function ProfitLossView() {
         <QueryError error={report.error} onRetry={() => void report.refetch()} />
       ) : (
         <div className={cn('flex flex-col gap-6', report.isPlaceholderData && 'opacity-60')}>
-          <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <section className="enter-stagger grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard
               label={t('revenue')}
               value={formatCurrency(data!.totalRevenue)}

@@ -40,7 +40,7 @@ export class SmtpEmailAdapter implements IEmailAdapter {
         return { providerMessageId: '', status: 'FAILED', errorMessage: 'Email delivery is not configured' };
       }
       logger.warn(`[SmtpEmailAdapter] SMTP not configured; simulating email to ${input.to}: "${input.subject}"`);
-      return { providerMessageId: `<simulated.${Date.now()}@trueco.in>`, status: 'SENT' };
+      return { providerMessageId: `<simulated.${Date.now()}@vargly.in>`, status: 'SENT' };
     }
 
     try {

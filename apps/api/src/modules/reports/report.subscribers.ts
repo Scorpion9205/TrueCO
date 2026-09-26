@@ -1,6 +1,6 @@
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { REPORT_EVENTS, ReportGeneratedPayload } from './report.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class ReportSubscribers {

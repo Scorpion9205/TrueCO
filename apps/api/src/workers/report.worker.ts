@@ -63,7 +63,7 @@ export class ReportWorker {
 
   public async processJob(payload: ReportJobPayload): Promise<ReportJobResult> {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'TrueCO Analytics Engine';
+    workbook.creator = 'Vargly Analytics Engine';
     workbook.created = new Date();
 
     let rowCount: number;

@@ -10,7 +10,7 @@ import {
 } from './dto/report.dto.js';
 import { ReportMapper } from './report.mapper.js';
 import { createReportGeneratedEvent } from './report.events.js';
-import { FeeInstallmentStatus } from '@trueco/types';
+import { FeeInstallmentStatus } from '@vargly/types';
 import { money, Money, toRupees } from '../../common/money/money.js';
 import { daysBetween, todayInIndia } from './report.dates.js';
 

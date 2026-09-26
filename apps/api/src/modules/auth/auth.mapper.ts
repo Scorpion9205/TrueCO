@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 import { AuthUserDto } from './dto/auth.dto.js';
 
 export interface UserAggregate {

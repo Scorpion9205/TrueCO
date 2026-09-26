@@ -5,7 +5,7 @@ import {
   NoticeDeletedPayload,
   NoticeUpdatedPayload,
 } from './notice.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class NoticeSubscribers {

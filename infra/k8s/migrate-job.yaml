@@ -3,10 +3,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: trueco-migrate
+  name: vargly-migrate
   labels:
     # Applied (and, for the job, awaited) before the deployments; see docs/RUNBOOK.md
-    trueco/stage: pre
+    vargly/stage: pre
 spec:
   backoffLimit: 2
   ttlSecondsAfterFinished: 3600
@@ -20,19 +20,19 @@ spec:
           type: RuntimeDefault
       containers:
         - name: migrate
-          image: trueco-api
+          image: vargly-api
           command:
             - sh
             - -c
             - npx prisma migrate deploy --schema=dist/database/prisma/schema.prisma && node dist/database/prisma/init-rbac.js
           envFrom:
             - configMapRef:
-                name: trueco-config
+                name: vargly-config
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: trueco-secrets
+                  name: vargly-secrets
                   key: MIGRATION_DATABASE_URL
           resources:
             requests:

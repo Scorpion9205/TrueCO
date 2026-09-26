@@ -1,5 +1,5 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 
 export interface CreateNotificationHistoryInput {
   coachingId: string;

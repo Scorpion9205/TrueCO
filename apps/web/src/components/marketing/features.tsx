@@ -43,7 +43,7 @@ export async function Features() {
               <li
                 key={key}
                 className={cn(
-                  'flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-card',
+                  'reveal lift flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-card',
                   featured && 'border-transparent bg-foreground text-background sm:p-8',
                   className,
                 )}

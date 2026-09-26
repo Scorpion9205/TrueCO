@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
-import { tokens } from '@trueco/ui';
+import { tokens } from '@vargly/ui';
 
 export default function App() {
   return (

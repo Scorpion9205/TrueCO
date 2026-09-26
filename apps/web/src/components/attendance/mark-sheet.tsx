@@ -254,7 +254,8 @@ function MarkForm({
 
 const STATUS_STYLES: Record<AttendanceStatus, string> = {
   PRESENT: 'aria-pressed:border-success aria-pressed:bg-success aria-pressed:text-background',
-  ABSENT: 'aria-pressed:border-destructive aria-pressed:bg-destructive aria-pressed:text-background',
+  ABSENT:
+    'aria-pressed:border-destructive aria-pressed:bg-destructive aria-pressed:text-background',
   LATE: 'aria-pressed:border-warning aria-pressed:bg-warning aria-pressed:text-background',
   EXCUSED: 'aria-pressed:border-info aria-pressed:bg-info aria-pressed:text-background',
 };

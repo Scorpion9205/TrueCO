@@ -1,5 +1,5 @@
-# kubectl apply -k infra/k8s   (after creating the trueco-secrets Secret; see secret.example.yaml)
-# Deploy order (docs/RUNBOOK.md): apply the `trueco/stage=pre` objects, wait for the trueco-migrate
+# kubectl apply -k infra/k8s   (after creating the vargly-secrets Secret; see secret.example.yaml)
+# Deploy order (docs/RUNBOOK.md): apply the `vargly/stage=pre` objects, wait for the vargly-migrate
 # Job to complete, then apply everything.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -10,6 +10,6 @@ resources:
   - worker-deployment.yaml
 # The single place the image version is pinned; CI should set newTag to the released git SHA
 images:
-  - name: trueco-api
-    newName: ghcr.io/scorpion9205/trueco-api
+  - name: vargly-api
+    newName: ghcr.io/scorpion9205/vargly-api
     newTag: v1.0.0

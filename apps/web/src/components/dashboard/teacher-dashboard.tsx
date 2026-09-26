@@ -23,7 +23,10 @@ export function TeacherDashboardView({ data }: { data: TeacherDashboardData }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <section aria-label={t('kpiLabel')} className="grid grid-cols-2 gap-4 md:grid-cols-3">
+      <section
+        aria-label={t('kpiLabel')}
+        className="enter-stagger grid grid-cols-2 gap-4 md:grid-cols-3"
+      >
         <KpiCard
           label={t('teacher.batches')}
           value={String(data.assignedBatches.length)}

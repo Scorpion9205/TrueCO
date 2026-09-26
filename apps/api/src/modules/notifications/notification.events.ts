@@ -1,4 +1,4 @@
-import { DomainEvent, NotificationChannel } from '@trueco/types';
+import { DomainEvent, NotificationChannel } from '@vargly/types';
 
 export interface NotificationSentPayload {
   readonly notificationId: string;

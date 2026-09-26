@@ -1,4 +1,4 @@
-import { DomainEvent, AttendanceStatus } from '@trueco/types';
+import { DomainEvent, AttendanceStatus } from '@vargly/types';
 
 export interface AttendanceRecordPayload {
   readonly studentId: string;

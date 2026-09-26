@@ -8,7 +8,7 @@ import {
 import { SalaryFilterDto } from '../../modules/salary/dto/salary.dto.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 import { SALARY_EVENTS } from '../../modules/salary/salary.events.js';
 
 const SALARY_STATUS = {

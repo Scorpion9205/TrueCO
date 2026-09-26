@@ -62,7 +62,7 @@ export function usePurchase() {
         return;
       }
       const outcome = await openCheckout(order, {
-        name: 'TrueCO',
+        name: 'Vargly',
         description: label,
         email: user?.email,
         contact: profile.data?.phone,

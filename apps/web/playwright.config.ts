@@ -20,6 +20,9 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
     locale: 'en-IN',
+    // Pages are checked in their finished state: accessibility scans read colours, and a
+    // half-faded element would fail contrast mid-animation. The motion itself is CSS-only.
+    reducedMotion: 'reduce',
     timezoneId: 'Asia/Kolkata',
   },
   projects: [
@@ -27,8 +30,15 @@ export default defineConfig({
     {
       name: 'desktop',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /auth\.setup\.ts/,
+      testIgnore: [/auth\.setup\.ts/, /mobile\.spec\.ts/],
       dependencies: ['setup'],
+    },
+    {
+      // Runs after the desktop tests: it signs in afresh rather than reusing their session
+      name: 'mobile',
+      use: { ...devices['Pixel 7'] },
+      testMatch: /mobile\.spec\.ts/,
+      dependencies: ['desktop'],
     },
   ],
   webServer: process.env.E2E_BASE_URL

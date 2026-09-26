@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 export interface ReportGeneratedPayload {
   readonly coachingId: string;

@@ -3,7 +3,7 @@ import {
   AiUsageLogResponseDto,
   AiCompletionResponseDto,
 } from './dto/ai.dto.js';
-import { AiProviderType } from '@trueco/types';
+import { AiProviderType } from '@vargly/types';
 
 export class AiMapper {
   public static toWalletDto(raw: any): AiWalletResponseDto {

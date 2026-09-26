@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class AiPolicy {
   public static canGenerate(permissions: string[], roles: RoleType[]): boolean {

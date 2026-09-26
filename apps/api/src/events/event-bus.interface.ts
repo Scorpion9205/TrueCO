@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 export type EventHandler<T = unknown> = (event: DomainEvent<T>) => Promise<void> | void;
 

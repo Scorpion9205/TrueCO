@@ -1,4 +1,4 @@
-import { AiProviderType } from '@trueco/types';
+import { AiProviderType } from '@vargly/types';
 import {
   AiCompletionOptions,
   AiCompletionResult,
@@ -28,14 +28,14 @@ export class MockAiProvider implements IAiProvider {
       promptLower.includes('parent report')
     ) {
       content =
-        '*TrueCO Academy — Student Performance Report*\n\n' +
+        '*Vargly Academy — Student Performance Report*\n\n' +
         'Dear Parent,\n' +
         'Here is the latest academic snapshot for your child:\n' +
         '• *Attendance*: 92% (Regular & Punctual)\n' +
         '• *Latest Test*: Physics Mechanics - 84/100 (Grade A)\n' +
         '• *Homework Completion*: 100% on schedule\n\n' +
         'Keep encouraging their regular study habits!\n' +
-        '_TrueCO Coaching Management_';
+        '_Vargly Coaching Management_';
     } else if (promptLower.includes('teacher') || promptLower.includes('batch insight')) {
       content =
         'Teacher Batch Performance Insight:\n' +

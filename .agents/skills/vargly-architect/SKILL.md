@@ -1,13 +1,13 @@
 ---
-name: trueco-architect
+name: vargly-architect
 description: >-
-  Lead Architect playbook for scaffolding TrueCO Clean Architecture modules, 
+  Lead Architect playbook for scaffolding Vargly Clean Architecture modules, 
   implementing OOP services, in-memory test fakes, Prisma repositories, and verifying phase completion.
 ---
 
-# TrueCO Senior Architect Playbook
+# Vargly Senior Architect Playbook
 
-This skill provides step-by-step guidance for engineers and subagents implementing TrueCO backend modules, maintaining strict Object-Oriented Clean Architecture, and executing each phase according to the specification.
+This skill provides step-by-step guidance for engineers and subagents implementing Vargly backend modules, maintaining strict Object-Oriented Clean Architecture, and executing each phase according to the specification.
 
 ---
 

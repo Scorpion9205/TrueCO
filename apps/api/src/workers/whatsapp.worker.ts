@@ -9,7 +9,7 @@ import {
   createNotificationFailedEvent,
   createNotificationSentEvent,
 } from '../modules/notifications/notification.events.js';
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 import { logger } from '../common/logger/logger.service.js';
 import { runJobForTenant } from './job-context.js';
 

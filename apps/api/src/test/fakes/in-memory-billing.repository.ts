@@ -1,4 +1,4 @@
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 import {
   CreateBillingPaymentInput,
   IBillingRepository,

@@ -1,5 +1,5 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 
 // The mapper reports teacherName; without the relation every salary row was nameless
 const WITH_TEACHER = { teacher: { select: { name: true } } } as const;

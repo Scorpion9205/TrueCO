@@ -5,7 +5,7 @@ const strong = (label: string) => `${label}-f3a9c2e7b1d84b6fa0c5e9d2b7a14c8e`;
 
 const secureProductionEnv = {
   NODE_ENV: 'production',
-  DATABASE_URL: 'postgresql://app:pw@db:5432/trueco',
+  DATABASE_URL: 'postgresql://app:pw@db:5432/vargly',
   JWT_ACCESS_SECRET: strong('access'),
   JWT_REFRESH_SECRET: strong('refresh'),
   DATABASE_ENCRYPTION_KEY: strong('dbkey'),
@@ -29,7 +29,7 @@ describe('environment configuration', () => {
       ...secureProductionEnv,
       DATABASE_ENCRYPTION_KEY: undefined,
       WHATSAPP_WEBHOOK_VERIFY_TOKEN: undefined,
-      JWT_ACCESS_SECRET: 'trueco_dev_access_super_secret_key_change_in_production_32char',
+      JWT_ACCESS_SECRET: 'vargly_dev_access_super_secret_key_change_in_production_32char',
     });
     expect(keys).toEqual(
       expect.arrayContaining(['DATABASE_ENCRYPTION_KEY', 'WHATSAPP_WEBHOOK_VERIFY_TOKEN', 'JWT_ACCESS_SECRET']),

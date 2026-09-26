@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: trueco-api
+  name: vargly-api
   labels:
-    app: trueco-api
+    app: vargly-api
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: trueco-api
+      app: vargly-api
   strategy:
     rollingUpdate:
       maxUnavailable: 0
@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       labels:
-        app: trueco-api
+        app: vargly-api
     spec:
       terminationGracePeriodSeconds: 40
       securityContext:
@@ -26,14 +26,14 @@ spec:
           type: RuntimeDefault
       containers:
         - name: api
-          image: trueco-api
+          image: vargly-api
           ports:
             - containerPort: 4000
           envFrom:
             - configMapRef:
-                name: trueco-config
+                name: vargly-config
             - secretRef:
-                name: trueco-secrets
+                name: vargly-secrets
           resources:
             requests:
               cpu: 250m
@@ -78,10 +78,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: trueco-api-service
+  name: vargly-api-service
 spec:
   selector:
-    app: trueco-api
+    app: vargly-api
   ports:
     - protocol: TCP
       port: 80
@@ -90,22 +90,22 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: trueco-api
+  name: vargly-api
 spec:
   minAvailable: 2
   selector:
     matchLabels:
-      app: trueco-api
+      app: vargly-api
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: trueco-api
+  name: vargly-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: trueco-api
+    name: vargly-api
   minReplicas: 3
   maxReplicas: 10
   metrics:

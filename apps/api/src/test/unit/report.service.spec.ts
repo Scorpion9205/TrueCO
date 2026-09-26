@@ -7,7 +7,7 @@ import { reportFilterSchema } from '../../modules/reports/validators/report.vali
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { REPORT_EVENTS } from '../../modules/reports/report.events.js';
 import { money } from '../../common/money/money.js';
-import { FeeInstallmentStatus } from '@trueco/types';
+import { FeeInstallmentStatus } from '@vargly/types';
 
 class InMemoryReportRepository implements IReportRepository {
   public feePlans: any[] = [];

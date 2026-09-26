@@ -3,7 +3,7 @@ import {
   FeePlanResponseDto,
   FeeTransactionResponseDto,
 } from './dto/fee.dto.js';
-import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@vargly/types';
 import { money, toRupees } from '../../common/money/money.js';
 
 export class FeeMapper {

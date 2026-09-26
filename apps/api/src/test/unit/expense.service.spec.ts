@@ -9,7 +9,7 @@ import {
 } from '../../modules/expenses/expense.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 import { EXPENSE_EVENTS } from '../../modules/expenses/expense.events.js';
 
 const TEST_CATEGORIES = {

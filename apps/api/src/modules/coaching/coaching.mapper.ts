@@ -1,5 +1,5 @@
 import { CoachingResponseDto } from './dto/coaching.dto.js';
-import { SubscriptionStatus } from '@trueco/types';
+import { SubscriptionStatus } from '@vargly/types';
 
 export class CoachingMapper {
   public static toResponseDto(coaching: any): CoachingResponseDto {

@@ -79,7 +79,7 @@ export function ExpensesPage() {
       />
       <MonthPicker month={month} onChange={changeMonth} />
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <section className="enter-stagger grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KpiCard
           label={t('kpi.spent')}
           value={summary.data ? formatCurrency(summary.data.total) : '—'}

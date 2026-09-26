@@ -82,12 +82,12 @@ describe('Account emails', () => {
 
   it('emails a password reset link built from FRONTEND_URL with the token encoded', async () => {
     const email = new CapturingEmail();
-    await new EmailAuthMailer(email, 'https://app.trueco.in').sendPasswordReset('owner@x.in', 'a+b/c=');
+    await new EmailAuthMailer(email, 'https://app.vargly.in').sendPasswordReset('owner@x.in', 'a+b/c=');
 
     expect(email.sent).toHaveLength(1);
     expect(email.sent[0].to).toBe('owner@x.in');
-    expect(email.sent[0].textBody).toContain('https://app.trueco.in/reset-password?token=a%2Bb%2Fc%3D');
-    expect(email.sent[0].htmlBody).toContain('href="https://app.trueco.in/reset-password?token=a%2Bb%2Fc%3D"');
+    expect(email.sent[0].textBody).toContain('https://app.vargly.in/reset-password?token=a%2Bb%2Fc%3D');
+    expect(email.sent[0].htmlBody).toContain('href="https://app.vargly.in/reset-password?token=a%2Bb%2Fc%3D"');
   });
 
   it('surfaces a failed delivery to the caller', async () => {

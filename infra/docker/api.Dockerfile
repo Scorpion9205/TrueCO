@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 # ========================================================
-# TrueCO API + background workers (one image, two commands)
+# Vargly API + background workers (one image, two commands)
 #   API:     node dist/main.js                (default)
 #   Worker:  node dist/workers/worker-runner.js
 #   Migrate: npx prisma migrate deploy --schema=dist/database/prisma/schema.prisma
@@ -23,7 +23,7 @@ COPY apps/api/package.json ./apps/api/
 # what actually changed
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm config set store-dir /pnpm/store && \
-    pnpm install --frozen-lockfile --filter @trueco/api...
+    pnpm install --frozen-lockfile --filter @vargly/api...
 
 # 3. Build Stage
 FROM deps AS builder
@@ -31,9 +31,9 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 
 # Generate the Prisma client (for this platform) & compile TypeScript
-RUN pnpm --filter @trueco/api prisma:generate
-RUN pnpm --filter @trueco/types build
-RUN pnpm --filter @trueco/api exec tsc -b
+RUN pnpm --filter @vargly/api prisma:generate
+RUN pnpm --filter @vargly/types build
+RUN pnpm --filter @vargly/api exec tsc -b
 
 # 4. Production Runner Stage
 FROM node:22-alpine AS runner

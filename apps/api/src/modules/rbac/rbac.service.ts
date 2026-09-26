@@ -6,7 +6,7 @@ import { RbacMapper } from './rbac.mapper.js';
 import { RoleDto, PermissionDto, UserRoleAssignmentDto } from './dto/rbac.dto.js';
 import { RbacPolicy } from './rbac.policy.js';
 import { createRoleAssignedEvent } from './rbac.events.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class RbacService {
   public constructor(

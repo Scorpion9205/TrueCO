@@ -1,4 +1,4 @@
-import { ApiError, createApiClient, isApiError } from '@trueco/api-client';
+import { ApiError, createApiClient, isApiError } from '@vargly/api-client';
 import { type NextRequest, NextResponse } from 'next/server';
 import { API_URL } from '@/lib/api';
 import { REFRESH_COOKIE, REFRESH_MAX_AGE_SECONDS, SESSION_FLAG_COOKIE } from './cookies';

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AiProviderType } from '@trueco/types';
+import { AiProviderType } from '@vargly/types';
 
 export const generateAiCompletionSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required').max(10000),

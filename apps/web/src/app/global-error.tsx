@@ -32,7 +32,7 @@ export default function GlobalError({
       >
         <main>
           <h1 style={{ fontSize: 24 }}>Something went wrong</h1>
-          <p style={{ color: '#57534e' }}>TrueCO couldn&apos;t load. Please try again.</p>
+          <p style={{ color: '#57534e' }}>Vargly couldn&apos;t load. Please try again.</p>
           {error.digest ? (
             <p style={{ color: '#57534e', fontSize: 12 }}>Reference: {error.digest}</p>
           ) : null}

@@ -927,10 +927,10 @@ model CoachingKnowledgeChunk {
 }
 
 // ==========================================
-// 11. Money integrity: numbering and TrueCO billing
+// 11. Money integrity: numbering and Vargly billing
 // ==========================================
 
-// Gap-free document counters. scope is a coaching id (fee receipts) or "platform" (TrueCO
+// Gap-free document counters. scope is a coaching id (fee receipts) or "platform" (Vargly
 // invoices); series is e.g. "RCT/2026-27". Incremented inside the transaction that issues the
 // document, so a rolled-back payment does not consume a number.
 model DocumentSequence {
@@ -958,7 +958,7 @@ enum BillingPaymentStatus {
   @@map("billing_payment_status")
 }
 
-// What a coaching bought from TrueCO. Created with the server-computed price when the order is
+// What a coaching bought from Vargly. Created with the server-computed price when the order is
 // placed; the webhook settles it at most once (CREATED -> PAID) and only for the expected amount.
 model BillingPayment {
   id               String               @id @default(uuid()) @db.Uuid

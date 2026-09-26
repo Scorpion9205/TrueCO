@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BillingService } from '../../modules/billing/billing.service.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 import { BILLING_EVENTS } from '../../modules/billing/billing.events.js';
 import { SubscriptionExpirationScheduler } from '../../modules/billing/billing.cron.js';
 import { MockPaymentGatewayAdapter } from '../../modules/billing/adapters/mock-payment-gateway.adapter.js';

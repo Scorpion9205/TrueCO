@@ -14,7 +14,7 @@ async function testPrismaAndDatabase(): Promise<CheckResult> {
   const prisma = new PrismaClient({
     datasources: {
       db: {
-        url: process.env.DATABASE_URL || 'postgresql://trueco_user:trueco_password@localhost:5432/trueco_db?schema=public',
+        url: process.env.DATABASE_URL || 'postgresql://vargly_user:vargly_password@localhost:5432/vargly_db?schema=public',
       },
     },
   });
@@ -74,7 +74,7 @@ async function testRedis(): Promise<CheckResult> {
     const pingResponse = await redis.ping();
 
     // Round-trip test key
-    const testKey = 'trueco:diagnostic:ping';
+    const testKey = 'vargly:diagnostic:ping';
     const testValue = `ok-${Date.now()}`;
     await redis.set(testKey, testValue, 'EX', 10);
     const readValue = await redis.get(testKey);
@@ -229,7 +229,7 @@ async function testFrontendApp(): Promise<CheckResult> {
 
 async function runDiagnostic() {
   console.log('\n======================================================');
-  console.log('   TrueCO Full-Stack Infrastructure & Connection Check');
+  console.log('   Vargly Full-Stack Infrastructure & Connection Check');
   console.log('======================================================\n');
 
   const results: CheckResult[] = [

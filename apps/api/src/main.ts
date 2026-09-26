@@ -89,7 +89,7 @@ export function createApp(): Express {
   // Base API v1 placeholder
   app.get('/api/v1', (_req: Request, res: Response) => {
     res.status(StatusCodes.OK).json({
-      name: 'TrueCO API',
+      name: 'Vargly API',
       version: '1.0.0',
       status: 'OPERATIONAL',
       docs: '/api/v1/docs',
@@ -146,7 +146,7 @@ async function startServer(): Promise<void> {
   }
 
   const server = app.listen(port, () => {
-    logger.info(`🚀 TrueCO API server running on port ${port} [${envConfig.get('NODE_ENV')}]`);
+    logger.info(`🚀 Vargly API server running on port ${port} [${envConfig.get('NODE_ENV')}]`);
   });
 
   // Graceful shutdown
@@ -175,7 +175,7 @@ async function startServer(): Promise<void> {
 if (process.env.NODE_ENV !== 'test') {
   registerProcessErrorHandlers('Api');
   startServer().catch((err) => {
-    logger.error('Failed to start TrueCO API server:', err);
+    logger.error('Failed to start Vargly API server:', err);
     process.exit(1);
   });
 }

@@ -73,6 +73,7 @@ describe('WhatsAppAssistantService (RAG Knowledge & Hybrid Assistant)', () => {
       id: 'parent-1',
       coachingId: testCoachingId,
       phone: parentPhone,
+      coaching: { name: 'Gravity Classes' },
       studentParents: [{ student: { id: studentId, firstName: 'Riya', lastName: 'Verma' } }],
     });
 
@@ -106,6 +107,9 @@ describe('WhatsAppAssistantService (RAG Knowledge & Hybrid Assistant)', () => {
       }),
       testCoachingId,
     );
+    // The assistant speaks for the parent's own institute
+    const [{ systemPrompt }] = mockAiService.generateCompletion.mock.calls[0];
+    expect(systemPrompt).toContain('Assistant for "Gravity Classes"');
   });
 
   it('should fall back gracefully when question has no matching knowledge in database', async () => {

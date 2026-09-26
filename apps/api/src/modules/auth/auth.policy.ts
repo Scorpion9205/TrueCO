@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class AuthPolicy {
   public static canRevokeAllTokens(currentUserId?: string, targetUserId?: string, roles: RoleType[] = []): boolean {

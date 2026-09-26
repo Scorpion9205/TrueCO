@@ -107,7 +107,7 @@ export function NoticesPage() {
           {postButton ? <div className="mt-2">{postButton}</div> : null}
         </StatePanel>
       ) : (
-        <ul className="flex flex-col gap-4">
+        <ul className="enter-stagger flex flex-col gap-4">
           {notices.data.map((notice) => (
             <li key={notice.id}>
               <NoticeCard notice={notice} canManage={canManage} />

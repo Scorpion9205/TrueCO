@@ -6,7 +6,7 @@ import { MockAiProvider } from '../../modules/ai/providers/mock-ai.provider.js';
 import { RedisPromptCache } from '../../modules/ai/cache/redis-prompt.cache.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AI_EVENTS } from '../../modules/ai/ai.events.js';
-import { AiProviderType } from '@trueco/types';
+import { AiProviderType } from '@vargly/types';
 
 describe('AiService (Phase 7 AI Service Layer Unit Tests)', () => {
   let aiService: AiService;

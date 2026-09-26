@@ -3,7 +3,7 @@ import { WhatsAppWorker } from '../../workers/whatsapp.worker.js';
 import { IWhatsAppAdapter } from '../../modules/notifications/adapters/whatsapp.adapter.interface.js';
 import { PrismaNotificationRepository } from '../../modules/notifications/notification.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 import { NOTIFICATION_EVENTS } from '../../modules/notifications/notification.events.js';
 
 describe('WhatsAppWorker (Phase 3 BullMQ Worker Unit Tests)', () => {

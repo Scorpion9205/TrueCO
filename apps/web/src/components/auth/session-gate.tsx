@@ -1,5 +1,6 @@
 'use client';
 
+import { isApiError } from '@vargly/api-client';
 import { Loader2 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -19,7 +20,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const session = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [state, setState] = useState<'loading' | 'ready' | 'offline'>(
+  const [state, setState] = useState<'loading' | 'ready' | 'offline' | 'busy'>(
     session ? 'ready' : 'loading',
   );
   const hadSession = useRef(Boolean(session));
@@ -33,7 +34,11 @@ export function SessionGate({ children }: { children: ReactNode }) {
         if (restored) setState('ready');
         else router.replace(`/login?next=${encodeURIComponent(pathname)}`);
       })
-      .catch(() => active && setState('offline'));
+      .catch((error: unknown) => {
+        if (!active) return;
+        // Too many sign-in checks in a short time is not a connection problem: say so
+        setState(isApiError(error) && error.status === 429 ? 'busy' : 'offline');
+      });
     return () => {
       active = false;
     };
@@ -56,10 +61,10 @@ export function SessionGate({ children }: { children: ReactNode }) {
     }
   }, [session, state, router, pathname]);
 
-  if (state === 'offline') {
+  if (state === 'offline' || state === 'busy') {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4">
-        <Alert tone="danger">{t('offline')}</Alert>
+        <Alert tone="danger">{t(state)}</Alert>
         <Button onClick={() => setState('loading')}>{t('retry')}</Button>
       </div>
     );

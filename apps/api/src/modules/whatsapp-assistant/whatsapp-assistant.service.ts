@@ -80,7 +80,7 @@ export class WhatsAppAssistantService {
   }
 
   /**
-   * One TrueCO number serves every institute. A parent registered at more than one is asked
+   * One Vargly number serves every institute. A parent registered at more than one is asked
    * which to talk to, and the choice is remembered for later messages.
    */
   private async chooseCoaching(
@@ -271,10 +271,14 @@ export class WhatsAppAssistantService {
       case 'RAG_KNOWLEDGE': {
         if (this.knowledgeBaseService) {
           try {
-            const chunks = await this.knowledgeBaseService.searchKnowledge(dto.body, coachingId, 3, 0.18);
+            // The relevance floor suits the embedding model in use (see KnowledgeBaseService)
+            const chunks = await this.knowledgeBaseService.searchKnowledge(dto.body, coachingId, 3);
             if (chunks.length > 0 && this.aiService) {
               const contextTexts = chunks.map((c) => c.content);
-              const systemPrompt = buildWhatsAppRagSystemPrompt('TrueCO Coaching Institute', contextTexts);
+              const systemPrompt = buildWhatsAppRagSystemPrompt(
+                parent.coaching?.name ?? 'your coaching institute',
+                contextTexts,
+              );
               const aiCompletion = await this.aiService.generateCompletion(
                 {
                   prompt: dto.body,
@@ -303,7 +307,7 @@ export class WhatsAppAssistantService {
       case 'HELP':
       default: {
         replyText =
-          `🤖 TrueCO Student Assistant for ${studentName}\n\n` +
+          `🤖 Vargly Student Assistant for ${studentName}\n\n` +
           `You can reply with keywords:\n` +
           `• *fees* - View pending fee balance\n` +
           `• *attendance* - Check class attendance\n` +

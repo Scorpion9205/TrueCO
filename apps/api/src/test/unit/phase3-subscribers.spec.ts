@@ -10,7 +10,7 @@ import { createAttendanceMarkedEvent } from '../../modules/attendance/attendance
 import { createTestResultReadyEvent } from '../../modules/tests/test.events.js';
 import { createHomeworkCreatedEvent } from '../../modules/homework/homework.events.js';
 import { createStudentCreatedEvent } from '../../modules/students/student.events.js';
-import { AttendanceStatus } from '@trueco/types';
+import { AttendanceStatus } from '@vargly/types';
 
 describe('Phase 3 Cross-Cutting Subscribers Integration', () => {
   let eventBus: EventBus;

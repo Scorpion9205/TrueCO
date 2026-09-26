@@ -5,7 +5,7 @@ import { AppError } from '../../common/middleware/error-handler.middleware.js';
 import { RiskFilterDto, RiskScoreResponseDto } from './dto/risk-engine.dto.js';
 import { RiskEngineMapper } from './risk-engine.mapper.js';
 import { createRiskComputedEvent, createRiskDetectedEvent } from './risk-engine.events.js';
-import { FeeInstallmentStatus, RiskLevel } from '@trueco/types';
+import { FeeInstallmentStatus, RiskLevel } from '@vargly/types';
 
 export class RiskEngineService {
   public constructor(
@@ -95,7 +95,7 @@ export class RiskEngineService {
     let homeworkFactor = 0;
     const pastHomework = data.homeworkList.filter((h: any) => new Date(h.dueDate) < now);
     if (pastHomework.length > 0) {
-      // In TrueCO, missed homework entries increase risk
+      // In Vargly, missed homework entries increase risk
       homeworkFactor = Math.min(100, pastHomework.length * 15);
       if (homeworkFactor > 30) {
         narrativeParts.push(`${pastHomework.length} missed/pending homework assignments`);

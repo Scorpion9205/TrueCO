@@ -3,7 +3,7 @@ import { AttendanceService } from '../../modules/attendance/attendance.service.j
 import { IAttendanceRepository, UpsertAttendanceSessionInput } from '../../modules/attendance/attendance.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
-import { AttendanceStatus } from '@trueco/types';
+import { AttendanceStatus } from '@vargly/types';
 import { ATTENDANCE_EVENTS } from '../../modules/attendance/attendance.events.js';
 
 class InMemoryAttendanceRepository implements IAttendanceRepository {

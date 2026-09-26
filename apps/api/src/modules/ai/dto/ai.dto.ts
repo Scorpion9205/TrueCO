@@ -1,4 +1,4 @@
-import { AiProviderType } from '@trueco/types';
+import { AiProviderType } from '@vargly/types';
 
 export interface GenerateAiCompletionDto {
   readonly prompt: string;

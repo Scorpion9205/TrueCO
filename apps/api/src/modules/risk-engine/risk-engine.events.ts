@@ -1,4 +1,4 @@
-import { DomainEvent, RiskLevel } from '@trueco/types';
+import { DomainEvent, RiskLevel } from '@vargly/types';
 
 export interface RiskComputedPayload {
   readonly coachingId: string;

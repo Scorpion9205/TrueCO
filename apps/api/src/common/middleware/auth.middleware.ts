@@ -4,7 +4,7 @@ import { tokenService, TokenPayload } from '../security/token.service.js';
 import { permissionResolver } from '../security/permission-resolver.service.js';
 import { RequestContextService } from '../services/request-context.service.js';
 import { AppError } from './error-handler.middleware.js';
-import { RequestContextData } from '@trueco/types';
+import { RequestContextData } from '@vargly/types';
 
 export async function authenticateMiddleware(
   req: Request,

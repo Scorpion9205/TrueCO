@@ -1,5 +1,5 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { AttendanceStatus } from '@trueco/types';
+import { AttendanceStatus } from '@vargly/types';
 
 export interface UpsertAttendanceSessionInput {
   coachingId: string;

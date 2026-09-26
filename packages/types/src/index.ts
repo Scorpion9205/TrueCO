@@ -1,5 +1,5 @@
 // ==========================================
-// TrueCO Core Types & Enums
+// Vargly Core Types & Enums
 // ==========================================
 
 export enum RoleType {

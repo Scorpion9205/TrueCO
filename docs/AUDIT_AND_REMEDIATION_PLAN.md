@@ -1,4 +1,4 @@
-# TrueCO: Codebase Audit & Phased Remediation Plan
+# Vargly: Codebase Audit & Phased Remediation Plan
 
 **Audit date:** 2026-09-23 · **Baseline commit:** `ffd331c` (main)
 
@@ -92,7 +92,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 **Upgrading an existing database** (created with `prisma db push`), as the schema owner:
 1. `prisma migrate resolve --applied 20260923000000_init` (mark the baseline as already present)
 2. `pnpm prisma:migrate:deploy` (applies RLS and the HNSW index)
-3. `psql "$OWNER_URL" -v app_password=... -f infra/docker/postgres/create-app-role.sql`, then point the API's `DATABASE_URL` at `trueco_app`
+3. `psql "$OWNER_URL" -v app_password=... -f infra/docker/postgres/create-app-role.sql`, then point the API's `DATABASE_URL` at `vargly_app`
 
 **Known limitations, tracked for later phases:**
 - Relation `connect` to another tenant's row by id is not blocked by RLS (the policy checks the written row, not the referenced one); services must validate referenced ids (Phase 2)
@@ -114,7 +114,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 
 **Exit:** met. Tests prove a teacher gets 403 on another batch's homework, tests and students; a deactivated teacher loses access on the next request with the same token; a lapsed trial gets 402 while sign-in and billing work; a reset link works once, including under 8 concurrent attempts.
 
-**Upgrading an existing database:** `pnpm prisma:migrate:deploy`, then re-run `pnpm --filter @trueco/api db:seed:rbac` to add the new permissions.
+**Upgrading an existing database:** `pnpm prisma:migrate:deploy`, then re-run `pnpm --filter @vargly/api db:seed:rbac` to add the new permissions.
 
 **Known limitations, tracked for later phases:**
 - List endpoints (`GET /students`, `/batches`, `/parents`) still return coaching-wide lists to teachers; per-batch filtering belongs in the services
@@ -126,10 +126,10 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 
 ### Phase 3: Money & data integrity ✅
 - [x] Fee payments lock the installment row and validate the balance inside the transaction; exact decimal arithmetic throughout (plans, discounts, payments, balances); amounts validated as whole paise
-- [x] Gap-free receipt numbers per coaching and invoice numbers for TrueCO, per Indian financial year (`RCT/2026-27/00001`, `INV/2026-27/00001`), issued inside the payment transaction (`document_sequences`)
+- [x] Gap-free receipt numbers per coaching and invoice numbers for Vargly, per Indian financial year (`RCT/2026-27/00001`, `INV/2026-27/00001`), issued inside the payment transaction (`document_sequences`)
 - [x] A gateway payment id is recorded once per coaching (unique `(coachingId, transactionRef)`): webhook retries and the paired `payment.captured` / `payment_link.paid` events collapse to one payment. Unique receipt numbers are now per coaching instead of global
 - [x] Fee webhooks: transient failures return 500 so Razorpay retries; payments that cannot be applied (e.g. installment already paid) are logged as `RECONCILE` instead of being silently dropped
-- [x] TrueCO billing reworked: the three free-grant endpoints are removed; `POST /billing/orders` prices plans and credit packs on the server and records a `billing_payments` row; the webhook settles it at most once, only for the recorded amount, and applies plan, period and credits in one transaction. ₹0 plans (the trial plan) cannot be bought. AI credit price is configurable (`AI_CREDIT_PRICE_PAISE`, default ₹1)
+- [x] Vargly billing reworked: the three free-grant endpoints are removed; `POST /billing/orders` prices plans and credit packs on the server and records a `billing_payments` row; the webhook settles it at most once, only for the recorded amount, and applies plan, period and credits in one transaction. ₹0 plans (the trial plan) cannot be bought. AI credit price is configurable (`AI_CREDIT_PRICE_PAISE`, default ₹1)
 - [x] AI credits are reserved atomically before a provider call and refunded if it fails; concurrent requests cannot overdraw a wallet. Removed dormant event subscribers that would have double-credited purchases
 - [x] Salaries: one per teacher per month (unique constraint, 409 on repeat); paying is a conditional update, so concurrent payments succeed once. Waivers race safely with payments
 - [x] Missing foreign keys added (`FeePlan`, `Salary`, `Expense` to `Coaching`; `Salary` to `Teacher`)
@@ -141,7 +141,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 **Upgrading an existing database:** `pnpm prisma:migrate:deploy`. The new unique rules fail the migration if duplicates already exist (repeated receipt numbers or gateway payment ids within a coaching, or two salaries for the same teacher and month); resolve those first.
 
 **Known limitations, tracked for later phases:**
-- Fee payment links are created on TrueCO's Razorpay account; collecting fees into each coaching's own account needs Razorpay Route or per-coaching keys
+- Fee payment links are created on Vargly's Razorpay account; collecting fees into each coaching's own account needs Razorpay Route or per-coaching keys
 - Payments logged as `RECONCILE` (money taken but not applicable) need a review screen and refund flow; today they exist only in logs
 - Nothing enforces a single active subscription per coaching at the database level; settlement updates the current one
 - AI usage logs still carry no `coachingId` (they are reached through the wallet)
@@ -161,7 +161,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - Events are recorded right after the business change commits, not in the same transaction, so a crash in that instant can still lose one; a full transactional outbox needs services to write events through their repository transaction
 - Handlers must tolerate re-running after a failure; handlers that write rows (timeline, audit) could duplicate a row if they fail after writing
 - `DEAD` events and payments marked `RECONCILE` are only visible in logs and the database; they need alerting and an admin view (Phase 6)
-- One TrueCO WhatsApp number serves every institute; routing by per-coaching WhatsApp numbers is not implemented
+- One Vargly WhatsApp number serves every institute; routing by per-coaching WhatsApp numbers is not implemented
 - The reminder hour (10:00 local) is fixed, not configurable per coaching
 - Notification sending is at-least-once: a worker that crashes after sending but before recording it can cause one resend after 10 minutes
 
@@ -191,7 +191,7 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - [x] Docker: one image runs the API, the worker and migrations. Fixed a build that could never succeed (it copied a non-existent `tsconfig.json`); added `.dockerignore` so host `node_modules` and `.env` secrets never enter the build context; pnpm store cached across builds
 - [x] docker-compose rebuilt and verified end to end in production mode: generated secrets (`pnpm docker:env`, git-ignored), app role created on first start, a one-shot `migrate` service (7 migrations + RBAC seed) before the API and worker, localhost-only configurable ports, fresh volume names so an existing local database is not reused. Checked: register, login, create/list student, events recorded and dispatched, worker with all 69 subscribers
 - [x] Kubernetes (Kustomize): migration Job staged before rollout, API Deployment (startup/readiness/liveness probes, resource requests/limits, non-root, read-only filesystem, zero-downtime rolling update, PodDisruptionBudget, HPA), a new worker Deployment, ConfigMap and secret template, image pinned in one place
-- [x] Alerting: `/metrics` now requires `METRICS_TOKEN` (was public; disabled in production without it) and labels requests by route pattern (raw paths made unbounded series); new `trueco_domain_events{status}`, `trueco_notifications_failed_24h` and `trueco_payment_reconcile_total`
+- [x] Alerting: `/metrics` now requires `METRICS_TOKEN` (was public; disabled in production without it) and labels requests by route pattern (raw paths made unbounded series); new `vargly_domain_events{status}`, `vargly_notifications_failed_24h` and `vargly_payment_reconcile_total`
 - [x] Tests never load the developer's `.env` (real keys there made test runs call Gemini); client-supplied trace ids are validated before being logged; the `uuid` dependency was replaced by `crypto.randomUUID`
 - [x] README and operations runbook (`docs/RUNBOOK.md`)
 
@@ -205,4 +205,4 @@ Status legend: ✅ fixed · 🚧 in progress · ⬜ not started
 - Database backups and point-in-time recovery are outside this repository
 
 ### Phase 7: Frontend
-Typed API client on `@trueco/types`, real authentication flow, replace mocked dashboard data.
+Typed API client on `@vargly/types`, real authentication flow, replace mocked dashboard data.

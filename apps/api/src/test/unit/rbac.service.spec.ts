@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { RbacService } from '../../modules/rbac/rbac.service.js';
 import { IRbacRepository } from '../../modules/rbac/rbac.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 class InMemoryRbacRepository implements IRbacRepository {
   public roles: Map<string, any> = new Map();

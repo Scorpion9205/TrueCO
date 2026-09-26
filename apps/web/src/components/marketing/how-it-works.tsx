@@ -15,7 +15,7 @@ export async function HowItWorks() {
           {STEPS.map((step, index) => (
             <li
               key={step}
-              className="relative flex flex-col items-center gap-3 text-center md:items-start md:text-left"
+              className="reveal relative flex flex-col items-center gap-3 text-center md:items-start md:text-left"
             >
               {/* Connector line between the steps on wide screens */}
               {index < STEPS.length - 1 ? (

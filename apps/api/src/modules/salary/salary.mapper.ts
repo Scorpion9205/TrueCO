@@ -1,5 +1,5 @@
 import { SalaryResponseDto } from './dto/salary.dto.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 
 export class SalaryMapper {
   public static toResponseDto(entity: any): SalaryResponseDto {

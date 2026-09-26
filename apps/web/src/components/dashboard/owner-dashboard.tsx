@@ -38,7 +38,10 @@ export function OwnerDashboardView({ data }: { data: OwnerDashboardData }) {
     <div className="flex flex-col gap-6">
       {isNew ? <GettingStarted /> : null}
 
-      <section aria-label={t('kpiLabel')} className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <section
+        aria-label={t('kpiLabel')}
+        className="enter-stagger grid grid-cols-2 gap-4 xl:grid-cols-4"
+      >
         <KpiCard label={t('kpi.students')} value={String(m.totalStudents)} icon={Users} />
         <KpiCard
           label={t('kpi.attendance')}

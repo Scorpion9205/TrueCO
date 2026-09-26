@@ -41,7 +41,7 @@ export function FeeReportView() {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">{t('scope')}</p>
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="enter-stagger grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard
           label={t('kpi.expected')}
           value={formatCurrency(data.totalExpected)}

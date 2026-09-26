@@ -14,7 +14,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DATABASE_URL: isTest
-    ? z.string().default('postgresql://trueco_user:trueco_password@localhost:5432/trueco_test?schema=public')
+    ? z.string().default('postgresql://vargly_user:vargly_password@localhost:5432/vargly_test?schema=public')
     : z.string().min(1, 'DATABASE_URL is required'),
   REDIS_HOST: z.string().default('localhost'),
   REDIS_PORT: z.coerce.number().default(6379),
@@ -50,7 +50,7 @@ const envSchema = z.object({
   WHATSAPP_API_TOKEN: z.string().optional(),
   WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().optional(),
-  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().default('trueco_webhook_secret_token'),
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN: z.string().default('vargly_webhook_secret_token'),
   WHATSAPP_API_VERSION: z.string().default('v19.0'),
   // SMTP Email
   SMTP_HOST: z.string().optional(),
@@ -58,7 +58,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_SECURE: z.coerce.boolean().default(false),
-  EMAIL_FROM: z.string().default('TrueCO Alerts <notifications@trueco.in>'),
+  EMAIL_FROM: z.string().default('Vargly Alerts <notifications@vargly.in>'),
   // AI Model Providers
   OPENAI_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
@@ -92,9 +92,9 @@ const envSchema = z.object({
 // Values that ship in code or .env.example. They are public, so they must never secure production.
 const KNOWN_INSECURE_VALUES = new Set([
   '0123456789abcdef0123456789abcdef',
-  'trueco_webhook_secret_token',
-  'trueco_dev_access_super_secret_key_change_in_production_32char',
-  'trueco_dev_refresh_super_secret_key_change_in_production_32char',
+  'vargly_webhook_secret_token',
+  'vargly_dev_access_super_secret_key_change_in_production_32char',
+  'vargly_dev_refresh_super_secret_key_change_in_production_32char',
   'test_jwt_access_secret_key_at_least_32_chars_long',
   'test_jwt_refresh_secret_key_at_least_32_chars_long',
 ]);

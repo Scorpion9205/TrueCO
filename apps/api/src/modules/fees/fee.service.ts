@@ -18,7 +18,7 @@ import {
   createFeePlanCreatedEvent,
   createFeeWaivedEvent,
 } from './fee.events.js';
-import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@vargly/types';
 import { IPaymentGatewayAdapter, PaymentLinkResult } from '../billing/adapters/payment-gateway.interface.js';
 import { MockPaymentGatewayAdapter } from '../billing/adapters/mock-payment-gateway.adapter.js';
 import { RazorpayAdapter } from '../billing/adapters/razorpay.adapter.js';

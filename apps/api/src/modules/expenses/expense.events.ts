@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 export interface ExpenseRecordedPayload {
   readonly expenseId: string;

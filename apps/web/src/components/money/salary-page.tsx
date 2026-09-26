@@ -135,7 +135,7 @@ export function SalaryPage() {
         ) : null}
       </div>
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      <section className="enter-stagger grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KpiCard
           label={t('kpi.payroll')}
           value={salaries.data ? formatCurrency(payroll) : '—'}

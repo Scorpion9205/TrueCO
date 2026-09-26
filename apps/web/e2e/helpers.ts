@@ -2,6 +2,24 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 export const OWNER_STATE = 'e2e/.auth/owner.json';
+/** The new owner's sign-in, for tests that need a session of their own (e.g. on a phone) */
+export const OWNER_LOGIN = 'e2e/.auth/owner-login.json';
+
+export const SECTIONS = [
+  '/app/students',
+  '/app/batches',
+  '/app/attendance',
+  '/app/tests',
+  '/app/homework',
+  '/app/fees',
+  '/app/expenses',
+  '/app/salary',
+  '/app/teachers',
+  '/app/notices',
+  '/app/reports',
+  '/app/settings',
+  '/app/billing',
+];
 
 /** Collects Content-Security-Policy violations and uncaught errors while a page is used */
 export function watchForProblems(page: Page): () => string[] {
@@ -30,4 +48,20 @@ export async function expectAccessible(page: Page): Promise<void> {
       return [`${violation.id}: ${violation.help}`, ...nodes].join('\n');
     });
   expect(serious, `${page.url()}\n${serious.join('\n')}`).toEqual([]);
+}
+
+/**
+ * Opens a section through the app's own navigation, as a person would. A full page load per
+ * section would fetch a new session each time and soon meet the API's limit on those.
+ */
+export async function openSection(page: Page, path: string): Promise<void> {
+  const menuButton = page.getByRole('button', { name: /open menu/i });
+  const scope = (await menuButton.isVisible())
+    ? (await menuButton.click(), page.getByRole('dialog'))
+    : page.getByRole('navigation', { name: 'App' }).first();
+  await scope.locator(`a[href="${path}"]`).first().click();
+  await page.waitForURL(`**${path}`);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  // The new page's title arrives with its data, just after the address changes
+  await expect(page).toHaveTitle(/\S.* · Vargly$/);
 }

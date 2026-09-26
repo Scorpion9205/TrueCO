@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { rupeeAmount } from '../../../common/money/money.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 
 export const generateSalarySchema = z.object({
   teacherId: z.string().uuid(),

@@ -6,7 +6,7 @@ import { BATCH_EVENTS, BatchCreatedPayload } from '../batches/batch.events.js';
 import { ATTENDANCE_EVENTS, AttendanceMarkedPayload } from '../attendance/attendance.events.js';
 import { TEST_EVENTS, TestCreatedPayload, MarksUploadedPayload } from '../tests/test.events.js';
 import { HOMEWORK_EVENTS, HomeworkCreatedPayload } from '../homework/homework.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class AuditSubscribers {

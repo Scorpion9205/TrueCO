@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class CoachingPolicy {
   public static canUpdateCoaching(callerCoachingId?: string, targetCoachingId?: string, roles: RoleType[] = []): boolean {

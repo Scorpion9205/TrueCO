@@ -1,5 +1,5 @@
 /**
- * Gap-free document numbers (fee receipts, TrueCO invoices).
+ * Gap-free document numbers (fee receipts, Vargly invoices).
  *
  * Numbers come from a counter row that is incremented inside the caller's transaction. The
  * row stays locked until that transaction ends, so concurrent issuers queue up, and a rolled

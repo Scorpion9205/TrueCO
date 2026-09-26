@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { AssistantIntent } from './dto/whatsapp-assistant.dto.js';
 
 export interface InboundMessageReceivedPayload {

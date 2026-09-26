@@ -1,5 +1,5 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { expectAccessible, OWNER_STATE, watchForProblems } from './helpers';
+import { expectAccessible, openSection, OWNER_STATE, SECTIONS, watchForProblems } from './helpers';
 
 // The API rotates refresh tokens and treats a reused one as theft, so the saved session is used
 // by one browser context for all of these steps, in order
@@ -43,22 +43,11 @@ test('a student can be added and found', async () => {
 });
 
 test('each section opens without errors', async () => {
-  for (const path of [
-    '/app/batches',
-    '/app/attendance',
-    '/app/tests',
-    '/app/homework',
-    '/app/fees',
-    '/app/expenses',
-    '/app/salary',
-    '/app/teachers',
-    '/app/notices',
-    '/app/reports',
-    '/app/settings',
-    '/app/billing',
-  ]) {
-    await page.goto(path);
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  // Visits and scans every section
+  test.setTimeout(180_000);
+  await page.goto('/app');
+  for (const path of SECTIONS) {
+    await openSection(page, path);
     await expectAccessible(page);
   }
 });
@@ -70,6 +59,8 @@ test('an unknown app address shows "not found" inside the app', async () => {
 });
 
 test('dark mode is remembered across a reload, without a flash', async () => {
+  // Visits and scans every section
+  test.setTimeout(180_000);
   await page.goto('/app');
   await page.getByRole('button', { name: /Account menu/ }).click();
   await page.getByRole('menuitemradio', { name: 'Dark' }).click();
@@ -80,6 +71,13 @@ test('dark mode is remembered across a reload, without a flash', async () => {
   // Set by the inline script before the app loads
   await expect(page.locator('html')).toHaveClass(/dark/);
   await expectAccessible(page);
+
+  // Every section stays readable in dark mode too
+  for (const path of SECTIONS) {
+    await openSection(page, path);
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    await expectAccessible(page);
+  }
 
   await page.getByRole('button', { name: /Account menu/ }).click();
   await page.getByRole('menuitemradio', { name: 'Light' }).click();

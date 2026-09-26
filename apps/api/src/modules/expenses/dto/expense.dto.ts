@@ -1,4 +1,4 @@
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 
 export interface CreateExpenseDto {
   readonly title: string;

@@ -2,7 +2,7 @@ import {
   getPrismaClient,
   ExtendedPrismaClient,
 } from '../../database/prisma/tenant-prisma.extension.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export interface CreateTeacherTransactionInput {
   coachingId: string;

@@ -32,7 +32,7 @@ export interface StudentAcademicSnapshot {
 export interface IWhatsAppAssistantRepository {
   /**
    * Parents whose phone number matches exactly (last 10 digits, ignoring formatting), across all
-   * coachings: one TrueCO WhatsApp number serves every institute, so a parent may be registered
+   * coachings: one Vargly WhatsApp number serves every institute, so a parent may be registered
    * at several. Each result includes `coaching: { name }`.
    */
   resolveParentsByPhone(phone: string): Promise<any[]>;

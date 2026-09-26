@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Job } from 'bullmq';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import { EventBus } from '../../events/event-bus.js';
 import { runJobForTenant, runJobAsSystem } from '../../workers/job-context.js';

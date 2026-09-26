@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class DashboardPolicy {
   public static canViewOwnerDashboard(roles: RoleType[]): boolean {

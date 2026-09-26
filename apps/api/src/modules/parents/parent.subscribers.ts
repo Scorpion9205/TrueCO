@@ -1,7 +1,7 @@
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { PARENT_EVENTS, ParentCreatedPayload, StudentParentLinkedPayload } from './parent.events.js';
 import { logger } from '../../common/logger/logger.service.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 export class ParentSubscribers {
   public static register(eventBus: IEventBus): void {

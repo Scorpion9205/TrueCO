@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class BillingPolicy {
   public static canManageBilling(roles: RoleType[]): boolean {

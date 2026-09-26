@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AttendanceStatus } from '@trueco/types';
+import { AttendanceStatus } from '@vargly/types';
 
 export const markAttendanceSchema = z
   .object({

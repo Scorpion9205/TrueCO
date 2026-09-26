@@ -1,6 +1,6 @@
-# TrueCO Runbook
+# Vargly Runbook
 
-For whoever deploys and operates the TrueCO API. Commands assume the Kubernetes manifests in `infra/k8s`.
+For whoever deploys and operates the Vargly API. Commands assume the Kubernetes manifests in `infra/k8s`.
 
 ## 1. Deploying a release
 
@@ -9,25 +9,25 @@ For whoever deploys and operates the TrueCO API. Commands assume the Kubernetes 
 3. **Run migrations first**, before any new pod starts:
    ```bash
    kubectl kustomize infra/k8s > release.yaml
-   kubectl delete job trueco-migrate --ignore-not-found
-   kubectl apply -f release.yaml -l trueco/stage=pre      # config + migration job only
-   kubectl wait --for=condition=complete job/trueco-migrate --timeout=10m
+   kubectl delete job vargly-migrate --ignore-not-found
+   kubectl apply -f release.yaml -l vargly/stage=pre      # config + migration job only
+   kubectl wait --for=condition=complete job/vargly-migrate --timeout=10m
    ```
    The job applies migrations and re-seeds roles, permissions and plans as the schema owner. It is idempotent.
-4. **Rollout.** `kubectl apply -f release.yaml` updates the API (3+ replicas, no downtime: `maxUnavailable: 0`) and the worker. Watch `kubectl rollout status deploy/trueco-api` and `deploy/trueco-worker`.
+4. **Rollout.** `kubectl apply -f release.yaml` updates the API (3+ replicas, no downtime: `maxUnavailable: 0`) and the worker. Watch `kubectl rollout status deploy/vargly-api` and `deploy/vargly-worker`.
 5. **Check the startup log** of both: `[Api] Integrations: …` and `[WorkerRunner] Integrations: …` show which integrations are live. Anything `OFF` in production is logged as a warning with what stops working.
 
 If a migration fails the rollout must not continue: the old version keeps running on the old schema.
 
 ## 2. Configuration
 
-Non-secret settings: `infra/k8s/configmap.yaml`. Secrets: create `trueco-secrets` from `infra/k8s/secret.example.yaml` (never commit it). The API **refuses to start** in production when:
+Non-secret settings: `infra/k8s/configmap.yaml`. Secrets: create `vargly-secrets` from `infra/k8s/secret.example.yaml` (never commit it). The API **refuses to start** in production when:
 
 - `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` are missing (every replica must share one keypair)
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `DATABASE_ENCRYPTION_KEY` or `WHATSAPP_WEBHOOK_VERIFY_TOKEN` are shorter than 32 characters or a known default
 - the database user is a superuser or has `BYPASSRLS`, which would silently disable tenant row-level security
 
-Two database users: `DATABASE_URL` is the application role (`trueco_app`, created by `infra/docker/postgres/create-app-role.sql`); `MIGRATION_DATABASE_URL` is the schema owner, used only by the migration job.
+Two database users: `DATABASE_URL` is the application role (`vargly_app`, created by `infra/docker/postgres/create-app-role.sql`); `MIGRATION_DATABASE_URL` is the schema owner, used only by the migration job.
 
 `TRUST_PROXY` must equal the number of proxies in front of the API (1 behind a single ingress). If it is too high, clients can spoof their IP and evade rate limits and login lockout.
 
@@ -37,11 +37,11 @@ Two database users: `DATABASE_URL` is the application role (`trueco_app`, create
 
 | Metric | Alert when | Means |
 | --- | --- | --- |
-| `trueco_domain_events{status="DEAD"}` | `> 0` | An event's handlers failed 10 times; see §4 |
-| `trueco_domain_events{status="FAILED"}` | rising for 30 min | Handlers keep failing (a dependency is down) |
-| `trueco_payment_reconcile_total` | any increase | Money was taken but could not be applied; see §5 |
-| `trueco_notifications_failed_24h` | above normal | WhatsApp/email delivery failing (credentials, provider outage) |
-| `trueco_http_request_duration_seconds` | p95 > 1 s | API slow; check database and Redis |
+| `vargly_domain_events{status="DEAD"}` | `> 0` | An event's handlers failed 10 times; see §4 |
+| `vargly_domain_events{status="FAILED"}` | rising for 30 min | Handlers keep failing (a dependency is down) |
+| `vargly_payment_reconcile_total` | any increase | Money was taken but could not be applied; see §5 |
+| `vargly_notifications_failed_24h` | above normal | WhatsApp/email delivery failing (credentials, provider outage) |
+| `vargly_http_request_duration_seconds` | p95 > 1 s | API slow; check database and Redis |
 
 Health: `/health/live` (process up) and `/health/ready` (database and Redis reachable) drive the Kubernetes probes.
 
@@ -63,10 +63,10 @@ Run these as the schema owner or with `SELECT set_config('app.rls_bypass','on',t
 
 ## 5. Payments needing reconciliation
 
-Logged as `RECONCILE` and counted by `trueco_payment_reconcile_total`:
+Logged as `RECONCILE` and counted by `vargly_payment_reconcile_total`:
 
 - **Fee payments** (`source="fee"`): Razorpay captured the money but the installment was already paid or waived, or the currency was wrong. Find the payment id in the log, check the student's installments, then refund in Razorpay or apply it to another installment by hand.
-- **TrueCO billing** (`source="billing"`, `AMOUNT_MISMATCH`): the amount paid differs from the order's price, so nothing was granted. Compare `billing_payments` (by `gateway_order_id`) with Razorpay, then refund or settle manually.
+- **Vargly billing** (`source="billing"`, `AMOUNT_MISMATCH`): the amount paid differs from the order's price, so nothing was granted. Compare `billing_payments` (by `gateway_order_id`) with Razorpay, then refund or settle manually.
 
 Webhook retries and duplicate deliveries are safe: each gateway payment is recorded once.
 
@@ -74,9 +74,9 @@ Webhook retries and duplicate deliveries are safe: each gateway payment is recor
 
 - **Rotate JWT keys:** generate a new keypair, update the secret, restart the API. Access tokens signed with the old key stop working at once; clients get a new one with their refresh token (refresh tokens are stored server-side and are not affected). To force everyone to sign in again, also revoke refresh tokens: `UPDATE refresh_tokens SET is_revoked = true`.
 - **Change an AI or embedding model:** set `AI_MODEL_*` / `*_EMBEDDING_MODEL`. After an embedding model change, re-sync each coaching's knowledge base: search only compares vectors produced by the current model.
-- **Scale workers:** increase `trueco-worker` replicas. Jobs, notification sends and the event relay are safe on several replicas.
+- **Scale workers:** increase `vargly-worker` replicas. Jobs, notification sends and the event relay are safe on several replicas.
 - **Upgrade a database created with `prisma db push`** (before migrations existed): `prisma migrate resolve --applied 20260923000000_init`, then deploy migrations as usual.
 
 ## 7. Known gaps
 
-Tracked in [AUDIT_AND_REMEDIATION_PLAN.md](AUDIT_AND_REMEDIATION_PLAN.md). Notably: database backups and point-in-time recovery are outside this repository, and fee payments are collected on TrueCO's own Razorpay account.
+Tracked in [AUDIT_AND_REMEDIATION_PLAN.md](AUDIT_AND_REMEDIATION_PLAN.md). Notably: database backups and point-in-time recovery are outside this repository, and fee payments are collected on Vargly's own Razorpay account.

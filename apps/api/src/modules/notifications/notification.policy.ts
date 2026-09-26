@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class NotificationPolicy {
   public static canManageNotifications(roles: RoleType[]): boolean {

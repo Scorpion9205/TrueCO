@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { RequestContextService } from '../services/request-context.service.js';
 import { getPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { SubscriptionStatus } from '@trueco/types';
+import { SubscriptionStatus } from '@vargly/types';
 import { queueRegistry } from '../../queues/queue.registry.js';
 import { logger } from '../logger/logger.service.js';
 
@@ -90,7 +90,7 @@ export function evaluateSubscriptionAccess(
     return {
       allowed: false,
       code: 'SUBSCRIPTION_EXPIRED',
-      message: 'Your TrueCO subscription has expired. Please upgrade to continue.',
+      message: 'Your Vargly subscription has expired. Please upgrade to continue.',
       state,
     };
   }
@@ -105,7 +105,7 @@ export function evaluateSubscriptionAccess(
       : {
           allowed: false,
           code: 'SUBSCRIPTION_EXPIRED',
-          message: 'Your TrueCO subscription has expired. Please upgrade to continue.',
+          message: 'Your Vargly subscription has expired. Please upgrade to continue.',
           state,
         };
   }

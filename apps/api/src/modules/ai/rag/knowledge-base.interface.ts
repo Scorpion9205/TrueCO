@@ -61,4 +61,11 @@ export interface IKnowledgeBaseRepository {
   ): Promise<void>;
   searchSimilarChunks(options: SearchKnowledgeQuery): Promise<KnowledgeChunkEntity[]>;
   deleteDocument(id: string, coachingId: string): Promise<boolean>;
+  /**
+   * Live documents, across coachings, with no active chunks from this embedding model (added
+   * while no model was configured, or embedded by an earlier one). Oldest first.
+   */
+  findDocumentsNeedingEmbedding(embeddingModel: string, limit: number): Promise<KnowledgeBaseEntity[]>;
+  /** Retires a document's chunks, so fresh ones can replace them */
+  deactivateChunks(knowledgeBaseId: string): Promise<void>;
 }

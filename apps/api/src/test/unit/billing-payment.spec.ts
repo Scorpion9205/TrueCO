@@ -11,7 +11,7 @@ import {
 import { money } from '../../common/money/money.js';
 import { MockPaymentGatewayAdapter } from '../../modules/billing/adapters/mock-payment-gateway.adapter.js';
 import { EventBus } from '../../events/event-bus.js';
-import { DiscountType, FeeInstallmentStatus, PlanCode, SubscriptionStatus } from '@trueco/types';
+import { DiscountType, FeeInstallmentStatus, PlanCode, SubscriptionStatus } from '@vargly/types';
 
 class FakeFeeRepository implements IFeeRepository {
   public plans: Map<string, any> = new Map();

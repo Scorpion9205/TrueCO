@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import { createTenantPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { PrismaFeeRepository } from '../../modules/fees/fee.repository.js';
@@ -158,7 +158,7 @@ describe.skipIf(!APP_URL || !OWNER_URL)('Money integrity (real PostgreSQL)', () 
     });
   });
 
-  describe('TrueCO billing orders', () => {
+  describe('Vargly billing orders', () => {
     it('settles a paid order exactly once under concurrent webhook deliveries', async () => {
       const billing = new PrismaBillingRepository(db);
       await asX(() =>

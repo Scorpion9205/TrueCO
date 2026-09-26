@@ -1,4 +1,4 @@
-# TrueCO — Architecture Design Document (ADD)
+# Vargly — Architecture Design Document (ADD)
 ### The WhatsApp-First Coaching ERP
 **Version 1.0 — Prepared for: 10,000+ coaching institutes · 5M+ students · 100,000 concurrent users**
 
@@ -6,15 +6,15 @@
 PROJECT OVERVIEW
 ==================================================
 
-We are building a SaaS product called TrueCO.
+We are building a SaaS product called Vargly.
 
-TrueCO is a modern WhatsApp-First Coaching Management ERP designed for small and medium coaching institutes.
+Vargly is a modern WhatsApp-First Coaching Management ERP designed for small and medium coaching institutes.
 
 The goal is to simplify coaching operations by providing a single platform for coaching owners and teachers while eliminating the need for parents and students to install any application.
 
 Instead of a Parent App or Student App, all communication happens through WhatsApp and Email.
 
-TrueCO is not just a management software.
+Vargly is not just a management software.
 
 It is an automation platform that helps coaching institutes manage their daily operations with minimal manual work.
 
@@ -46,7 +46,7 @@ Existing coaching software has several problems:
 - Teachers waste time maintaining registers and Excel sheets.
 - Many existing ERP systems are expensive, difficult to use, and overloaded with unnecessary features.
 
-TrueCO solves these problems by automating communication and daily operations through WhatsApp and Email.
+Vargly solves these problems by automating communication and daily operations through WhatsApp and Email.
 
 ==================================================
 OUR VISION
@@ -54,17 +54,17 @@ OUR VISION
 
 Our vision is to become the operating system for coaching institutes.
 
-Whenever a coaching owner thinks about managing students, teachers, fees, attendance, homework, tests, reports, and parent communication, they should think of TrueCO.
+Whenever a coaching owner thinks about managing students, teachers, fees, attendance, homework, tests, reports, and parent communication, they should think of Vargly.
 
 Every repetitive task should be automated.
 
-The coaching staff should focus on teaching while TrueCO handles operations.
+The coaching staff should focus on teaching while Vargly handles operations.
 
 The architecture should be designed with this long-term vision in mind.
 
 ## 1. Executive Summary
 
-TrueCO is a multi-tenant SaaS ERP for coaching institutes in India. Its defining constraint is that **parents and students never install software** — every interaction happens through WhatsApp (Meta Cloud API) and Email. Only two human actor types log into the actual product: **Coaching Owners** and **Teachers**, plus a **Super Admin** who operates the platform itself.
+Vargly is a multi-tenant SaaS ERP for coaching institutes in India. Its defining constraint is that **parents and students never install software** — every interaction happens through WhatsApp (Meta Cloud API) and Email. Only two human actor types log into the actual product: **Coaching Owners** and **Teachers**, plus a **Super Admin** who operates the platform itself.
 
 This forces three architectural commitments that shape everything downstream:
 
@@ -95,7 +95,7 @@ This forces three architectural commitments that shape everything downstream:
 
 ### 3.1 Layered vs Clean vs Hexagonal vs Onion vs DDD
 
-| Style | Strength | Weakness for TrueCO |
+| Style | Strength | Weakness for Vargly |
 |---|---|---|
 | **Traditional Layered (Controller→Service→Repo)** | Simple, familiar to any team | Domain logic leaks into services that also know about HTTP/DB; hard to keep 20+ modules from becoming spaghetti as team grows |
 | **Hexagonal (Ports & Adapters)** | Excellent isolation of infrastructure (great for swapping WhatsApp provider, AI provider) | Heavier ceremony (ports for everything) is overkill for CRUD-heavy modules like "Notice Board" |
@@ -294,7 +294,7 @@ erDiagram
 
 There should be two different folder for backend and frontend
 ```
-trueco/
+vargly/
 ├── apps/
 │   ├── api/                      # Express + TS backend (the modular monolith)
 │   │   ├── src/
@@ -433,7 +433,7 @@ async markAttendance(req, res) { ... }
 
 - **Middleware** (`tenantContext`, `authenticate`) runs first — resolves user + coaching + loads permission set into request context (cached in Redis per user-session, invalidated on role change).
 - **Guards/Decorators** (`@RequirePermission`, `@RequireFeature`, `@RequireBatchAccess`) run per-route, checking the pre-loaded permission set — no DB hit on the hot path.
-- **`@RequireBatchAccess`** is a TrueCO-specific guard: for Teacher-role requests touching a `batchId`, it additionally verifies membership in `TeacherBatches` — this is the one place row-level scoping goes beyond simple RBAC into data-level authorization, and it's implemented as its own decorator so it's never forgotten on a new Teacher-facing endpoint.
+- **`@RequireBatchAccess`** is a Vargly-specific guard: for Teacher-role requests touching a `batchId`, it additionally verifies membership in `TeacherBatches` — this is the one place row-level scoping goes beyond simple RBAC into data-level authorization, and it's implemented as its own decorator so it's never forgotten on a new Teacher-facing endpoint.
 
 ---
 
@@ -956,6 +956,6 @@ The Modular Monolith's module boundaries (§8) are designed to *be* future servi
 
 ---
 
-*This document is the baseline Architecture Design Document for TrueCO v1. It should be maintained as an ADR (Architecture Decision Record) log going forward — any deviation from a decision above should be documented with its own rationale rather than silently drifting from this baseline.*
+*This document is the baseline Architecture Design Document for Vargly v1. It should be maintained as an ADR (Architecture Decision Record) log going forward — any deviation from a decision above should be documented with its own rationale rather than silently drifting from this baseline.*
 
 

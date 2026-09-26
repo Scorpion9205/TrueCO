@@ -1,4 +1,4 @@
-import { DomainEvent, AiProviderType } from '@trueco/types';
+import { DomainEvent, AiProviderType } from '@vargly/types';
 
 export const AI_EVENTS = {
   CREDITS_DEDUCTED: 'AiCreditsDeducted',

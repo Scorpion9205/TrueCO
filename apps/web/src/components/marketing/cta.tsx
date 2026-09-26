@@ -13,7 +13,7 @@ export async function Cta() {
 
   return (
     <section aria-labelledby="cta-title" className="px-4 py-16 sm:px-6 sm:py-24">
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-xl bg-foreground px-6 py-12 text-center text-background sm:px-12 sm:py-16">
+      <div className="reveal relative mx-auto max-w-6xl overflow-hidden rounded-xl bg-foreground px-6 py-12 text-center text-background sm:px-12 sm:py-16">
         <div
           aria-hidden
           className="absolute -top-24 -right-24 size-64 rounded-full bg-brand/30 blur-3xl"

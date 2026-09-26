@@ -4,11 +4,11 @@ import {
   AssistantRepliedPayload,
   InboundMessageReceivedPayload,
 } from './whatsapp-assistant.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 import { NotificationService } from '../notifications/notification.service.js';
-import { NotificationChannel } from '@trueco/types';
+import { NotificationChannel } from '@vargly/types';
 
 export class WhatsAppAssistantSubscribers {
   public static register(eventBus: IEventBus, notificationService?: NotificationService): void {

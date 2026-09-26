@@ -1,5 +1,5 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 import { nextDocumentNumber } from '../../common/money/document-number.js';
 
 export type BillingCycle = 'MONTHLY' | 'YEARLY';

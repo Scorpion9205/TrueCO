@@ -1,5 +1,5 @@
 import { AttendanceSessionResponseDto } from './dto/attendance.dto.js';
-import { AttendanceStatus } from '@trueco/types';
+import { AttendanceStatus } from '@vargly/types';
 
 export class AttendanceMapper {
   public static toSessionResponseDto(entity: any): AttendanceSessionResponseDto {

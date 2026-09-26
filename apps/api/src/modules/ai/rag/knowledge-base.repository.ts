@@ -138,6 +138,40 @@ export class PrismaKnowledgeBaseRepository implements IKnowledgeBaseRepository {
     }));
   }
 
+  public async findDocumentsNeedingEmbedding(
+    embeddingModel: string,
+    limit: number,
+  ): Promise<KnowledgeBaseEntity[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT kb.id
+      FROM coaching_knowledge_bases kb
+      WHERE kb.deleted_at IS NULL
+        AND kb.is_active = true
+        AND NOT EXISTS (
+          SELECT 1 FROM coaching_knowledge_chunks c
+          WHERE c.knowledge_base_id = kb.id
+            AND c.is_active = true
+            AND c.embedding_model = ${embeddingModel}
+        )
+      ORDER BY kb.created_at ASC
+      LIMIT ${limit};
+    `;
+    if (rows.length === 0) return [];
+    const documents = await (this.prisma as any).coachingKnowledgeBase.findMany({
+      where: { id: { in: rows.map((r) => r.id) } },
+      orderBy: { createdAt: 'asc' },
+    });
+    return documents.map((d: any) => this.toEntity(d));
+  }
+
+  public async deactivateChunks(knowledgeBaseId: string): Promise<void> {
+    await this.prisma.$executeRaw`
+      UPDATE coaching_knowledge_chunks
+      SET is_active = false, updated_at = NOW()
+      WHERE knowledge_base_id = ${knowledgeBaseId}::uuid AND is_active = true
+    `;
+  }
+
   public async deleteDocument(id: string, coachingId: string): Promise<boolean> {
     const doc = await this.findById(id, coachingId);
     if (!doc) return false;

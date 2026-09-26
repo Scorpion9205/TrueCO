@@ -7,31 +7,31 @@ import { logger } from '../logger/logger.service.js';
 
 // Enable default runtime & process metrics (CPU, Memory, Event Loop, Heap)
 client.collectDefaultMetrics({
-  prefix: 'trueco_',
+  prefix: 'vargly_',
 });
 
 export const httpRequestsTotal = new client.Counter({
-  name: 'trueco_http_requests_total',
+  name: 'vargly_http_requests_total',
   help: 'Total number of incoming HTTP requests',
   labelNames: ['method', 'route', 'status_code'],
 });
 
 export const httpRequestDurationSeconds = new client.Histogram({
-  name: 'trueco_http_request_duration_seconds',
+  name: 'vargly_http_request_duration_seconds',
   help: 'Duration of HTTP requests in seconds',
   labelNames: ['method', 'route', 'status_code'],
   buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
 });
 
 export const bullMqJobsProcessedTotal = new client.Counter({
-  name: 'trueco_bullmq_jobs_processed_total',
+  name: 'vargly_bullmq_jobs_processed_total',
   help: 'Total number of BullMQ background jobs processed',
   labelNames: ['queue', 'status'],
 });
 
 /** Money was taken but could not be applied; someone must reconcile or refund it. Alert on any increase. */
 export const paymentReconcileTotal = new client.Counter({
-  name: 'trueco_payment_reconcile_total',
+  name: 'vargly_payment_reconcile_total',
   help: 'Payments that were received but could not be applied and need manual reconciliation',
   labelNames: ['source', 'reason'],
 });
@@ -65,7 +65,7 @@ async function loadOperationalCounts() {
 }
 
 new client.Gauge({
-  name: 'trueco_domain_events',
+  name: 'vargly_domain_events',
   help: 'Domain events not yet delivered (PENDING/FAILED) or given up on (DEAD); alert on DEAD > 0',
   labelNames: ['status'],
   async collect() {
@@ -79,7 +79,7 @@ new client.Gauge({
 });
 
 new client.Gauge({
-  name: 'trueco_notifications_failed_24h',
+  name: 'vargly_notifications_failed_24h',
   help: 'WhatsApp/email notifications that failed in the last 24 hours',
   async collect() {
     try {
