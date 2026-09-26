@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import { Redis } from 'ioredis';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import { createTenantPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { EventBus } from '../../events/event-bus.js';

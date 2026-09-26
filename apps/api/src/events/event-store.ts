@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { getPrismaClient, ExtendedPrismaClient } from '../database/prisma/tenant-prisma.extension.js';
 import { RequestContextService } from '../common/services/request-context.service.js';
 

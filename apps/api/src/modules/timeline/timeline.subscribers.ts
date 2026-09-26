@@ -5,7 +5,7 @@ import { ATTENDANCE_EVENTS, AttendanceMarkedPayload } from '../attendance/attend
 import { TEST_EVENTS, TestResultReadyPayload } from '../tests/test.events.js';
 import { BATCH_EVENTS, StudentEnrolledInBatchPayload, StudentTransferredBatchPayload } from '../batches/batch.events.js';
 import { FEE_EVENTS, FeePaidPayload } from '../fees/fee.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class TimelineSubscribers {

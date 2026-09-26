@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { RequestContextService } from '../services/request-context.service.js';
 import { getPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 import { AppError } from '../middleware/error-handler.middleware.js';
 
 /**

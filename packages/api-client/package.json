@@ -1,5 +1,5 @@
 {
-  "name": "@trueco/api-client",
+  "name": "@vargly/api-client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@trueco/config": "workspace:*",
+    "@vargly/config": "workspace:*",
     "typescript": "^5.5.4"
   }
 }

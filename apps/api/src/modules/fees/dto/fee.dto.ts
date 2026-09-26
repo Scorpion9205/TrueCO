@@ -1,4 +1,4 @@
-import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@trueco/types';
+import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@vargly/types';
 
 export interface CreateFeeInstallmentInputDto {
   readonly installmentNo: number;

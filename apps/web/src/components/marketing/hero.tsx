@@ -12,7 +12,7 @@ export async function Hero() {
   return (
     <section aria-labelledby="hero-title" className="overflow-hidden">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:py-28">
-        <div className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
+        <div className="enter-stagger flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
           <Badge tone="brand">{t('badge')}</Badge>
           <h1
             id="hero-title"
@@ -34,7 +34,9 @@ export async function Hero() {
           <p className="text-sm text-muted-foreground">{t('note')}</p>
         </div>
 
-        <ProductPreview />
+        <div className="animate-in fade-in slide-in-from-bottom-6 fill-mode-both delay-300 duration-700">
+          <ProductPreview />
+        </div>
       </div>
     </section>
   );

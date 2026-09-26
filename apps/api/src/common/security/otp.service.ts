@@ -146,7 +146,7 @@ export class OtpService implements IOtpService {
     const banner = [
       '',
       '╔══════════════════════════════════════════════════════════════╗',
-      '║                    🔑 TRUECO DEV OTP                         ║',
+      '║                    🔑 VARGLY DEV OTP                         ║',
       '╠══════════════════════════════════════════════════════════════╣',
       `║  Target:   ${identifier.padEnd(46)}║`,
       `║  Code:     >>> ${code} <<<${' '.repeat(34)}║`,

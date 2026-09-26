@@ -7,7 +7,7 @@ import {
 } from '../../modules/notifications/notification.repository.js';
 import { QueueRegistry } from '../../queues/queue.registry.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
 
 class InMemoryNotificationRepository implements INotificationRepository {

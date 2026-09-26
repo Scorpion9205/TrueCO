@@ -39,12 +39,12 @@ describe('Button', () => {
 describe('Logo', () => {
   it('links home with an accessible name', () => {
     render(<Logo />);
-    expect(screen.getByRole('link', { name: 'TrueCO home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Vargly home' })).toHaveAttribute('href', '/');
   });
 
   it('can render without a link', () => {
     render(<Logo href={null} />);
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByText('CO')).toHaveClass('text-brand');
+    expect(screen.getByText('ly')).toHaveClass('text-brand');
   });
 });

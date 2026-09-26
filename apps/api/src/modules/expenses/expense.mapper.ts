@@ -1,5 +1,5 @@
 import { ExpenseResponseDto } from './dto/expense.dto.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 
 export class ExpenseMapper {
   public static toResponseDto(entity: any): ExpenseResponseDto {

@@ -4,7 +4,7 @@ import {
   SalaryGeneratedPayload,
   SalaryPaidPayload,
 } from './salary.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class SalarySubscribers {

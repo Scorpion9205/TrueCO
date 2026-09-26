@@ -10,7 +10,7 @@ import {
   SendNotificationDto,
 } from './dto/notification.dto.js';
 import { NotificationMapper } from './notification.mapper.js';
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 import {

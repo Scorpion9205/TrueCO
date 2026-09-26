@@ -4,18 +4,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: trueco-worker
+  name: vargly-worker
   labels:
-    app: trueco-worker
+    app: vargly-worker
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: trueco-worker
+      app: vargly-worker
   template:
     metadata:
       labels:
-        app: trueco-worker
+        app: vargly-worker
     spec:
       terminationGracePeriodSeconds: 60
       securityContext:
@@ -25,13 +25,13 @@ spec:
           type: RuntimeDefault
       containers:
         - name: worker
-          image: trueco-api
+          image: vargly-api
           command: ['node', 'dist/workers/worker-runner.js']
           envFrom:
             - configMapRef:
-                name: trueco-config
+                name: vargly-config
             - secretRef:
-                name: trueco-secrets
+                name: vargly-secrets
           resources:
             requests:
               cpu: 250m

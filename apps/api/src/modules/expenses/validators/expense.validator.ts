@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { rupeeAmount } from '../../../common/money/money.js';
-import { PaymentMethod } from '@trueco/types';
+import { PaymentMethod } from '@vargly/types';
 
 export const createExpenseSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),

@@ -1,4 +1,4 @@
-import { createApiClient, isApiError } from '@trueco/api-client';
+import { createApiClient, isApiError } from '@vargly/api-client';
 import { API_URL } from '@/lib/api';
 import type { LoginInput, RegisterInput, RegisterResult, Session } from './types';
 
@@ -88,13 +88,13 @@ export function refreshSession(): Promise<Session | null> {
 
 function withRefreshLock<T>(task: () => Promise<T>): Promise<T> {
   if (typeof navigator !== 'undefined' && navigator.locks?.request) {
-    return navigator.locks.request('trueco-auth-refresh', task) as Promise<T>;
+    return navigator.locks.request('vargly-auth-refresh', task) as Promise<T>;
   }
   return task();
 }
 
 /**
- * Client for the TrueCO API with the signed-in user's token, renewing it once when it expires.
+ * Client for the Vargly API with the signed-in user's token, renewing it once when it expires.
  * An ended session is cleared by refreshSession, which sends the app back to the login page.
  */
 export const api = createApiClient({

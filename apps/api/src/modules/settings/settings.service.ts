@@ -13,12 +13,12 @@ export const DEFAULT_COACHING_CONFIG: CoachingConfig = {
   attendanceThreshold: 75,
   branding: {
     primaryColor: '#4F46E5',
-    headerText: 'TrueCO Coaching Institute',
+    headerText: 'Vargly Coaching Institute',
   },
   notifications: {
     whatsappEnabled: true,
     emailEnabled: true,
-    defaultSenderName: 'TrueCO Institute',
+    defaultSenderName: 'Vargly Institute',
   },
 };
 

@@ -3,7 +3,7 @@ import { KnowledgeBaseService } from './knowledge-base.service.js';
 import { NOTICE_EVENTS, NoticeCreatedPayload } from '../../notice-board/notice.events.js';
 import { HOMEWORK_EVENTS, HomeworkCreatedPayload } from '../../homework/homework.events.js';
 import { TEST_EVENTS, TestCreatedPayload } from '../../tests/test.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../../common/logger/logger.service.js';
 
 export class KnowledgeSyncSubscriber {

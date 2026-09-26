@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FeeInstallmentStatus } from '@trueco/types';
+import { FeeInstallmentStatus } from '@vargly/types';
 import { FeeMapper } from '../../modules/fees/fee.mapper.js';
 
 const plan = (installments: any[]) => ({

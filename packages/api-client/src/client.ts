@@ -10,7 +10,7 @@ export interface RequestOptions {
 }
 
 export interface ApiClientOptions {
-  /** e.g. "https://api.trueco.in/api/v1" */
+  /** e.g. "https://api.vargly.in/api/v1" */
   readonly baseUrl: string;
   /** Supplies the current access token; omitted for public endpoints. */
   readonly getAccessToken?: () => string | null | undefined;
@@ -76,7 +76,7 @@ async function readJson(response: Response): Promise<any> {
 }
 
 /**
- * Typed client for the TrueCO API. Unwraps the `{ data }` success envelope and converts every
+ * Typed client for the Vargly API. Unwraps the `{ data }` success envelope and converts every
  * failure (HTTP error, network error, unreadable body) into an ApiError.
  */
 export function createApiClient(options: ApiClientOptions): ApiClient {

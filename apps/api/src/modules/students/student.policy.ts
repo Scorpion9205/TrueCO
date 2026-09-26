@@ -1,4 +1,4 @@
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 export class StudentPolicy {
   public static canManageStudents(roles: RoleType[]): boolean {

@@ -1,6 +1,6 @@
 'use client';
 
-import { isApiError } from '@trueco/api-client';
+import { isApiError } from '@vargly/api-client';
 import { CircleAlert, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';

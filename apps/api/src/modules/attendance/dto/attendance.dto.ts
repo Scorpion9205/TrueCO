@@ -1,4 +1,4 @@
-import { AttendanceStatus } from '@trueco/types';
+import { AttendanceStatus } from '@vargly/types';
 
 export interface StudentAttendanceEntryDto {
   readonly studentId: string;

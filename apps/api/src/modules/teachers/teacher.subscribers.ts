@@ -1,7 +1,7 @@
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { TEACHER_EVENTS, TeacherCreatedPayload } from './teacher.events.js';
 import { logger } from '../../common/logger/logger.service.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 export class TeacherSubscribers {
   public static register(eventBus: IEventBus): void {

@@ -3,7 +3,7 @@
 export const THEMES = ['light', 'dark', 'system'] as const;
 export type Theme = (typeof THEMES)[number];
 
-export const THEME_STORAGE_KEY = 'trueco-theme';
+export const THEME_STORAGE_KEY = 'vargly-theme';
 /** The product's look is light; dark is a choice */
 export const DEFAULT_THEME: Theme = 'light';
 

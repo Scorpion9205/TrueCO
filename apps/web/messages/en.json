@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "TrueCO — Coaching management on WhatsApp",
+    "title": "Vargly — Coaching management on WhatsApp",
     "description": "Run your coaching institute in one place: students, batches, attendance, fees and parent updates on WhatsApp."
   },
   "Nav": {
@@ -80,7 +80,7 @@
     }
   },
   "Highlights": {
-    "label": "Why TrueCO",
+    "label": "Why Vargly",
     "trial": "free trial",
     "trialValue": "{days} days",
     "startingPrice": "a month to start",
@@ -134,7 +134,7 @@
     "product": "Product",
     "account": "Account",
     "contact": "Contact",
-    "rights": "© {year} TrueCO. All rights reserved."
+    "rights": "© {year} Vargly. All rights reserved."
   },
   "NotFound": {
     "title": "Page not found",
@@ -187,18 +187,18 @@
       "RATE_LIMITED": "Too many attempts. Please wait a minute and try again.",
       "CODE_CONFLICT": "This institute code is taken. Please choose another.",
       "INVALID_OR_EXPIRED_TOKEN": "This link is invalid or has expired. Request a new one.",
-      "network": "Could not reach TrueCO. Check your internet connection and try again.",
+      "network": "Could not reach Vargly. Check your internet connection and try again.",
       "validation": "Please check the highlighted fields.",
       "unexpected": "Something went wrong. Please try again."
     },
     "login": {
       "metaTitle": "Sign in",
       "title": "Welcome back",
-      "subtitle": "Sign in to your TrueCO account.",
+      "subtitle": "Sign in to your Vargly account.",
       "submit": "Sign in",
       "submitting": "Signing in…",
       "forgot": "Forgot password?",
-      "noAccount": "New to TrueCO?",
+      "noAccount": "New to Vargly?",
       "signUp": "Start your free trial",
       "expired": "Your session has ended. Please sign in again.",
       "registered": "Your institute is ready. Sign in to continue.",
@@ -242,13 +242,14 @@
       "success": "Your email is verified.",
       "failed": "This verification link is invalid or has expired.",
       "missingToken": "This verification link is incomplete. Open the link from your email again.",
-      "continue": "Continue to TrueCO"
+      "continue": "Continue to Vargly"
     }
   },
   "App": {
     "loading": "Loading your workspace…",
-    "offline": "Could not reach TrueCO. Check your internet connection.",
-    "retry": "Try again"
+    "offline": "Could not reach Vargly. Check your internet connection.",
+    "retry": "Try again",
+    "busy": "Vargly is busy with too many requests from this device. Wait a minute, then try again."
   },
   "Shell": {
     "navLabel": "App",
@@ -287,7 +288,7 @@
     },
     "subscription": {
       "trialEnding": "{days, plural, =0 {Your free trial ends today.} one {Your free trial ends tomorrow.} other {Your free trial ends in # days.}}",
-      "grace": "Your payment is overdue. Pay soon to keep using TrueCO without interruption.",
+      "grace": "Your payment is overdue. Pay soon to keep using Vargly without interruption.",
       "expired": "Your subscription has ended. Most features are paused until you choose a plan.",
       "choosePlan": "Choose a plan",
       "askOwner": "Ask your institute owner to renew."
@@ -388,7 +389,7 @@
       "FORBIDDEN": "You don't have permission to do that.",
       "NOT_FOUND": "This record no longer exists. It may have been removed.",
       "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
-      "network": "Could not reach TrueCO. Check your internet connection and try again.",
+      "network": "Could not reach Vargly. Check your internet connection and try again.",
       "unexpected": "Something went wrong. Please try again.",
       "BATCH_HAS_STUDENTS": "This batch still has students. Remove them or move them to another batch first, or mark the batch inactive instead.",
       "INVALID_SCHEDULE": "The end time must be after the start time.",
@@ -1020,7 +1021,7 @@
     "deactivate": "Mark inactive",
     "reactivate": "Mark active",
     "deactivateTitle": "Mark {name} inactive?",
-    "deactivateBody": "They lose access to TrueCO straight away. Their attendance, tests and salary records are kept, and you can mark them active again later.",
+    "deactivateBody": "They lose access to Vargly straight away. Their attendance, tests and salary records are kept, and you can mark them active again later.",
     "deactivated": "{name} marked inactive",
     "reactivated": "{name} marked active",
     "empty": {
@@ -1036,7 +1037,7 @@
       "name": "Full name",
       "phone": "Mobile number",
       "email": "Email",
-      "emailHint": "They sign in to TrueCO with this email.",
+      "emailHint": "They sign in to Vargly with this email.",
       "emailFixed": "This is their sign-in email, so it can't be changed here.",
       "specialization": "Subject",
       "specializationPlaceholder": "e.g. Physics",
@@ -1250,7 +1251,7 @@
     },
     "preferences": {
       "title": "Receipts and messages",
-      "description": "How receipts are numbered and whether TrueCO messages parents for you.",
+      "description": "How receipts are numbered and whether Vargly messages parents for you.",
       "prefix": "Receipt prefix",
       "prefixExample": "Receipts look like {example}",
       "prefixInvalid": "Use 2 to 10 letters or digits.",
@@ -1284,7 +1285,7 @@
   },
   "Billing": {
     "title": "Billing",
-    "subtitle": "Your TrueCO plan, AI credits and payments.",
+    "subtitle": "Your Vargly plan, AI credits and payments.",
     "plansTitle": "Plans",
     "plansBody": "Pay monthly or yearly. A new plan starts right away; paying for your current plan adds to the time you have left.",
     "ownerOnly": "Only the institute owner can change the plan or buy credits.",
@@ -1300,7 +1301,7 @@
       "credits": "AI credits",
       "trial": "{days, plural, =0 {Free trial ends today} one {# day left in your free trial} other {# days left in your free trial}} (ends {date})",
       "active": "Paid until {date}",
-      "grace": "Payment is overdue. Pay by {date} to keep using TrueCO.",
+      "grace": "Payment is overdue. Pay by {date} to keep using Vargly.",
       "ended": "Your plan has ended. Choose a plan below to continue.",
       "status": {
         "TRIALING": "Free trial",
@@ -1335,13 +1336,13 @@
       "close": "Close",
       "mockTitle": "Online payments aren't connected yet",
       "mockDev": "Razorpay keys aren't set on this server, so no real payment can be taken. In development you can mark this order as paid to try the flow.",
-      "mockLive": "Online payment isn't available right now. Please contact TrueCO support to upgrade.",
+      "mockLive": "Online payment isn't available right now. Please contact Vargly support to upgrade.",
       "simulate": "Mark as paid (development)"
     }
   },
   "Errors": {
     "title": "Something went wrong",
-    "body": "This page couldn't load. Try again, and if it keeps happening, contact TrueCO support.",
+    "body": "This page couldn't load. Try again, and if it keeps happening, contact Vargly support.",
     "reference": "Reference: {id}",
     "retry": "Try again",
     "dashboard": "Back to dashboard",

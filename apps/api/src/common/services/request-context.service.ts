@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
-import { RequestContextData, RoleType } from '@trueco/types';
+import { RequestContextData, RoleType } from '@vargly/types';
 
 /**
  * Prisma queries are lazy: they execute when first awaited. A query returned from a context

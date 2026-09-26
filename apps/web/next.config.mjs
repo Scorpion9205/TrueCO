@@ -47,7 +47,7 @@ const nextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
-  transpilePackages: ['@trueco/api-client', '@trueco/types', '@trueco/ui'],
+  transpilePackages: ['@vargly/api-client', '@vargly/types', '@vargly/ui'],
   // Linting runs from the monorepo root (pnpm lint), where the shared ESLint config lives
   eslint: { ignoreDuringBuilds: true },
   experimental: {

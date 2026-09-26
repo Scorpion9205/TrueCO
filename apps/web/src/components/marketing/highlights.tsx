@@ -20,7 +20,7 @@ export async function Highlights({ startingPrice }: { startingPrice: number | nu
     <section aria-label={t('label')} className="px-4 sm:px-6">
       <dl
         className={cn(
-          'mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 rounded-xl bg-band px-6 py-10 text-band-foreground sm:px-10',
+          'reveal mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 rounded-xl bg-band px-6 py-10 text-band-foreground sm:px-10',
           items.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3',
         )}
       >

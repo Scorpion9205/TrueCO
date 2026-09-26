@@ -1,7 +1,7 @@
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { AUTH_EVENTS, UserLoggedInPayload, UserLoggedOutPayload } from './auth.events.js';
 import { logger } from '../../common/logger/logger.service.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { COACHING_EVENTS, CoachingCreatedPayload } from '../coaching/coaching.events.js';
 import type { AuthService } from './auth.service.js';
 

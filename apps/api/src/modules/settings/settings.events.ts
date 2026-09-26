@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { CoachingConfig } from './dto/settings.dto.js';
 
 export interface SettingsUpdatedPayload {

@@ -1,4 +1,4 @@
-import { DomainEvent, PaymentMethod } from '@trueco/types';
+import { DomainEvent, PaymentMethod } from '@vargly/types';
 
 export interface SalaryGeneratedPayload {
   readonly salaryId: string;

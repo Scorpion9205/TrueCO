@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { Redis } from 'ioredis';
-import { ApiErrorResponse } from '@trueco/types';
+import { ApiErrorResponse } from '@vargly/types';
 import { queueRegistry } from '../../queues/queue.registry.js';
 import { logger } from '../logger/logger.service.js';
 

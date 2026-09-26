@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'node:crypto';
-import { RequestContextData, RoleType } from '@trueco/types';
+import { RequestContextData, RoleType } from '@vargly/types';
 import { RequestContextService } from '../services/request-context.service.js';
 
 export function tenantContextMiddleware(req: Request, _res: Response, next: NextFunction): void {

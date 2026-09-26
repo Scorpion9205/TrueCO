@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { envConfig } from '../../config/env.config.js';
 import { KnowledgeBaseService } from '../../modules/ai/rag/knowledge-base.service.js';
 import { InMemoryKnowledgeBaseRepository } from '../fakes/in-memory-knowledge-base.repository.js';
 import { MockEmbeddingProvider } from '../../modules/ai/embeddings/mock-embedding.provider.js';
@@ -121,5 +122,54 @@ describe('KnowledgeBaseService (RAG & Multi-Tenant pgvector)', () => {
     // Verify it no longer appears in search
     const afterDelete = await service.searchKnowledge('Holi celebrations holiday', COACHING_A, 2, 0.3);
     expect(afterDelete).toHaveLength(0);
+  });
+
+  describe('embedding models', () => {
+    const doc = {
+      title: 'Batch timings',
+      type: 'SCHEDULE' as const,
+      rawContent: 'Class 10 Physics meets on Monday, Wednesday and Friday from 5 PM to 6:30 PM.',
+    };
+
+    it('never stores or searches mock vectors in production; the document waits for a model', async () => {
+      const real = envConfig.get.bind(envConfig);
+      const get = vi
+        .spyOn(envConfig, 'get')
+        .mockImplementation(((key: string) => (key === 'NODE_ENV' ? 'production' : real(key as any))) as any);
+      try {
+        expect(service.canEmbed).toBe(false);
+        const { chunksCount } = await service.ingestDocument(doc, COACHING_A);
+        expect(chunksCount).toBe(0);
+        expect(repository.activeChunks()).toEqual([]);
+        expect(await service.searchKnowledge('When is physics class?', COACHING_A)).toEqual([]);
+        await expect(service.reindexPending()).rejects.toThrow(/No embedding model/);
+      } finally {
+        get.mockRestore();
+      }
+    });
+
+    it('re-indexes documents that have no chunks from the current model, and only those', async () => {
+      await service.ingestDocument(doc, COACHING_A);
+      const other = new MockEmbeddingProvider();
+      Object.defineProperty(other, 'modelId', { value: 'openai:text-embedding-3-small' });
+      const upgraded = new KnowledgeBaseService(repository, other, eventBus);
+
+      expect(await upgraded.reindexPending()).toBe(1);
+      expect(repository.activeChunks('openai:text-embedding-3-small').length).toBeGreaterThan(0);
+      // Chunks of the old model are retired, not left to be searched
+      expect(repository.activeChunks('mock:hash-v1')).toEqual([]);
+      expect(await upgraded.reindexPending()).toBe(0);
+    });
+
+    it('lets RAG_MIN_SIMILARITY set how relevant an excerpt must be', async () => {
+      await service.ingestDocument(doc, COACHING_A);
+      process.env.RAG_MIN_SIMILARITY = '0.99';
+      try {
+        expect(await service.searchKnowledge('physics class timing', COACHING_A)).toEqual([]);
+      } finally {
+        delete process.env.RAG_MIN_SIMILARITY;
+      }
+      expect((await service.searchKnowledge('physics class timing', COACHING_A)).length).toBeGreaterThan(0);
+    });
   });
 });

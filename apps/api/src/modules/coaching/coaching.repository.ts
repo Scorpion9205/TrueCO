@@ -3,7 +3,7 @@ import {
   getPrismaClient,
   ExtendedPrismaClient,
 } from '../../database/prisma/tenant-prisma.extension.js';
-import { PlanCode, RoleType, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, RoleType, SubscriptionStatus } from '@vargly/types';
 
 export interface CreateCoachingTransactionInput {
   coachingName: string;

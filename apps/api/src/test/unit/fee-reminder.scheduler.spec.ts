@@ -8,7 +8,7 @@ import {
 import { IFeeRepository } from '../../modules/fees/fee.repository.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { FEE_EVENTS } from '../../modules/fees/fee.events.js';
-import { FeeInstallmentStatus } from '@trueco/types';
+import { FeeInstallmentStatus } from '@vargly/types';
 
 const IST = '11111111-1111-1111-1111-111111111111';
 const LONDON = '33333333-3333-3333-3333-333333333333';

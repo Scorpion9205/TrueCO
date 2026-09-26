@@ -3,7 +3,7 @@ import { CoachingService } from '../../modules/coaching/coaching.service.js';
 import { ICoachingRepository, CreateCoachingTransactionInput } from '../../modules/coaching/coaching.repository.js';
 import { IPasswordService } from '../../common/security/password.service.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 
 class InMemoryCoachingRepository implements ICoachingRepository {
   public coachings: Map<string, any> = new Map();

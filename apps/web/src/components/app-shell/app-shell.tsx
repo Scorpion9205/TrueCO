@@ -1,6 +1,7 @@
 'use client';
 
 import { Menu, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Dialog } from 'radix-ui';
 import { type ReactNode, useState } from 'react';
@@ -21,6 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations('Shell');
   const [menuOpen, setMenuOpen] = useState(false);
   const coaching = useCoachingProfile();
+  const pathname = usePathname();
 
   const institute = coaching.data ? (
     <p className="truncate text-sm font-semibold" title={coaching.data.name}>
@@ -90,7 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Dialog.Root>
 
           <div className="lg:hidden">
-            <Logo href="/app" className="text-lg" />
+            <Logo href="/app" />
           </div>
           <div className="hidden min-w-0 flex-1 lg:block">{institute}</div>
           <div className="ml-auto">
@@ -100,7 +102,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <main id="content" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 print:p-0">
           <div className="mx-auto w-full max-w-7xl">
-            <SectionGuard>{children}</SectionGuard>
+            {/* Keyed by address so each page fades in as it opens */}
+            <div key={pathname} className="page-enter">
+              <SectionGuard>{children}</SectionGuard>
+            </div>
           </div>
         </main>
       </div>

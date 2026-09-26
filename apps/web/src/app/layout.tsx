@@ -19,11 +19,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('Metadata');
   return {
     metadataBase: new URL(SITE_URL),
-    title: { default: t('title'), template: '%s · TrueCO' },
+    title: { default: t('title'), template: '%s · Vargly' },
     description: t('description'),
     openGraph: {
       type: 'website',
-      siteName: 'TrueCO',
+      siteName: 'Vargly',
       title: t('title'),
       description: t('description'),
       locale: 'en_IN',

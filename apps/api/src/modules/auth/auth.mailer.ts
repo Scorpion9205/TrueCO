@@ -22,8 +22,8 @@ export class EmailAuthMailer implements IAuthMailer {
     const link = `${this.frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
     await this.send(
       to,
-      'Reset your TrueCO password',
-      'We received a request to reset your TrueCO password. This link works once and expires in 1 hour.',
+      'Reset your Vargly password',
+      'We received a request to reset your Vargly password. This link works once and expires in 1 hour.',
       'Reset password',
       link,
       "If you didn't ask for this, you can ignore this email; your password stays the same.",
@@ -34,11 +34,11 @@ export class EmailAuthMailer implements IAuthMailer {
     const link = `${this.frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
     await this.send(
       to,
-      'Verify your email for TrueCO',
-      'Please confirm this email address for your TrueCO account. The link expires in 48 hours.',
+      'Verify your email for Vargly',
+      'Please confirm this email address for your Vargly account. The link expires in 48 hours.',
       'Verify email',
       link,
-      "If you didn't create a TrueCO account, you can ignore this email.",
+      "If you didn't create a Vargly account, you can ignore this email.",
     );
   }
 

@@ -43,7 +43,7 @@ export class CloudinaryStorageService implements IStorageService {
       throw new Error('Cloudinary is not configured. Please supply CLOUDINARY credentials in .env');
     }
 
-    const folder = `trueco/${input.coachingId}/${input.category}`;
+    const folder = `vargly/${input.coachingId}/${input.category}`;
     const cleanFileName = input.fileName.replace(/\.[^/.]+$/, '');
 
     return new Promise((resolve, reject) => {
@@ -86,7 +86,7 @@ export class CloudinaryStorageService implements IStorageService {
     }
 
     const timestamp = Math.round(Date.now() / 1000);
-    const folder = `trueco/${coachingId}/${category}`;
+    const folder = `vargly/${coachingId}/${category}`;
     const cleanFileName = fileName.replace(/\.[^/.]+$/, '');
     const publicId = `${folder}/${cleanFileName}_${Date.now()}`;
 

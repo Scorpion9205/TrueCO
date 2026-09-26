@@ -45,6 +45,35 @@ export class InMemoryKnowledgeBaseRepository implements IKnowledgeBaseRepository
     return doc;
   }
 
+  public async findDocumentsNeedingEmbedding(
+    embeddingModel: string,
+    limit: number,
+  ): Promise<KnowledgeBaseEntity[]> {
+    const chunks = Array.from(this.chunks.values());
+    return Array.from(this.documents.values())
+      .filter(
+        (d) =>
+          d.isActive &&
+          !chunks.some(
+            (c) => c.knowledgeBaseId === d.id && c.isActive && c.embeddingModel === embeddingModel,
+          ),
+      )
+      .slice(0, limit);
+  }
+
+  public async deactivateChunks(knowledgeBaseId: string): Promise<void> {
+    for (const chunk of this.chunks.values()) {
+      if (chunk.knowledgeBaseId === knowledgeBaseId) chunk.isActive = false;
+    }
+  }
+
+  /** Test helper: active chunks, optionally of one model */
+  public activeChunks(embeddingModel?: string): StoredChunk[] {
+    return Array.from(this.chunks.values()).filter(
+      (c) => c.isActive && (!embeddingModel || c.embeddingModel === embeddingModel),
+    );
+  }
+
   public async findById(id: string, coachingId: string): Promise<KnowledgeBaseEntity | null> {
     const doc = this.documents.get(id);
     return doc && doc.coachingId === coachingId && doc.isActive ? doc : null;

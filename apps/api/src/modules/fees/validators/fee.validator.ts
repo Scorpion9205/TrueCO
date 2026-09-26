@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { rupeeAmount } from '../../../common/money/money.js';
-import { DiscountType, PaymentMethod } from '@trueco/types';
+import { DiscountType, PaymentMethod } from '@vargly/types';
 
 export const createFeeInstallmentSchema = z.object({
   installmentNo: z.number().int().positive(),

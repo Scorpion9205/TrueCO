@@ -1,6 +1,6 @@
-# TrueCO Multi-Agent Engineering System (AGENTS.md)
+# Vargly Multi-Agent Engineering System (AGENTS.md)
 
-This document defines the specialized agent personas, architectural responsibilities, and operational protocols for engineering the **TrueCO WhatsApp-First Coaching ERP**. Every engineer/agent contributing to this codebase must adhere strictly to these defined roles and the associated rules in `.agents/rules/`.
+This document defines the specialized agent personas, architectural responsibilities, and operational protocols for engineering the **Vargly WhatsApp-First Coaching ERP**. Every engineer/agent contributing to this codebase must adhere strictly to these defined roles and the associated rules in `.agents/rules/`.
 
 ---
 
@@ -13,7 +13,7 @@ This document defines the specialized agent personas, architectural responsibili
   - Guard the 13-file module anatomy (ADD §8) across all 20+ backend domains.
   - Ensure zero framework leakage (no Express or Prisma types in Service layer public signatures).
   - Define core interfaces, abstractions, and design patterns (Repository, Factory, Adapter, Observer, Strategy).
-  - Review all PRs and changes against `TrueCO_Architecture_Design_Document.md` and `TrueCO_Antigravity_Build_Prompt.md`.
+  - Review all PRs and changes against `Vargly_Architecture_Design_Document.md` and `Vargly_Antigravity_Build_Prompt.md`.
 
 ### 1.2 Platform & Multi-Tenancy Agent (`platform-infra-agent`)
 * **Role**: Infrastructure, Database & Core Runtime Specialist.

@@ -1,5 +1,5 @@
 import { NotificationResponseDto } from './dto/notification.dto.js';
-import { NotificationChannel, NotificationStatus } from '@trueco/types';
+import { NotificationChannel, NotificationStatus } from '@vargly/types';
 
 export class NotificationMapper {
   public static toResponseDto(entity: any): NotificationResponseDto {

@@ -6,7 +6,7 @@ import { IPasswordService } from '../../common/security/password.service.js';
 import { ITokenService, TokenPayload } from '../../common/security/token.service.js';
 import { IAccountLockoutService } from '../../common/security/account-lockout.service.js';
 import { IEventBus } from '../../events/event-bus.interface.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 // ==========================================
 // In-Memory Test Doubles (Clean Architecture)

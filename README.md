@@ -1,4 +1,4 @@
-# TrueCO
+# Vargly
 
 WhatsApp-first management platform for coaching institutes: students, batches, attendance, tests, homework, fees, salaries and parent communication over WhatsApp and email, with an AI assistant that answers parents from each institute's own data.
 
@@ -35,14 +35,14 @@ pnpm docker:env                        # once: writes infra/docker/compose.env w
 docker compose --env-file infra/docker/compose.env -f infra/docker/docker-compose.yml up -d postgres redis
 
 # Migrations and roles/permissions/plans, as the schema owner (POSTGRES_PASSWORD from compose.env)
-export OWNER_URL="postgresql://trueco_owner:<POSTGRES_PASSWORD>@localhost:5433/trueco_db?schema=public"
+export OWNER_URL="postgresql://vargly_owner:<POSTGRES_PASSWORD>@localhost:5433/vargly_db?schema=public"
 DATABASE_URL="$OWNER_URL" pnpm prisma:migrate:deploy
-DATABASE_URL="$OWNER_URL" pnpm --filter @trueco/api db:seed:rbac
+DATABASE_URL="$OWNER_URL" pnpm --filter @vargly/api db:seed:rbac
 
-# API configuration: DATABASE_URL uses trueco_app / APP_DB_PASSWORD from compose.env
+# API configuration: DATABASE_URL uses vargly_app / APP_DB_PASSWORD from compose.env
 cp apps/api/.env.example apps/api/.env
 
-pnpm --filter @trueco/api dev          # API on :4000; in development it also runs the workers
+pnpm --filter @vargly/api dev          # API on :4000; in development it also runs the workers
 ```
 
 Without SMTP, WhatsApp or payment credentials, development simulates sending and logs it. Production fails instead of pretending; the startup log lists which integrations are live.

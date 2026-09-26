@@ -1,5 +1,5 @@
 {
-  "extends": "@trueco/config/tsconfig.base.json",
+  "extends": "@vargly/config/tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
     "noEmit": true,

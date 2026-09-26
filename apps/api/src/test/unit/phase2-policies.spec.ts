@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SubscriptionStatus } from '@trueco/types';
+import { SubscriptionStatus } from '@vargly/types';
 import {
   assertContentMatchesType,
   assertUploadAllowed,

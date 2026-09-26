@@ -6,7 +6,7 @@ always_on: true
 
 # RBAC & Subscription Feature-Flag Rules
 
-TrueCO enforces a unified authorization and billing choke point. Access control is divided into two distinct dimensions:
+Vargly enforces a unified authorization and billing choke point. Access control is divided into two distinct dimensions:
 1. **RBAC**: Does the user have permission to perform this action?
 2. **Subscription / Feature Flag**: Does this tenant's plan license this capability?
 
@@ -60,7 +60,7 @@ TrueCO enforces a unified authorization and billing choke point. Access control 
       "details": {
         "requiredFeature": "ai.insights",
         "currentPlan": "STARTER",
-        "upgradeUrl": "https://app.trueco.in/billing/upgrade"
+        "upgradeUrl": "https://app.vargly.in/billing/upgrade"
       }
     }
   }

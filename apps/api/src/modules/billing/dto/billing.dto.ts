@@ -1,4 +1,4 @@
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 
 export interface PlanResponseDto {
   readonly id: string;

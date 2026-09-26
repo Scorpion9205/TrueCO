@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PlanCode } from '@trueco/types';
+import { PlanCode } from '@vargly/types';
 
 // The client says what it wants to buy; the price is always computed on the server.
 export const createBillingOrderSchema = z.discriminatedUnion('type', [

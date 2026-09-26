@@ -1,4 +1,4 @@
-import { createApiClient } from '@trueco/api-client';
+import { createApiClient } from '@vargly/api-client';
 import { cache } from 'react';
 import { API_URL } from './api';
 import { sortPlans, type PublicPlan } from './plans';

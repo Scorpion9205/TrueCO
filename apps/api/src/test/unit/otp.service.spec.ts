@@ -21,7 +21,7 @@ describe('OtpService (Development Terminal OTP)', () => {
   });
 
   it('invalidates OTP after single use (one-time)', async () => {
-    const email = 'teacher@trueco.in';
+    const email = 'teacher@vargly.in';
     const otp = await otpService.generateOtp(email, 'LOGIN', 60);
 
     const firstAttempt = await otpService.verifyOtp(email, otp, 'LOGIN');
@@ -33,7 +33,7 @@ describe('OtpService (Development Terminal OTP)', () => {
   });
 
   it('rejects an incorrect OTP code', async () => {
-    const email = 'student@trueco.in';
+    const email = 'student@vargly.in';
     await otpService.generateOtp(email, 'PASSWORD_RESET', 60);
 
     const isValid = await otpService.verifyOtp(email, '000000', 'PASSWORD_RESET');
@@ -41,7 +41,7 @@ describe('OtpService (Development Terminal OTP)', () => {
   });
 
   it('burns the OTP after too many wrong guesses, even if the right code follows', async () => {
-    const email = 'bruteforce@trueco.in';
+    const email = 'bruteforce@vargly.in';
     const otp = await otpService.generateOtp(email, 'LOGIN', 60);
     const wrong = otp === '111111' ? '222222' : '111111';
 
@@ -53,7 +53,7 @@ describe('OtpService (Development Terminal OTP)', () => {
   });
 
   it('rejects verification with wrong purpose', async () => {
-    const email = 'director@trueco.in';
+    const email = 'director@vargly.in';
     const otp = await otpService.generateOtp(email, 'SIGNUP', 60);
 
     const isValid = await otpService.verifyOtp(email, otp, 'LOGIN');

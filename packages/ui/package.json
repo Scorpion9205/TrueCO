@@ -1,5 +1,5 @@
 {
-  "name": "@trueco/ui",
+  "name": "@vargly/ui",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -16,7 +16,7 @@
     "clean": "rimraf dist"
   },
   "devDependencies": {
-    "@trueco/config": "workspace:*",
+    "@vargly/config": "workspace:*",
     "typescript": "^5.5.4"
   }
 }

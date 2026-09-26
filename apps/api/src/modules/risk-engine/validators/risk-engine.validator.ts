@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RiskLevel } from '@trueco/types';
+import { RiskLevel } from '@vargly/types';
 
 export const riskFilterSchema = z.object({
   level: z.nativeEnum(RiskLevel).optional(),

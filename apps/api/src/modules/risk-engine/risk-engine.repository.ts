@@ -1,5 +1,5 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { RiskLevel } from '@trueco/types';
+import { RiskLevel } from '@vargly/types';
 import { RiskFilterDto } from './dto/risk-engine.dto.js';
 
 export interface UpsertRiskScoreInput {

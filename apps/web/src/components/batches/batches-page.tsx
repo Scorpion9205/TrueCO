@@ -56,7 +56,7 @@ export function BatchesPage() {
           {addButton ? <div className="mt-2">{addButton}</div> : null}
         </StatePanel>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="enter-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {batches.data.map((batch) => (
             <li key={batch.id}>
               <BatchCard batch={batch} />
@@ -82,7 +82,7 @@ function BatchCard({ batch }: { batch: Batch }) {
   return (
     <Link
       href={`/app/batches/${batch.id}`}
-      className="flex h-full flex-col gap-4 rounded-xl border bg-card p-5 shadow-card transition-shadow hover:shadow-float"
+      className="lift flex h-full flex-col gap-4 rounded-xl border bg-card p-5 shadow-card"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

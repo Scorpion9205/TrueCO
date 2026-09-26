@@ -6,7 +6,7 @@ always_on: true
 
 # Multi-Tenancy & Row-Level Security Rules
 
-Multi-tenancy isolation is non-negotiable. TrueCO employs a **Shared Database, Shared Schema** architecture with strict three-tier defense-in-depth isolation:
+Multi-tenancy isolation is non-negotiable. Vargly employs a **Shared Database, Shared Schema** architecture with strict three-tier defense-in-depth isolation:
 
 ---
 

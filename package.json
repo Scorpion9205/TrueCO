@@ -1,22 +1,22 @@
 {
-  "name": "trueco-monorepo",
+  "name": "vargly-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "TrueCO — WhatsApp-First Coaching Management SaaS ERP",
+  "description": "Vargly — WhatsApp-First Coaching Management SaaS ERP",
   "scripts": {
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
-    "test:unit": "pnpm --filter @trueco/api run test:unit",
+    "test:unit": "pnpm --filter @vargly/api run test:unit",
     "lint": "eslint \"apps/api/src/**/*.ts\" \"packages/*/src/**/*.ts\" \"apps/web/**/*.{ts,tsx}\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "docker:env": "node infra/docker/generate-compose-env.mjs",
     "docker:up": "docker compose --env-file infra/docker/compose.env -f infra/docker/docker-compose.yml up -d --build",
     "docker:down": "docker compose --env-file infra/docker/compose.env -f infra/docker/docker-compose.yml down",
-    "prisma:generate": "pnpm --filter @trueco/api run prisma:generate",
-    "prisma:migrate": "pnpm --filter @trueco/api run prisma:migrate",
-    "prisma:migrate:deploy": "pnpm --filter @trueco/api run prisma:migrate:deploy",
-    "test:integration": "pnpm --filter @trueco/api run test:integration",
-    "prisma:studio": "pnpm --filter @trueco/api run prisma:studio"
+    "prisma:generate": "pnpm --filter @vargly/api run prisma:generate",
+    "prisma:migrate": "pnpm --filter @vargly/api run prisma:migrate",
+    "prisma:migrate:deploy": "pnpm --filter @vargly/api run prisma:migrate:deploy",
+    "test:integration": "pnpm --filter @vargly/api run test:integration",
+    "prisma:studio": "pnpm --filter @vargly/api run prisma:studio"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

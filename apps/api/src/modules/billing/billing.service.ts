@@ -15,7 +15,7 @@ import {
   createAiCreditsPurchasedEvent,
   createSubscriptionUpgradedEvent,
 } from './billing.events.js';
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 import { toPaise } from '../../common/money/money.js';
 import { IPaymentGatewayAdapter, PaymentOrderResult } from './adapters/payment-gateway.interface.js';
 import { MockPaymentGatewayAdapter } from './adapters/mock-payment-gateway.adapter.js';
@@ -159,7 +159,7 @@ export class BillingService {
     const orderId: string | undefined = paymentEntity?.order_id ?? payload.payload?.order?.entity?.id;
     const coachingId = paymentEntity?.notes?.coachingId ?? payload.payload?.order?.entity?.notes?.coachingId;
     if (!orderId || !paymentEntity?.id || !isUuid(coachingId)) {
-      // Not a TrueCO subscription order (e.g. a fee payment link): nothing to settle here
+      // Not a Vargly subscription order (e.g. a fee payment link): nothing to settle here
       return { status: 'IGNORED' };
     }
 

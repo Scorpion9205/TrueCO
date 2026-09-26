@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NotificationChannel } from '@trueco/types';
+import { NotificationChannel } from '@vargly/types';
 
 export const sendNotificationSchema = z.object({
   channel: z.nativeEnum(NotificationChannel),

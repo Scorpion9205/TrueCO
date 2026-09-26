@@ -5,7 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * TrueCO design tokens. Components use the semantic names (bg-background, text-primary, ...),
+ * Vargly design tokens. Components use the semantic names (bg-background, text-primary, ...),
  * never raw colours, so light/dark themes and future rebrands change only this file.
  *
  * Brand: black, white and orange.
@@ -148,14 +148,94 @@
   }
 }
 
-/* Honour users who ask the OS for less motion */
+/*
+ * Motion. Short and purposeful: things rise into place as they appear, nothing loops or blocks
+ * reading. Every effect ends in the element's normal state, so content is never left hidden.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@utility enter-stagger {
+  /* Children rise in one after another (the first eight; later ones with the eighth) */
+  & > * {
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  & > :nth-child(2) {
+    animation-delay: 50ms;
+  }
+  & > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+  & > :nth-child(4) {
+    animation-delay: 150ms;
+  }
+  & > :nth-child(5) {
+    animation-delay: 200ms;
+  }
+  & > :nth-child(6) {
+    animation-delay: 250ms;
+  }
+  & > :nth-child(7) {
+    animation-delay: 300ms;
+  }
+  & > :nth-child(n + 8) {
+    animation-delay: 350ms;
+  }
+}
+
+@utility page-enter {
+  animation: page-in 0.3s ease-out both;
+}
+
+@utility reveal {
+  /*
+   * Rises in as it scrolls into view, driven by the scroll position itself (no JavaScript).
+   * Browsers without scroll-driven animations simply show it.
+   */
+  @supports (animation-timeline: view()) {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
+}
+
+@utility lift {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-float);
+  }
+}
+
+/* Honour users who ask the OS for less motion: no movement, no waiting on staggered delays */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .lift:hover {
+    transform: none;
+  }
+  /* Scroll-driven reveals follow the scroll position, not a clock: switch them off outright */
+  .reveal {
+    animation: none !important;
   }
 }

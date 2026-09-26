@@ -1,4 +1,4 @@
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { ImportEntityType } from './dto/import.dto.js';
 
 export interface BulkDataImportedPayload {

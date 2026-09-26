@@ -4,7 +4,7 @@ import { NotificationService } from './notification.service.js';
 import { failedNotificationQuerySchema } from './validators/notification.validator.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
 import { envConfig } from '../../config/env.config.js';
-import { NotificationStatus } from '@trueco/types';
+import { NotificationStatus } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 import { hmacSha256Hex, isUnsignedWebhookAllowed, safeEqual } from '../../common/security/webhook-signature.js';
 import { queueRegistry, QUEUE_NAMES } from '../../queues/queue.registry.js';

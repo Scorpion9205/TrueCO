@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { EventBus } from '../../events/event-bus.js';
 import {
   decodeFromStorage,

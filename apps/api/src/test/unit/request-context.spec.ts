@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { RequestContextService } from '../../common/services/request-context.service.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 
 describe('RequestContextService (Phase 0 Foundation)', () => {
   it('should isolate context across different asynchronous execution paths', async () => {

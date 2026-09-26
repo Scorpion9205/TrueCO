@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
-import { ApiErrorResponse } from '@trueco/types';
+import { ApiErrorResponse } from '@vargly/types';
 import { logger } from '../logger/logger.service.js';
 
 export class AppError extends Error {

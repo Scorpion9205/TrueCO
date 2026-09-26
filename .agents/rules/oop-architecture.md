@@ -1,12 +1,12 @@
 ---
-description: Strict Object-Oriented Programming and Clean Architecture Standards for TrueCO
+description: Strict Object-Oriented Programming and Clean Architecture Standards for Vargly
 globs: "apps/api/**/*.ts,packages/**/*.ts"
 always_on: true
 ---
 
 # Object-Oriented Programming & Clean Architecture Standards
 
-As established by our 15-year Senior Software Engineering leadership, TrueCO backend code must be strictly **Object-Oriented**, adhering to SOLID principles and Clean Architecture discipline. Procedural scripting and loose global function patterns are strictly prohibited in domain logic.
+As established by our 15-year Senior Software Engineering leadership, Vargly backend code must be strictly **Object-Oriented**, adhering to SOLID principles and Clean Architecture discipline. Procedural scripting and loose global function patterns are strictly prohibited in domain logic.
 
 ---
 

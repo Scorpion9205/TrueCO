@@ -77,7 +77,7 @@ export function PricingCards({
               key={plan.id}
               aria-label={plan.name}
               className={cn(
-                'relative flex flex-col rounded-xl border bg-card p-6 shadow-card sm:p-8',
+                'reveal relative flex flex-col rounded-xl border bg-card p-6 shadow-card sm:p-8',
                 highlighted && 'border-2 border-primary shadow-float lg:-my-4 lg:py-12',
               )}
             >

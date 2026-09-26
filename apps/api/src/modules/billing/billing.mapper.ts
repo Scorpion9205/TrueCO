@@ -3,7 +3,7 @@ import {
   PlanResponseDto,
   SubscriptionResponseDto,
 } from './dto/billing.dto.js';
-import { PlanCode, SubscriptionStatus } from '@trueco/types';
+import { PlanCode, SubscriptionStatus } from '@vargly/types';
 
 export class BillingMapper {
   public static toPlanDto(entity: any): PlanResponseDto {

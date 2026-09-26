@@ -13,7 +13,7 @@ import {
   DiscountType,
   FeeInstallmentStatus,
   PaymentMethod,
-} from '@trueco/types';
+} from '@vargly/types';
 import { FEE_EVENTS } from '../../modules/fees/fee.events.js';
 
 class InMemoryFeeRepository implements IFeeRepository {

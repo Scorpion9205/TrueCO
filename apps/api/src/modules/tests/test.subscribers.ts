@@ -6,7 +6,7 @@ import {
   TestResultReadyPayload,
 } from './test.events.js';
 import { logger } from '../../common/logger/logger.service.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 export class TestSubscribers {
   public static register(eventBus: IEventBus): void {

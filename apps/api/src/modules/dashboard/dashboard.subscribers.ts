@@ -1,6 +1,6 @@
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { DASHBOARD_EVENTS, DashboardViewedPayload } from './dashboard.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class DashboardSubscribers {

@@ -5,7 +5,7 @@ import {
   FeePlanCreatedPayload,
   FeeWaivedPayload,
 } from './fee.events.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 
 export class FeeSubscribers {

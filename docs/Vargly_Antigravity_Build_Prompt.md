@@ -1,13 +1,13 @@
-# Antigravity Build Prompt — TrueCO
+# Antigravity Build Prompt — Vargly
 
-Paste this into Antigravity as your project brief. It references `TrueCO_Architecture_Design_Document.md` — upload/attach that file alongside this prompt so the agent has the full spec in context.
+Paste this into Antigravity as your project brief. It references `Vargly_Architecture_Design_Document.md` — upload/attach that file alongside this prompt so the agent has the full spec in context.
 
 ---
 
 ```
-You are acting as a senior full-stack engineering team implementing TrueCO, a
+You are acting as a senior full-stack engineering team implementing Vargly, a
 WhatsApp-first Coaching Management SaaS ERP, strictly following the attached
-Architecture Design Document (TrueCO_Architecture_Design_Document.md).
+Architecture Design Document (Vargly_Architecture_Design_Document.md).
 
 Do not deviate from the architecture document's decisions (tech stack, module
 structure, multi-tenancy model, event-driven design, naming conventions)

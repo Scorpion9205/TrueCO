@@ -6,7 +6,7 @@ import { HOMEWORK_EVENTS, HomeworkCreatedPayload } from '../homework/homework.ev
 import { FEE_EVENTS, FeePaidPayload, FeeReminderTriggeredPayload } from '../fees/fee.events.js';
 import { NOTICE_EVENTS, NoticeCreatedPayload } from '../notice-board/notice.events.js';
 import { RISK_EVENTS, RiskDetectedPayload } from '../risk-engine/risk-engine.events.js';
-import { NotificationChannel, DomainEvent, AttendanceStatus } from '@trueco/types';
+import { NotificationChannel, DomainEvent, AttendanceStatus } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 import {
   CoachingPreferences,

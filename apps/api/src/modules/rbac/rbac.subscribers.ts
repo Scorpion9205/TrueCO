@@ -1,7 +1,7 @@
 import { IEventBus } from '../../events/event-bus.interface.js';
 import { RBAC_EVENTS, RoleAssignedPayload } from './rbac.events.js';
 import { logger } from '../../common/logger/logger.service.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 import {
   IAccessCacheInvalidator,
   permissionResolver,

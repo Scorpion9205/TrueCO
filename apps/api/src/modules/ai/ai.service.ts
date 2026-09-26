@@ -238,7 +238,7 @@ export class AiService {
       `\nInstructions: Highlight key strengths, note any academic dips objectively, and offer encouraging, actionable guidance for home study.`;
 
     const systemPrompt =
-      'You are TrueCO Senior Academic Advisor, an expert Indian coaching mentor crafting professional, empathetic, and motivating student progress updates for parents.';
+      'You are Vargly Senior Academic Advisor, an expert Indian coaching mentor crafting professional, empathetic, and motivating student progress updates for parents.';
 
     return this.generateCompletion(
       {
@@ -291,7 +291,7 @@ export class AiService {
       `Instructions: Format strictly with WhatsApp markdown (*bold* for highlights, emojis for sections, clean bullets). Keep it under 250 words.`;
 
     const systemPrompt =
-      'You are TrueCO WhatsApp Assistant generator. Format messages cleanly for instant parent readability on mobile devices.';
+      'You are Vargly WhatsApp Assistant generator. Format messages cleanly for instant parent readability on mobile devices.';
 
     return this.generateCompletion(
       {
@@ -338,7 +338,7 @@ export class AiService {
       `Instructions: Provide an executive summary of batch health, point out areas of student engagement strength, identify batches requiring academic intervention, and recommend 2 concrete teaching strategies.`;
 
     const systemPrompt =
-      'You are TrueCO Chief Academic Director analyzing faculty performance and batch learning curves to improve coaching institute outcomes.';
+      'You are Vargly Chief Academic Director analyzing faculty performance and batch learning curves to improve coaching institute outcomes.';
 
     return this.generateCompletion(
       {

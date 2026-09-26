@@ -1,6 +1,6 @@
 'use client';
 
-import { isApiError } from '@trueco/api-client';
+import { isApiError } from '@vargly/api-client';
 import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';

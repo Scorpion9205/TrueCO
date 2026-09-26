@@ -9,7 +9,7 @@ import { reportIntegrationStatus } from '../common/integrations/integration-stat
 
 async function bootstrapWorkers(): Promise<void> {
   logger.info('=====================================================');
-  logger.info('  TrueCO Distributed Background Worker Runner v1.0   ');
+  logger.info('  Vargly Distributed Background Worker Runner v1.0   ');
   logger.info('=====================================================');
 
   try {

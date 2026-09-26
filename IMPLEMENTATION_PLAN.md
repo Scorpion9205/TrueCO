@@ -1,23 +1,23 @@
-# TrueCO — Comprehensive Phase-Wise Implementation Plan
+# Vargly — Comprehensive Phase-Wise Implementation Plan
 ### The WhatsApp-First Coaching ERP — Engineering Blueprint & Architecture Roadmap
 **Prepared by**: Senior Principal Software Architect (15+ Years Enterprise Experience)  
 **Standard**: Strict Object-Oriented Clean Architecture & Modular Monolith  
-**Reference Documents**: `TrueCO_Architecture_Design_Document.md` & `TrueCO_Antigravity_Build_Prompt.md`
+**Reference Documents**: `Vargly_Architecture_Design_Document.md` & `Vargly_Antigravity_Build_Prompt.md`
 
 ---
 ==================================================
 PROJECT OVERVIEW
 ==================================================
 
-We are building a SaaS product called TrueCO.
+We are building a SaaS product called Vargly.
 
-TrueCO is a modern WhatsApp-First Coaching Management ERP designed for small and medium coaching institutes.
+Vargly is a modern WhatsApp-First Coaching Management ERP designed for small and medium coaching institutes.
 
 The goal is to simplify coaching operations by providing a single platform for coaching owners and teachers while eliminating the need for parents and students to install any application.
 
 Instead of a Parent App or Student App, all communication happens through WhatsApp and Email.
 
-TrueCO is not just a management software.
+Vargly is not just a management software.
 
 It is an automation platform that helps coaching institutes manage their daily operations with minimal manual work.
 
@@ -49,7 +49,7 @@ Existing coaching software has several problems:
 - Teachers waste time maintaining registers and Excel sheets.
 - Many existing ERP systems are expensive, difficult to use, and overloaded with unnecessary features.
 
-TrueCO solves these problems by automating communication and daily operations through WhatsApp and Email.
+Vargly solves these problems by automating communication and daily operations through WhatsApp and Email.
 
 ==================================================
 OUR VISION
@@ -57,17 +57,17 @@ OUR VISION
 
 Our vision is to become the operating system for coaching institutes.
 
-Whenever a coaching owner thinks about managing students, teachers, fees, attendance, homework, tests, reports, and parent communication, they should think of TrueCO.
+Whenever a coaching owner thinks about managing students, teachers, fees, attendance, homework, tests, reports, and parent communication, they should think of Vargly.
 
 Every repetitive task should be automated.
 
-The coaching staff should focus on teaching while TrueCO handles operations.
+The coaching staff should focus on teaching while Vargly handles operations.
 
 The architecture should be designed with this long-term vision in mind.
 
 ## Executive Architectural Summary
 
-TrueCO is engineered as a high-performance, modular monolith designed to scale to **10,000+ coaching institutes, 5M+ students, and 100,000 concurrent users**. 
+Vargly is engineered as a high-performance, modular monolith designed to scale to **10,000+ coaching institutes, 5M+ students, and 100,000 concurrent users**. 
 
 ### Primary Architectural Pillars:
 1. **Clean Architecture & Strict OOP**: Every module follows a mandatory 13-file anatomy. Domain services are pure TypeScript classes with zero framework (Express/Prisma) leakage in their public signatures.

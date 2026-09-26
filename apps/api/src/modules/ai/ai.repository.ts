@@ -1,5 +1,5 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
-import { AiProviderType } from '@trueco/types';
+import { AiProviderType } from '@vargly/types';
 
 export interface CreateAiUsageLogInput {
   walletId: string;

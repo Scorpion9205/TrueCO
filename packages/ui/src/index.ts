@@ -1,5 +1,5 @@
 // ==========================================
-// TrueCO Design System Tokens & Aesthetics
+// Vargly Design System Tokens & Aesthetics
 // ==========================================
 
 export const tokens = {

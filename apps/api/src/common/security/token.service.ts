@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import jwt, { SignOptions, VerifyOptions } from 'jsonwebtoken';
 import { envConfig } from '../../config/env.config.js';
-import { RoleType } from '@trueco/types';
+import { RoleType } from '@vargly/types';
 import { logger } from '../logger/logger.service.js';
 
 export interface TokenPayload {
@@ -97,8 +97,8 @@ export class TokenService implements ITokenService {
     const options: SignOptions = {
       algorithm: 'RS256',
       expiresIn: envConfig.get('JWT_ACCESS_EXPIRES_IN') as any,
-      issuer: 'trueco-auth-service',
-      audience: 'trueco-clients',
+      issuer: 'vargly-auth-service',
+      audience: 'vargly-clients',
     };
 
     return jwt.sign(payload, this.privateKey, options);
@@ -107,8 +107,8 @@ export class TokenService implements ITokenService {
   public verifyAccessToken(token: string): TokenPayload {
     const options: VerifyOptions = {
       algorithms: ['RS256'],
-      issuer: 'trueco-auth-service',
-      audience: 'trueco-clients',
+      issuer: 'vargly-auth-service',
+      audience: 'vargly-clients',
     };
 
     const decoded = jwt.verify(token, this.publicKey, options) as jwt.JwtPayload;

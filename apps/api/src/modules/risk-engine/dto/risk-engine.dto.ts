@@ -1,4 +1,4 @@
-import { RiskLevel } from '@trueco/types';
+import { RiskLevel } from '@vargly/types';
 
 export interface RiskFactorsDto {
   readonly attendanceFactor: number;

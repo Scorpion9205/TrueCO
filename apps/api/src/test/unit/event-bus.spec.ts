@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { EventBus } from '../../events/event-bus.js';
-import { DomainEvent } from '@trueco/types';
+import { DomainEvent } from '@vargly/types';
 
 describe('EventBus (Phase 0 Foundation)', () => {
   it('should dispatch an event to registered subscribers', async () => {

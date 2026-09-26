@@ -1,4 +1,4 @@
-import { DomainEvent, PlanCode, SubscriptionStatus } from '@trueco/types';
+import { DomainEvent, PlanCode, SubscriptionStatus } from '@vargly/types';
 
 export interface SubscriptionUpgradedPayload {
   readonly coachingId: string;

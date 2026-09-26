@@ -96,7 +96,7 @@ export function AttendanceReportView() {
         </StatePanel>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <section className="enter-stagger grid grid-cols-2 gap-4 lg:grid-cols-3">
             <KpiCard
               label={t('kpi.sessions')}
               value={String(data!.totalSessions)}
