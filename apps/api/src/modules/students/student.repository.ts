@@ -61,6 +61,9 @@ export class PrismaStudentRepository implements IStudentRepository {
 
   private listWhere(filters?: StudentListFilters): any {
     const where: any = { deletedAt: null };
+    if (filters?.batchIds) {
+      where.batchStudents = { some: { batchId: { in: filters.batchIds }, leftAt: null } };
+    }
     if (filters?.isActive !== undefined) {
       where.isActive = filters.isActive;
     }

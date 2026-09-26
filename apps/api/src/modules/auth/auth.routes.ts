@@ -28,8 +28,13 @@ export function createAuthRoutes(controller: AuthController): Router {
   router.post('/forgot-password', resetIpLimit, resetTargetLimit, controller.forgotPassword);
   router.post('/reset-password', tokenLimit, controller.resetPassword);
   router.post('/verify-email', tokenLimit, controller.verifyEmail);
-  router.post('/send-otp', otpIpLimit, otpTargetLimit, controller.sendOtp);
-  router.post('/verify-otp', verifyOtpLimit, controller.verifyOtp);
+  // One-time codes are generated but not delivered yet (no SMS/WhatsApp sender), and a verified
+  // LOGIN code issues a full session. Until delivery exists and the flow is reviewed with it,
+  // the endpoints stay off rather than being an unused way in. Enable with ENABLE_OTP_LOGIN=true.
+  if (process.env.ENABLE_OTP_LOGIN === 'true') {
+    router.post('/send-otp', otpIpLimit, otpTargetLimit, controller.sendOtp);
+    router.post('/verify-otp', verifyOtpLimit, controller.verifyOtp);
+  }
 
   return router;
 }

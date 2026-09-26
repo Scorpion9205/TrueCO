@@ -4,6 +4,7 @@ import {
   SubscriptionResponseDto,
 } from './dto/billing.dto.js';
 import { PlanCode, SubscriptionStatus } from '@vargly/types';
+import { effectiveSubscription } from './subscription-status.js';
 
 export class BillingMapper {
   public static toPlanDto(entity: any): PlanResponseDto {
@@ -53,7 +54,7 @@ export class BillingMapper {
       coachingId: sub.coachingId,
       planCode: sub.plan?.code as PlanCode,
       planName: sub.plan?.name || 'Default Plan',
-      status: sub.status as SubscriptionStatus,
+      status: effectiveSubscription(sub).status,
       trialEndsAt,
       trialDaysRemaining,
       currentPeriodEnd: new Date(sub.currentPeriodEnd),

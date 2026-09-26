@@ -5,7 +5,6 @@ import { AiWorker } from './ai.worker.js';
 import { ReminderWorker } from './reminder.worker.js';
 import { PdfWorker } from './pdf.worker.js';
 import { ReportWorker } from './report.worker.js';
-import { ImportWorker } from './import.worker.js';
 import { AnalyticsWorker } from './analytics.worker.js';
 import { CleanupWorker } from './cleanup.worker.js';
 import { EventRelayWorker } from './event-relay.worker.js';
@@ -21,7 +20,6 @@ export class WorkerRegistry {
   private readonly reminderWorker: ReminderWorker;
   private readonly pdfWorker: PdfWorker;
   private readonly reportWorker: ReportWorker;
-  private readonly importWorker: ImportWorker;
   private readonly analyticsWorker: AnalyticsWorker;
   private readonly cleanupWorker: CleanupWorker;
   private readonly eventRelayWorker: EventRelayWorker;
@@ -35,7 +33,6 @@ export class WorkerRegistry {
     this.reminderWorker = new ReminderWorker();
     this.pdfWorker = new PdfWorker();
     this.reportWorker = new ReportWorker();
-    this.importWorker = new ImportWorker();
     this.analyticsWorker = new AnalyticsWorker();
     this.cleanupWorker = new CleanupWorker();
     this.eventRelayWorker = new EventRelayWorker();
@@ -63,7 +60,6 @@ export class WorkerRegistry {
     await this.reminderWorker.start();
     this.pdfWorker.start();
     this.reportWorker.start();
-    this.importWorker.start();
     this.analyticsWorker.start();
     await this.cleanupWorker.start();
     await this.eventRelayWorker.start();
@@ -83,7 +79,6 @@ export class WorkerRegistry {
       this.reminderWorker.close(),
       this.pdfWorker.close(),
       this.reportWorker.close(),
-      this.importWorker.close(),
       this.analyticsWorker.close(),
       this.cleanupWorker.close(),
       this.eventRelayWorker.close(),

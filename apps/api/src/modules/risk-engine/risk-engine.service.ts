@@ -6,6 +6,7 @@ import { RiskFilterDto, RiskScoreResponseDto } from './dto/risk-engine.dto.js';
 import { RiskEngineMapper } from './risk-engine.mapper.js';
 import { createRiskComputedEvent, createRiskDetectedEvent } from './risk-engine.events.js';
 import { FeeInstallmentStatus, RiskLevel } from '@vargly/types';
+import { money, toRupees } from '../../common/money/money.js';
 
 export class RiskEngineService {
   public constructor(
@@ -75,19 +76,19 @@ export class RiskEngineService {
 
     if (overdueInstallments.length > 0) {
       let maxOverdueDays = 0;
-      let totalOverdueAmount = 0;
+      let totalOverdue = money(0);
 
       for (const inst of overdueInstallments) {
         const diffDays = Math.ceil(
           (now.getTime() - new Date(inst.dueDate).getTime()) / (1000 * 60 * 60 * 24),
         );
         maxOverdueDays = Math.max(maxOverdueDays, diffDays);
-        totalOverdueAmount += Number(inst.amount) - Number(inst.paidAmount || 0);
+        totalOverdue = totalOverdue.plus(money(inst.amount).minus(money(inst.paidAmount)));
       }
 
       feeFactor = Math.min(100, overdueInstallments.length * 30 + maxOverdueDays * 1.5);
       narrativeParts.push(
-        `${overdueInstallments.length} fee installment(s) overdue (₹${totalOverdueAmount} pending)`,
+        `${overdueInstallments.length} fee installment(s) overdue (₹${toRupees(totalOverdue)} pending)`,
       );
     }
 

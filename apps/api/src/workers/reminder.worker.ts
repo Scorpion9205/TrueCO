@@ -2,18 +2,36 @@ import { Worker, Job } from 'bullmq';
 import { QueueRegistry, QUEUE_NAMES } from '../queues/queue.registry.js';
 import { FeeReminderScheduler } from '../modules/fees/fee.cron.js';
 import { PrismaFeeRepository } from '../modules/fees/fee.repository.js';
+import { SubscriptionExpirationScheduler } from '../modules/billing/billing.cron.js';
+import { PrismaBillingRepository } from '../modules/billing/billing.repository.js';
 import { eventBus } from '../events/event-bus.js';
 import { logger } from '../common/logger/logger.service.js';
 import { runJobAsSystem } from './job-context.js';
 
+export const SUBSCRIPTION_SCAN_JOB = 'daily_subscription_scan';
+
 export class ReminderWorker {
   private worker: Worker | null = null;
   private readonly scheduler: FeeReminderScheduler;
+  private readonly subscriptions: SubscriptionExpirationScheduler;
 
   public constructor(
     scheduler?: FeeReminderScheduler,
+    subscriptions?: SubscriptionExpirationScheduler,
   ) {
     this.scheduler = scheduler || new FeeReminderScheduler(new PrismaFeeRepository(), eventBus);
+    this.subscriptions =
+      subscriptions || new SubscriptionExpirationScheduler(new PrismaBillingRepository(), eventBus);
+  }
+
+  /** Routes a job to its scan; both scan every coaching, then act per tenant */
+  public async process(job: Job): Promise<{ triggeredCount: number }> {
+    logger.info(`[ReminderWorker] Processing reminder job: ${job.name} (id: ${job.id})`);
+    const count =
+      job.name === SUBSCRIPTION_SCAN_JOB
+        ? await runJobAsSystem(job, () => this.subscriptions.runDailyExpirationCheck())
+        : await runJobAsSystem(job, () => this.scheduler.runDailyReminderCheck());
+    return { triggeredCount: count };
   }
 
   public async start(): Promise<Worker> {
@@ -37,14 +55,20 @@ export class ReminderWorker {
       },
     );
 
+    // Daily at 9:00 India time: ends lapsed trials and plans, and warns owners 7, 3 and 1 days
+    // ahead. Once a day, because each warning is keyed to a number of days remaining.
+    await reminderQueue.add(
+      SUBSCRIPTION_SCAN_JOB,
+      {},
+      {
+        jobId: SUBSCRIPTION_SCAN_JOB,
+        repeat: { pattern: '0 9 * * *', tz: 'Asia/Kolkata' },
+      },
+    );
+
     this.worker = new Worker(
       QUEUE_NAMES.REMINDER,
-      async (job: Job) => {
-        logger.info(`[ReminderWorker] Processing reminder job: ${job.name} (id: ${job.id})`);
-        // Scans installments across all coachings; reminder events then run per tenant
-        const count = await runJobAsSystem(job, () => this.scheduler.runDailyReminderCheck());
-        return { triggeredCount: count };
-      },
+      (job: Job) => this.process(job),
       {
         connection: redis,
         concurrency: 2,

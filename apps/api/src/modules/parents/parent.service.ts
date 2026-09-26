@@ -97,8 +97,8 @@ export class ParentService {
     );
   }
 
-  public async getParentById(id: string): Promise<ParentResponseDto> {
-    const parent = await this.parentRepository.findById(id);
+  public async getParentById(id: string, batchIds?: string[]): Promise<ParentResponseDto> {
+    const parent = await this.parentRepository.findById(id, batchIds);
     if (!parent) {
       throw new AppError('PARENT_NOT_FOUND', 'Parent record not found', StatusCodes.NOT_FOUND);
     }
@@ -110,8 +110,8 @@ export class ParentService {
     return parent ? ParentMapper.toResponseDto(parent) : null;
   }
 
-  public async listParents(search?: string): Promise<ParentResponseDto[]> {
-    const parents = await this.parentRepository.findMany(search);
+  public async listParents(search?: string, batchIds?: string[]): Promise<ParentResponseDto[]> {
+    const parents = await this.parentRepository.findMany(search, batchIds);
     return parents.map(ParentMapper.toResponseDto);
   }
 }

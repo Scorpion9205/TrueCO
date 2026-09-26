@@ -6,6 +6,7 @@ import { HOMEWORK_EVENTS, HomeworkCreatedPayload } from '../homework/homework.ev
 import { FEE_EVENTS, FeePaidPayload, FeeReminderTriggeredPayload } from '../fees/fee.events.js';
 import { NOTICE_EVENTS, NoticeCreatedPayload } from '../notice-board/notice.events.js';
 import { RISK_EVENTS, RiskDetectedPayload } from '../risk-engine/risk-engine.events.js';
+import { BILLING_EVENTS, SubscriptionExpiringPayload } from '../billing/billing.events.js';
 import { NotificationChannel, DomainEvent, AttendanceStatus } from '@vargly/types';
 import { logger } from '../../common/logger/logger.service.js';
 import {
@@ -239,6 +240,30 @@ ${content}`
       },
     );
 
+    // 6b. Trial or plan ending -> tell the owner, so the institute is not cut off by surprise
+    eventBus.subscribe(
+      BILLING_EVENTS.SUBSCRIPTION_EXPIRING,
+      async (event: DomainEvent<SubscriptionExpiringPayload>) => {
+        const { coachingId, daysRemaining, trialEndsAt } = event.payload;
+        const endDay = new Date(trialEndsAt).toISOString().slice(0, 10);
+        try {
+          await service.enqueueNotification(
+            {
+              channel: NotificationChannel.WHATSAPP,
+              recipient: `coaching:${coachingId}:owner`,
+              recipientType: 'TEACHER',
+              content: subscriptionReminderText(daysRemaining),
+              idempotencyKey: `subscription.expiring.${coachingId}.${endDay}.${daysRemaining}`,
+            },
+            coachingId,
+            event.metadata?.correlationId,
+          );
+        } catch (err) {
+          logger.error(`[NotificationSubscribers] Failed enqueuing subscription reminder:`, err);
+        }
+      },
+    );
+
     // 7. Student Risk Detected -> Alert Coaching Owner
     eventBus.subscribe(
       RISK_EVENTS.RISK_DETECTED,
@@ -286,3 +311,13 @@ export function noticeRecipients(
       return [students, parents, teachers];
   }
 }
+
+/** What the owner is told as the trial or paid period runs out */
+export function subscriptionReminderText(daysRemaining: number): string {
+  if (daysRemaining <= 0) {
+    return '⚠️ Your Vargly plan has ended, so your institute can no longer use Vargly. Your data is safe: choose a plan in Vargly → Billing to continue.';
+  }
+  const when = daysRemaining === 1 ? 'tomorrow' : `in ${daysRemaining} days`;
+  return `⏰ Your Vargly plan ends ${when}. Choose a plan in Vargly → Billing to keep attendance, fees and parent updates running without a break.`;
+}
+

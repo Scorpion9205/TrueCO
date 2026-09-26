@@ -1,4 +1,4 @@
-export type ImportEntityType = 'STUDENTS' | 'TEACHERS' | 'BATCHES';
+export type ImportEntityType = 'STUDENTS' | 'BATCHES';
 
 export interface ImportRowError {
   readonly rowNumber: number;

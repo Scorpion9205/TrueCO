@@ -2,6 +2,7 @@ import {
   OwnerDashboardResponseDto,
   TeacherDashboardResponseDto,
 } from './dto/dashboard.dto.js';
+import { money, toRupees } from '../../common/money/money.js';
 
 export class DashboardMapper {
   public static toOwnerResponseDto(data: any): OwnerDashboardResponseDto {
@@ -19,7 +20,7 @@ export class DashboardMapper {
         studentName: i.feePlan?.student
           ? `${i.feePlan.student.firstName} ${i.feePlan.student.lastName}`.trim()
           : 'Student',
-        amount: Number(i.amount) - Number(i.paidAmount || 0),
+        amount: toRupees(money(i.amount).minus(money(i.paidAmount))),
         dueDate: new Date(i.dueDate),
       })),
     };

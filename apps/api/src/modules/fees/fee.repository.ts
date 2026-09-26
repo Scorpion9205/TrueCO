@@ -5,6 +5,7 @@ import { DiscountType, FeeInstallmentStatus, PaymentMethod } from '@vargly/types
 import { AppError } from '../../common/middleware/error-handler.middleware.js';
 import { money, MoneyInput, Money } from '../../common/money/money.js';
 import { nextDocumentNumber } from '../../common/money/document-number.js';
+import { MONEY_TRANSACTION } from '../../common/money/transaction-options.js';
 
 export interface CreateFeePlanInput {
   coachingId: string;
@@ -283,7 +284,7 @@ export class PrismaFeeRepository implements IFeeRepository {
         plan: installment.feePlan,
         remainingBalance: total.minus(newPaid),
       } as const;
-    });
+    }, MONEY_TRANSACTION);
   }
 
   public async waiveInstallment(installmentId: string, remarks?: string): Promise<any | null> {

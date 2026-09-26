@@ -136,9 +136,15 @@ export class PrismaRiskEngineRepository implements IRiskEngineRepository {
     return rawPrisma.riskScore.findMany({
       where: {
         coachingId,
+        student: { deletedAt: null },
         ...(filter?.level && { level: filter.level }),
-        ...(filter?.minScore !== undefined && { score: { gte: filter.minScore } }),
-        ...(filter?.maxScore !== undefined && { score: { lte: filter.maxScore } }),
+        // One score filter with both bounds (separate spreads let the maximum replace the minimum)
+        ...((filter?.minScore !== undefined || filter?.maxScore !== undefined) && {
+          score: {
+            ...(filter?.minScore !== undefined && { gte: filter.minScore }),
+            ...(filter?.maxScore !== undefined && { lte: filter.maxScore }),
+          },
+        }),
       },
       include: { student: true },
       orderBy: { score: 'desc' },

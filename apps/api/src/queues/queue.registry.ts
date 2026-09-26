@@ -11,7 +11,6 @@ export const QUEUE_NAMES = {
   REPORT: 'report-queue',
   PDF: 'pdf-queue',
   AI: 'ai-queue',
-  IMPORT: 'import-queue',
   ANALYTICS: 'analytics-queue',
   CLEANUP: 'cleanup-queue',
   EVENTS: 'events-queue',
