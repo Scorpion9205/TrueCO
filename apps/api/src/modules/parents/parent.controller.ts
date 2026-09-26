@@ -4,6 +4,7 @@ import { ParentService } from './parent.service.js';
 import { createParentSchema, linkStudentParentSchema } from './validators/parent.validator.js';
 import { CreateParentDto, LinkStudentParentDto } from './dto/parent.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
+import { taughtBatchScope } from '../../common/decorators/require-batch-access.decorator.js';
 
 export class ParentController {
   public constructor(private readonly parentService: ParentService) {}
@@ -29,13 +30,20 @@ export class ParentController {
   };
 
   public getById = async (req: Request, res: Response): Promise<void> => {
-    const parent = await this.parentService.getParentById(req.params.id);
+    // Teachers reach only the parents of their own batches' students (others read as not found)
+    const parent = await this.parentService.getParentById(
+      req.params.id,
+      (await taughtBatchScope()) ?? undefined,
+    );
     res.status(StatusCodes.OK).json({ data: parent });
   };
 
   public list = async (req: Request, res: Response): Promise<void> => {
     const search = req.query.search as string | undefined;
-    const parents = await this.parentService.listParents(search);
+    const parents = await this.parentService.listParents(
+      search,
+      (await taughtBatchScope()) ?? undefined,
+    );
     res.status(StatusCodes.OK).json({ data: parents });
   };
 }

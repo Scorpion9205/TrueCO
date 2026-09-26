@@ -57,4 +57,6 @@ export interface StudentResponseDto {
 export interface StudentListFilters {
   readonly isActive?: boolean;
   readonly search?: string;
+  /** Only students currently in one of these batches (a teacher's own); omit for everyone */
+  readonly batchIds?: string[];
 }

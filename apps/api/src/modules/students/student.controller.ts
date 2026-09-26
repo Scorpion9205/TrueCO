@@ -8,6 +8,7 @@ import {
 } from './validators/student.validator.js';
 import { CreateStudentDto, UpdateStudentDto } from './dto/student.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
+import { taughtBatchScope } from '../../common/decorators/require-batch-access.decorator.js';
 
 export class StudentController {
   public constructor(private readonly studentService: StudentService) {}
@@ -29,9 +30,12 @@ export class StudentController {
 
   public list = async (req: Request, res: Response): Promise<void> => {
     const query = listStudentsQuerySchema.parse(req.query);
+    const batchIds = await taughtBatchScope();
     const filters = {
       search: query.search || undefined,
       isActive: query.isActive === undefined ? undefined : query.isActive === 'true',
+      // Teachers list only the students of their own batches
+      ...(batchIds ? { batchIds } : {}),
     };
 
     // Paged when asked (the web app always asks); otherwise the full list, as before

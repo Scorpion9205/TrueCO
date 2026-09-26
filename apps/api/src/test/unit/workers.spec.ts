@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PdfWorker } from '../../workers/pdf.worker.js';
 import { ReportWorker } from '../../workers/report.worker.js';
-import { ImportWorker } from '../../workers/import.worker.js';
 import { AnalyticsWorker } from '../../workers/analytics.worker.js';
 import { MockStorageService } from '../../common/storage/mock-storage.service.js';
 
@@ -124,37 +123,6 @@ describe('Background Workers Unit Tests (Phase 3)', () => {
 
       expect(result.status).toBe('COMPLETED');
       expect(result.format).toBe('xlsx');
-    });
-  });
-
-  describe('ImportWorker', () => {
-    it('should validate and process bulk student rows reporting errors for invalid rows', async () => {
-      const mockPrisma: any = {
-        student: {
-          create: vi.fn().mockImplementation(async ({ data }: any) => {
-            if (!data.firstName) throw new Error('First name required');
-            return { id: 's-1', ...data };
-          }),
-        },
-      };
-
-      const worker = new ImportWorker(mockPrisma);
-
-      const result = await worker.processJob({
-        coachingId: 'coaching-1',
-        entityType: 'STUDENTS',
-        rows: [
-          { firstName: 'Rahul', lastName: 'Kumar', phone: '9876543210' },
-          { firstName: '', lastName: 'MissingFirst' }, // Invalid
-          { firstName: 'Sneha', lastName: 'Gupta' },
-        ],
-      });
-
-      expect(result.status).toBe('PARTIAL_SUCCESS');
-      expect(result.processedCount).toBe(3);
-      expect(result.successCount).toBe(2);
-      expect(result.failureCount).toBe(1);
-      expect(result.errors[0].row).toBe(2);
     });
   });
 

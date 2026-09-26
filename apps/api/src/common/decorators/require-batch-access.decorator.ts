@@ -110,3 +110,19 @@ export function requireBatchAccess(options: BatchAccessOptions = {}) {
     next();
   };
 }
+
+/**
+ * The batches whose records the caller may list: null for owners and platform admins (no limit),
+ * otherwise the batches an active teacher is assigned to (empty when none). Lists use this so a
+ * teacher sees the same students and parents the per-record checks above would let them open.
+ */
+export async function taughtBatchScope(): Promise<string[] | null> {
+  const roles = RequestContextService.getRoles();
+  if (roles.includes(RoleType.SUPER_ADMIN) || roles.includes(RoleType.OWNER)) return null;
+  const teacher = await db().teacher.findFirst({
+    where: { userId: RequestContextService.getUserId(), isActive: true },
+    include: { teacherBatches: { select: { batchId: true } } },
+  });
+  return teacher ? teacher.teacherBatches.map((tb: { batchId: string }) => tb.batchId) : [];
+}
+

@@ -3,9 +3,21 @@ import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/ten
 export interface IParentRepository {
   create(data: any): Promise<any>;
   findByPhone(phone: string): Promise<any | null>;
-  findById(id: string): Promise<any | null>;
+  /** batchIds limits the lookup to parents of students in those batches (a teacher's) */
+  findById(id: string, batchIds?: string[]): Promise<any | null>;
   linkStudent(data: { studentId: string; parentId: string; coachingId: string; isPrimary?: boolean }): Promise<any>;
-  findMany(search?: string): Promise<any[]>;
+  findMany(search?: string, batchIds?: string[]): Promise<any[]>;
+}
+
+/** Parents with a child currently in one of the batches; no condition when batchIds is absent */
+function inBatches(batchIds?: string[]) {
+  return batchIds
+    ? {
+        studentParents: {
+          some: { student: { batchStudents: { some: { batchId: { in: batchIds }, leftAt: null } } } },
+        },
+      }
+    : {};
 }
 
 export class PrismaParentRepository implements IParentRepository {
@@ -33,9 +45,9 @@ export class PrismaParentRepository implements IParentRepository {
     });
   }
 
-  public async findById(id: string): Promise<any | null> {
+  public async findById(id: string, batchIds?: string[]): Promise<any | null> {
     return (this.prisma as any).parent.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, ...inBatches(batchIds) },
       include: {
         studentParents: {
           include: { student: true },
@@ -69,8 +81,8 @@ export class PrismaParentRepository implements IParentRepository {
     });
   }
 
-  public async findMany(search?: string): Promise<any[]> {
-    const where: any = { deletedAt: null };
+  public async findMany(search?: string, batchIds?: string[]): Promise<any[]> {
+    const where: any = { deletedAt: null, ...inBatches(batchIds) };
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },

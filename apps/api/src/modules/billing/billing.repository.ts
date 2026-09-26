@@ -1,6 +1,7 @@
 import { getPrismaClient, ExtendedPrismaClient } from '../../database/prisma/tenant-prisma.extension.js';
 import { PlanCode, SubscriptionStatus } from '@vargly/types';
 import { nextDocumentNumber } from '../../common/money/document-number.js';
+import { MONEY_TRANSACTION } from '../../common/money/transaction-options.js';
 
 export type BillingCycle = 'MONTHLY' | 'YEARLY';
 
@@ -204,6 +205,6 @@ export class PrismaBillingRepository implements IBillingRepository {
       }
 
       return { kind: 'settled', payment: settled, subscription, creditsAdded, walletBalance } as const;
-    });
+    }, MONEY_TRANSACTION);
   }
 }

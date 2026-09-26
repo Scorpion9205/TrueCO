@@ -8,6 +8,7 @@ import {
 } from './validators/expense.validator.js';
 import { CreateExpenseDto, UpdateExpenseDto } from './dto/expense.dto.js';
 import { RequestContextService } from '../../common/services/request-context.service.js';
+import { todayInIndia } from '../reports/report.dates.js';
 
 export class ExpenseController {
   public constructor(private readonly expenseService: ExpenseService) {}
@@ -64,8 +65,10 @@ export class ExpenseController {
 
   public summary = async (req: Request, res: Response): Promise<void> => {
     const coachingId = RequestContextService.getRequiredCoachingId();
-    const month = req.query.month ? Number(req.query.month) : new Date().getMonth() + 1;
-    const year = req.query.year ? Number(req.query.year) : new Date().getFullYear();
+    // Defaults to the current month in India, not the server's clock zone
+    const today = todayInIndia();
+    const month = req.query.month ? Number(req.query.month) : Number(today.slice(5, 7));
+    const year = req.query.year ? Number(req.query.year) : Number(today.slice(0, 4));
 
     const result = await this.expenseService.getExpenseSummary(coachingId, month, year);
     res.status(StatusCodes.OK).json({ data: result });

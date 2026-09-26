@@ -84,6 +84,7 @@ export class PrismaDashboardRepository implements IDashboardRepository {
         where: {
           coachingId,
           level: { in: ['HIGH', 'CRITICAL'] },
+          student: { deletedAt: null, isActive: true },
         },
       }),
       rawPrisma.studentTimeline.findMany({

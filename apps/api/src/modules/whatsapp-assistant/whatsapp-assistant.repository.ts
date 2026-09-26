@@ -7,6 +7,7 @@ import { ConversationContext } from './dto/whatsapp-assistant.dto.js';
 import { Redis } from 'ioredis';
 import { queueRegistry } from '../../queues/queue.registry.js';
 import { logger } from '../../common/logger/logger.service.js';
+import { money, toRupees } from '../../common/money/money.js';
 
 export interface StudentAcademicSnapshot {
   readonly student: any;
@@ -128,9 +129,12 @@ export class PrismaWhatsAppAssistantRepository implements IWhatsAppAssistantRepo
       orderBy: { dueDate: 'asc' },
     });
 
-    const totalPending = pendingInstallments.reduce(
-      (acc: number, inst: any) => acc + (Number(inst.amount) - Number(inst.paidAmount || 0)),
-      0,
+    // Exact to the paisa: this figure is sent to parents on WhatsApp
+    const totalPending = toRupees(
+      pendingInstallments.reduce(
+        (acc: any, inst: any) => acc.plus(money(inst.amount).minus(money(inst.paidAmount))),
+        money(0),
+      ),
     );
     const upcomingDueDate = pendingInstallments[0]?.dueDate;
 
